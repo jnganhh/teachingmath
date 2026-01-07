@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalPay Edu - Interactive Learning</title>
+    
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Load React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 3. Load Babel (to process JSX in browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Custom animation utilities */
+        .animate-marquee {
+            animation: marquee 25s linear infinite;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Setup Globals ---
+        const { useState, useEffect } = React;
+
+        // --- Icons (Inline Definitions to prevent loading errors) ---
+        const IconBase = ({ children, className }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {children}
+            </svg>
+        );
+
+        const Globe = ({ className }) => (
+            <IconBase className={className}>
+                <circle cx="12" cy="12" r="10" />
+                <path d="M2 12h20" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </IconBase>
+        );
+
+        const Wallet = ({ className }) => (
+            <IconBase className={className}>
+                <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+                <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+            </IconBase>
+        );
+
+        const Landmark = ({ className }) => (
+            <IconBase className={className}>
+                <line x1="3" y1="22" x2="21" y2="22" />
+                <line x1="6" y1="18" x2="6" y2="11" />
+                <line x1="10" y1="18" x2="10" y2="11" />
+                <line x1="14" y1="18" x2="14" y2="11" />
+                <line x1="18" y1="18" x2="18" y2="11" />
+                <polygon points="12 2 2 7 22 7 12 2" />
+            </IconBase>
+        );
+
+        const CreditCard = ({ className }) => (
+            <IconBase className={className}>
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+            </IconBase>
+        );
+
+        const ChevronDown = ({ className }) => (
+            <IconBase className={className}>
+                <polyline points="6 9 12 15 18 9" />
+            </IconBase>
+        );
+
+        const ChevronUp = ({ className }) => (
+            <IconBase className={className}>
+                <polyline points="18 15 12 9 6 15" />
+            </IconBase>
+        );
+
+        const Check = ({ className }) => (
+            <IconBase className={className}>
+                <polyline points="20 6 9 17 4 12" />
+            </IconBase>
+        );
+
+        const X = ({ className }) => (
+            <IconBase className={className}>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </IconBase>
+        );
+
+        const TrendingUp = ({ className }) => (
+            <IconBase className={className}>
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                <polyline points="17 6 23 6 23 12" />
+            </IconBase>
+        );
+
+        const Bot = ({ className }) => (
+            <IconBase className={className}>
+                <rect x="3" y="11" width="18" height="10" rx="2" />
+                <circle cx="12" cy="5" r="2" />
+                <path d="M12 7v4" />
+                <line x1="8" y1="16" x2="8" y2="16" />
+                <line x1="16" y1="16" x2="16" y2="16" />
+            </IconBase>
+        );
+
+        const RefreshCw = ({ className }) => (
+            <IconBase className={className}>
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </IconBase>
+        );
+
+        // --- Data & Logic ---
+
+        const PAYMENT_METHODS = [
+            {
+                id: 'cash',
+                name: 'Cash / Foreign Currency',
+                icon: <Wallet className="w-6 h-6" />,
+                color: 'bg-green-100 text-green-700',
+                pros: [
+                    'Immediate payment settled instantly.',
+                    'No digital footprint or technology required.',
+                    'Useful for small, in-person transactions.'
+                ],
+                cons: [
+                    'High risk of theft or loss (no recovery).',
+                    'Requires physical presence.',
+                    'Exchange rates at kiosks/airports are often poor.',
+                    'Not suitable for large business transactions.'
+                ]
+            },
+            {
+                id: 'wire',
+                name: 'Wire Transfer (SWIFT)',
+                icon: <Landmark className="w-6 h-6" />,
+                color: 'bg-blue-100 text-blue-700',
+                pros: [
+                    'Highly secure for large amounts.',
+                    'Accepted globally by almost all banks.',
+                    'Fixed fees make it economical for very large sums.'
+                ],
+                cons: [
+                    'Slow processing (1-5 business days).',
+                    'High fixed fees ($15-$50+) from both sending and receiving banks.',
+                    'Exchange rates set by banks may include a markup.',
+                    'Irreversible once processed.'
+                ]
+            },
+            {
+                id: 'card',
+                name: 'Credit / Debit Card',
+                icon: <CreditCard className="w-6 h-6" />,
+                color: 'bg-purple-100 text-purple-700',
+                pros: [
+                    'Extremely convenient and fast.',
+                    'Consumer protection (chargebacks) reduces risk.',
+                    'Automatic currency conversion at point of sale.'
+                ],
+                cons: [
+                    'Foreign transaction fees (approx 2.5-3%).',
+                    'Merchant fees may be passed to the buyer.',
+                    'Risk of "Dynamic Currency Conversion" (paying in home currency at bad rates).',
+                    'Spending limits apply.'
+                ]
+            },
+            {
+                id: 'multicurrency',
+                name: 'Multi-Currency Account',
+                icon: <Globe className="w-6 h-6" />,
+                color: 'bg-indigo-100 text-indigo-700',
+                pros: [
+                    'Hold funds in different currencies to wait for good rates.',
+                    'Avoid conversion fees on every single transaction.',
+                    'Great for businesses with regular international dealings.'
+                ],
+                cons: [
+                    'Complex to manage multiple balances.',
+                    'May have monthly account maintenance fees.',
+                    'Not all banks offer this service to individuals.',
+                    'Requires strategic planning.'
+                ]
+            }
+        ];
+
+        // Simulated AI Logic
+        const AI_DECISION_TREE = (answers) => {
+            const { amount, urgency, type, risk } = answers;
+            const numAmount = parseFloat(amount);
+            
+            if (numAmount < 100 && urgency === 'high') {
+                return {
+                    method: 'Credit / Debit Card',
+                    reason: 'For small, urgent amounts, the speed and convenience of a card outweigh the transaction fees.',
+                    confidence: 95
+                };
+            }
+            if (numAmount < 500 && type === 'personal') {
+                return {
+                    method: 'Digital Wallet / Card',
+                    reason: 'Digital wallets or cards offer good consumer protection for personal purchases without the hassle of setting up wires.',
+                    confidence: 88
+                };
+            }
+            if (numAmount > 2000 && risk === 'high') {
+                return {
+                    method: 'Wire Transfer',
+                    reason: 'For large amounts where risk is a concern, bank-to-bank wire transfers provide the best paper trail and security.',
+                    confidence: 92
+                };
+            }
+            if (numAmount > 5000) {
+                return {
+                    method: 'Wire Transfer / FX Broker',
+                    reason: 'For amounts this large, the fixed fee of a wire transfer is negligible compared to percentage fees. A specialist FX broker might give a better rate.',
+                    confidence: 98
+                };
+            }
+            if (type === 'business') {
+                return {
+                    method: 'Multi-Currency Account',
+                    reason: 'As a business, opening a multi-currency account will save you significant money on repeated conversions.',
+                    confidence: 90
+                };
+            }
+            
+            return {
+                method: 'Wire Transfer',
+                reason: 'A standard wire transfer strikes a balance between security and global acceptance for this scenario.',
+                confidence: 75
+            };
+        };
+
+        // --- Components ---
+
+        const PaymentMethodCard = ({ method }) => {
+            const [isOpen, setIsOpen] = useState(false);
+
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-md">
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${method.color}`}>
+                                {method.icon}
+                            </div>
+                            <h3 className="font-semibold text-slate-800">{method.name}</h3>
+                        </div>
+                        {isOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                    </button>
+                    
+                    {isOpen && (
+                        <div className="p-4 grid md:grid-cols-2 gap-4 text-sm animate-in fade-in duration-200">
+                            <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                <h4 className="font-bold text-green-800 flex items-center gap-2 mb-2">
+                                    <Check className="w-4 h-4" /> Advantages
+                                </h4>
+                                <ul className="space-y-1 text-green-700">
+                                    {method.pros.map((pro, i) => (
+                                        <li key={i}>• {pro}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                <h4 className="font-bold text-red-800 flex items-center gap-2 mb-2">
+                                    <X className="w-4 h-4" /> Disadvantages
+                                </h4>
+                                <ul className="space-y-1 text-red-700">
+                                    {method.cons.map((con, i) => (
+                                        <li key={i}>• {con}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const TransactionVisualizer = ({ amount, methodId, targetCurrency, rate }) => {
+            const numericAmount = parseFloat(amount) || 1000;
+            
+            let feePercentage = 0;
+            let fixedFee = 0;
+            
+            switch (methodId) {
+                case 'card': feePercentage = 0.03; fixedFee = 0; break;
+                case 'wire': feePercentage = 0.005; fixedFee = 35; break;
+                case 'multicurrency': feePercentage = 0.004; fixedFee = 5; break;
+                case 'cash': feePercentage = 0.05; fixedFee = 0; break;
+                default: feePercentage = 0.01; fixedFee = 10;
+            }
+
+            const feeCost = (numericAmount * feePercentage) + fixedFee;
+            const finalAmountSource = numericAmount - feeCost;
+            const finalAmountTarget = finalAmountSource * rate;
+            
+            const width = 600;
+            const height = 200;
+            const startX = 50;
+            const endX = 550;
+            const centerY = 100;
+            const maxStroke = 40;
+            const endStroke = maxStroke * (finalAmountSource / numericAmount);
+
+            return (
+                <div className="w-full overflow-hidden bg-slate-900 rounded-xl p-4 shadow-inner">
+                    <div className="text-center text-slate-400 text-xs mb-2 tracking-wider uppercase">Visualizing Transaction Friction</div>
+                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+                        <defs>
+                            <linearGradient id="flowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#4ade80" />
+                                <stop offset="100%" stopColor="#3b82f6" />
+                            </linearGradient>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+                            </marker>
+                        </defs>
+
+                        <text x={startX} y={centerY - 40} textAnchor="middle" fill="white" className="text-sm font-bold">You Send</text>
+                        <text x={startX} y={centerY + 50} textAnchor="middle" fill="#4ade80" className="text-xs font-mono">${numericAmount.toLocaleString()}</text>
+
+                        <text x={width/2} y={centerY - 50} textAnchor="middle" fill="#94a3b8" className="text-xs">
+                            {PAYMENT_METHODS.find(m => m.id === methodId)?.name || 'Processing'}
+                        </text>
+
+                        <text x={endX} y={centerY - 40} textAnchor="middle" fill="white" className="text-sm font-bold">They Receive</text>
+                        <text x={endX} y={centerY + 50} textAnchor="middle" fill="#3b82f6" className="text-xs font-mono">
+                            {finalAmountTarget.toLocaleString(undefined, { maximumFractionDigits: 2 })} {targetCurrency}
+                        </text>
+
+                        <path 
+                            d={`M ${width/2} ${centerY + (maxStroke/2)} L ${width/2} ${centerY + (maxStroke/2) + 20}`} 
+                            stroke="#ef4444" 
+                            strokeWidth="2" 
+                            fill="none" 
+                            strokeDasharray="4"
+                        />
+                        <text x={width/2} y={centerY + 60} textAnchor="middle" fill="#ef4444" className="text-xs font-bold">
+                            -${feeCost.toFixed(2)} (Fees/Loss)
+                        </text>
+
+                        <path
+                            d={`M ${startX + 30} ${centerY} C ${startX + 150} ${centerY}, ${endX - 150} ${centerY}, ${endX - 30} ${centerY}`}
+                            fill="none"
+                            stroke="url(#flowGradient)"
+                            strokeWidth={Math.max(endStroke, 2)}
+                            strokeLinecap="round"
+                            className="transition-all duration-1000 ease-in-out"
+                            markerEnd="url(#arrowhead)"
+                        />
+                        
+                        <path
+                            d={`M ${startX + 30} ${centerY} C ${startX + 150} ${centerY}, ${endX - 150} ${centerY}, ${endX - 30} ${centerY}`}
+                            fill="none"
+                            stroke="rgba(255,255,255,0.1)"
+                            strokeWidth={maxStroke}
+                            strokeLinecap="round"
+                            className="pointer-events-none"
+                        />
+                    </svg>
+                    <div className="flex justify-between px-4 text-xs text-slate-500 mt-2">
+                        <span>Source: CAD</span>
+                        <span>Target: {targetCurrency}</span>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App ---
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('learn');
+            const [rates, setRates] = useState(null);
+            const [loadingRates, setLoadingRates] = useState(false);
+            const [targetCurrency, setTargetCurrency] = useState('EUR');
+            const [calcAmount, setCalcAmount] = useState(1000);
+            const [calcMethod, setCalcMethod] = useState('wire');
+
+            const [advisorStep, setAdvisorStep] = useState(0);
+            const [advisorAnswers, setAdvisorAnswers] = useState({ amount: '', urgency: '', type: '', risk: '' });
+            const [advisorResult, setAdvisorResult] = useState(null);
+            const [isTyping, setIsTyping] = useState(false);
+
+            useEffect(() => {
+                fetchRates();
+            }, []);
+
+            const fetchRates = async () => {
+                setLoadingRates(true);
+                try {
+                    // Changed from USD to CAD
+                    const res = await fetch('https://api.frankfurter.app/latest?from=CAD');
+                    const data = await res.json();
+                    setRates(data.rates);
+                } catch (error) {
+                    console.error("Failed to fetch rates", error);
+                } finally {
+                    setLoadingRates(false);
+                }
+            };
+
+            const handleAdvisorInput = (field, value) => {
+                setAdvisorAnswers(prev => ({ ...prev, [field]: value }));
+                setIsTyping(true);
+                setTimeout(() => {
+                    setIsTyping(false);
+                    if (advisorStep < 3) {
+                        setAdvisorStep(prev => prev + 1);
+                    } else {
+                        const result = AI_DECISION_TREE({ ...advisorAnswers, [field]: value });
+                        setAdvisorResult(result);
+                        setAdvisorStep(4);
+                    }
+                }, 800);
+            };
+
+            const resetAdvisor = () => {
+                setAdvisorStep(0);
+                setAdvisorAnswers({ amount: '', urgency: '', type: '', risk: '' });
+                setAdvisorResult(null);
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-12">
+                    <header className="bg-blue-700 text-white shadow-lg sticky top-0 z-50">
+                        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Globe className="w-8 h-8 text-blue-300" />
+                                <div>
+                                    <h1 className="text-xl font-bold tracking-tight">GlobalPay Edu</h1>
+                                    <p className="text-xs text-blue-200">F1.1 Multi-Currency Methods</p>
+                                </div>
+                            </div>
+                            
+                            <nav className="flex gap-1 md:gap-4 bg-blue-800/50 p-1 rounded-lg">
+                                {['learn', 'calculator', 'advisor'].map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                            activeTab === tab 
+                                                ? 'bg-white text-blue-700 shadow-sm' 
+                                                : 'text-blue-200 hover:text-white hover:bg-blue-700'
+                                        }`}
+                                    >
+                                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+                        
+                        <div className="bg-blue-900 text-blue-200 text-xs py-1 px-4 overflow-hidden whitespace-nowrap">
+                            <div className="inline-flex gap-8 animate-marquee">
+                                {loadingRates ? (
+                                    <span>Fetching live rates...</span>
+                                ) : rates ? (
+                                    <>
+                                        <span>1 CAD = {rates.USD} USD</span>
+                                        <span>1 CAD = {rates.EUR} EUR</span>
+                                        <span>1 CAD = {rates.GBP} GBP</span>
+                                        <span>1 CAD = {rates.JPY} JPY</span>
+                                    </>
+                                ) : (
+                                    <span>Rates unavailable</span>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-5xl mx-auto px-4 py-8">
+                        {/* LEARN TAB */}
+                        {activeTab === 'learn' && (
+                            <div className="space-y-6">
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                                        <Landmark className="w-6 h-6 text-blue-600" />
+                                        Methods of Payment
+                                    </h2>
+                                    <p className="text-slate-600 mb-6">Explore the methods below to understand their pros and cons.</p>
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        {PAYMENT_METHODS.map((method) => (
+                                            <PaymentMethodCard key={method.id} method={method} />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CALCULATOR TAB */}
+                        {activeTab === 'calculator' && (
+                            <div className="grid md:grid-cols-12 gap-6">
+                                <div className="md:col-span-5 space-y-4">
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                        <h2 className="text-xl font-bold mb-4 text-slate-800">Scenario Builder</h2>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-500 mb-1">Amount (CAD)</label>
+                                                <input 
+                                                    type="number" value={calcAmount} onChange={(e) => setCalcAmount(e.target.value)}
+                                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-500 mb-1">Target Currency</label>
+                                                <select value={targetCurrency} onChange={(e) => setTargetCurrency(e.target.value)}
+                                                    className="w-full p-2 border border-slate-300 rounded-lg">
+                                                    {rates && Object.keys(rates).slice(0, 10).map(curr => (
+                                                        <option key={curr} value={curr}>{curr}</option>
+                                                    ))}
+                                                    {!rates && <option>EUR</option>}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-500 mb-1">Payment Method</label>
+                                                <div className="grid grid-cols-1 gap-2">
+                                                    {PAYMENT_METHODS.map(m => (
+                                                        <button key={m.id} onClick={() => setCalcMethod(m.id)}
+                                                            className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                                                                calcMethod === m.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                                                            }`}>
+                                                            <div className={`p-1.5 rounded ${m.color}`}>{m.icon}</div>
+                                                            <span className="text-sm font-medium">{m.name}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-7">
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-full">
+                                        <h2 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+                                            <TrendingUp className="w-5 h-5 text-blue-600" /> Impact Visualizer
+                                        </h2>
+                                        <div className="flex items-center justify-center bg-slate-50 rounded-xl mb-4 border border-slate-100">
+                                            <TransactionVisualizer amount={calcAmount} methodId={calcMethod} targetCurrency={targetCurrency} rate={rates ? rates[targetCurrency] : 0.85} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ADVISOR TAB */}
+                        {activeTab === 'advisor' && (
+                            <div className="max-w-2xl mx-auto">
+                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                                    <div className="bg-slate-900 p-6 text-white flex items-center gap-4">
+                                        <div className="bg-blue-500 p-3 rounded-full"><Bot className="w-8 h-8 text-white" /></div>
+                                        <div><h2 className="text-xl font-bold">Payment AI Advisor</h2><p className="text-slate-400 text-sm">Tell me about your transaction.</p></div>
+                                    </div>
+                                    <div className="p-6 min-h-[400px] flex flex-col bg-slate-50">
+                                        {/* Chat Interface */}
+                                        <div className="flex gap-4 mb-6">
+                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Bot className="w-5 h-5 text-blue-600" /></div>
+                                            <div className="bg-white p-4 rounded-2xl text-slate-700 max-w-[80%]"><p>Hello! Roughly how much are you transferring?</p></div>
+                                        </div>
+                                        {advisorStep === 0 && (
+                                            <div className="flex gap-2 justify-end flex-wrap">
+                                                {['$50', '$500', '$2,500', '$10,000+'].map(opt => (
+                                                    <button key={opt} onClick={() => handleAdvisorInput('amount', opt.replace(/[^0-9]/g, ''))} className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700">{opt}</button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {advisorStep > 0 && <div className="text-right text-slate-500 text-sm mb-4">Amount: ${advisorAnswers.amount}</div>}
+                                        
+                                        {advisorStep === 1 && (
+                                            <div className="space-y-4">
+                                                <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Bot className="w-5 h-5 text-blue-600" /></div><div className="bg-white p-4 rounded-2xl text-slate-700"><p>How quickly does it need to arrive?</p></div></div>
+                                                <div className="flex gap-2 justify-end"><button onClick={() => handleAdvisorInput('urgency', 'high')} className="bg-blue-600 text-white px-4 py-2 rounded-full">Immediately</button><button onClick={() => handleAdvisorInput('urgency', 'low')} className="bg-blue-600 text-white px-4 py-2 rounded-full">Within a week</button></div>
+                                            </div>
+                                        )}
+
+                                        {advisorStep === 2 && (
+                                             <div className="space-y-4">
+                                                <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Bot className="w-5 h-5 text-blue-600" /></div><div className="bg-white p-4 rounded-2xl text-slate-700"><p>Is this Personal or Business?</p></div></div>
+                                                <div className="flex gap-2 justify-end"><button onClick={() => handleAdvisorInput('type', 'personal')} className="bg-blue-600 text-white px-4 py-2 rounded-full">Personal</button><button onClick={() => handleAdvisorInput('type', 'business')} className="bg-blue-600 text-white px-4 py-2 rounded-full">Business</button></div>
+                                            </div>
+                                        )}
+
+                                        {advisorStep === 3 && (
+                                             <div className="space-y-4">
+                                                <div className="flex gap-4"><div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><Bot className="w-5 h-5 text-blue-600" /></div><div className="bg-white p-4 rounded-2xl text-slate-700"><p>Do you trust the recipient?</p></div></div>
+                                                <div className="flex gap-2 justify-end"><button onClick={() => handleAdvisorInput('risk', 'low')} className="bg-blue-600 text-white px-4 py-2 rounded-full">Yes (Trusted)</button><button onClick={() => handleAdvisorInput('risk', 'high')} className="bg-blue-600 text-white px-4 py-2 rounded-full">No (Unknown/New)</button></div>
+                                            </div>
+                                        )}
+
+                                        {advisorResult && (
+                                            <div className="mt-4 bg-green-50 p-4 rounded-xl border border-green-200">
+                                                <h3 className="font-bold text-green-800 text-lg mb-1">{advisorResult.method}</h3>
+                                                <p className="text-green-700 text-sm mb-3">{advisorResult.reason}</p>
+                                                <button onClick={resetAdvisor} className="text-xs text-blue-600 hover:underline flex items-center gap-1"><RefreshCw className="w-3 h-3"/> Start Over</button>
+                                            </div>
+                                        )}
+                                        {isTyping && <div className="text-slate-400 text-sm italic ml-12">Analyzing...</div>}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
