@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mr. Ngan 互動學習資源庫</title>
+    <title>Mr. Ngan's Interactive Learning Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 漫畫風格的按鈕和卡片特效 */
+        /* Comic-style borders and shadows */
         .comic-border {
             border: 3px solid #1e293b;
             box-shadow: 6px 6px 0px #1e293b;
@@ -23,42 +23,42 @@
     <div class="max-w-4xl mx-auto">
         <header class="text-center mb-10">
             <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-wide text-blue-600 drop-shadow-md">
-                Mr. Ngan 互動學習資源庫
+                Mr. Ngan's Interactive Learning Hub
             </h1>
-            <p class="text-lg font-bold text-slate-600">數學與物理的視覺化練習場</p>
+            <p class="text-lg font-bold text-slate-600">A visual playground for Math and Physics</p>
         </header>
 
         <section class="bg-white p-6 rounded-xl comic-border mb-10">
             <h2 class="text-2xl font-bold mb-4 flex items-center">
-                <span>🤖 智能助教：你需要什麼幫助？</span>
+                <span>🤖 Smart Assistant: What do you need help with?</span>
             </h2>
-            <p class="mb-4 text-slate-600 text-sm">輸入你想學的主題（例如：MPM2D, 數學, 錢, 物理），助教會自動幫你找出來！</p>
-            <input type="text" id="aiInput" onkeyup="smartSearch()" placeholder="試著輸入 '因式分解'..." 
+            <p class="mb-4 text-slate-600 text-sm">Type a topic (e.g., MPM2D, math, money, physics) and I'll find it for you!</p>
+            <input type="text" id="aiInput" onkeyup="smartSearch()" placeholder="Try typing 'factoring'..." 
                    class="w-full p-4 border-4 border-slate-800 rounded-lg text-lg focus:outline-none focus:ring-4 focus:ring-blue-300 font-bold">
             <div id="aiResponse" class="mt-4 text-blue-600 font-bold min-h-[24px]"></div>
         </section>
 
         <div id="resourceGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            <a href="mpm2d-factoring.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="數學 math mpm2d 因式分解 factoring 10年級">
+            <a href="mpm2d-factoring.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d factoring grade 10 polynomials">
                 <div class="flex justify-between items-start mb-4">
-                    <span class="bg-blue-100 text-blue-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">10年級數學</span>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grade 10 Math</span>
                     <span class="text-2xl">🧮</span>
                 </div>
-                <h3 class="text-xl font-black mb-2">MPM2D 因式分解大師</h3>
-                <p class="text-slate-600 font-medium">透過互動視覺化的方式，徹底搞懂多項式的因式分解技巧。</p>
+                <h3 class="text-xl font-black mb-2">MPM2D Factoring Master</h3>
+                <p class="text-slate-600 font-medium">Master polynomial factoring techniques through interactive visualization.</p>
             </a>
 
-            <a href="Currency converter and means of payment.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="數學 math 錢 貨幣 轉換 currency 匯率 生活">
+            <a href="Currency converter and means of payment.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math money currency converter exchange rate real life">
                 <div class="flex justify-between items-start mb-4">
-                    <span class="bg-green-100 text-green-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">生活數學</span>
+                    <span class="bg-green-100 text-green-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Life Math</span>
                     <span class="text-2xl">💵</span>
                 </div>
-                <h3 class="text-xl font-black mb-2">即時貨幣轉換器</h3>
-                <p class="text-slate-600 font-medium">學習匯率概念與支付工具的最佳互動小工具。</p>
+                <h3 class="text-xl font-black mb-2">Live Currency Converter</h3>
+                <p class="text-slate-600 font-medium">The best interactive tool to learn about exchange rates and payment methods.</p>
             </a>
 
-            </div>
+        </div>
     </div>
 
     <script>
@@ -72,7 +72,6 @@
                 let tags = card.getAttribute('data-tags').toLowerCase();
                 let title = card.querySelector('h3').innerText.toLowerCase();
                 
-                // 簡單的邏輯：如果輸入框的字出現在標籤或標題裡，就顯示該卡片
                 if (tags.includes(input) || title.includes(input)) {
                     card.style.display = "block";
                     matchCount++;
@@ -81,13 +80,12 @@
                 }
             });
 
-            // 讓它看起來像 AI 在說話
             if (input.trim() === "") {
                 aiResponse.innerText = "";
             } else if (matchCount > 0) {
-                aiResponse.innerText = `💡 助教幫你找到了 ${matchCount} 個相關的練習工具！去試試看吧！`;
+                aiResponse.innerText = `💡 I found ${matchCount} tool(s) for you! Go check them out!`;
             } else {
-                aiResponse.innerText = "🤔 嗯...目前還沒有找到這個主題的工具，你可以換個關鍵字試試。";
+                aiResponse.innerText = "🤔 Hmm... I couldn't find a tool for that topic yet. Try a different keyword!";
             }
         }
     </script>
