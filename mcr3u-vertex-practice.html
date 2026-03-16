@@ -351,484 +351,289 @@
   </div>
 </div>
 
-<script>
-(function(){
-  // ---------- Utility ----------
-  function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
-  function formatTime(seconds){
-    const m=Math.floor(seconds/60);
-    const s=seconds%60;
-    return m+":"+(s<10?"0"+s:s);
-  }
-  function shuffle(arr){
-    for(let i=arr.length-1;i>0;i--){
-      const j=Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]]=[arr[j],arr[i]];
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  // 2. Your Firebase Configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDLdV6V4W_SXjfkBgfhjIjlIzonwqzEjkE",
+    authDomain: "mcr3u-5389f.firebaseapp.com",
+    projectId: "mcr3u-5389f",
+    storageBucket: "mcr3u-5389f.firebasestorage.app",
+    messagingSenderId: "997075199387",
+    appId: "1:997075199387:web:46ae62c6e6380445536d3e",
+    measurementId: "G-ZS130GMVXR"
+  };
+
+  // 3. Initialize Firebase & Firestore
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const scoresCol = collection(db, "scores");
+
+  (function(){
+    // ---------- Utility ----------
+    function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+    function formatTime(seconds){
+      const m=Math.floor(seconds/60);
+      const s=seconds%60;
+      return m+":"+(s<10?"0"+s:s);
     }
-    return arr;
-  }
-  function approxEqual(a,b,tol){
-    return Math.abs(a-b)<=tol;
-  }
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+      }
+      return arr;
+    }
+    function approxEqual(a,b,tol){ return Math.abs(a-b)<=tol; }
 
-  // ---------- State ----------
-  let questions=[];
-  let currentIndex=0;
-  let score=0;
-  let timer=null;
-  let elapsed=0;
-  let mode="mc";
-  let difficulty="medium";
-  let numQuestions=8;
-  let currentQuestion=null;
+    // ---------- State ----------
+    let questions=[];
+    let currentIndex=0;
+    let score=0;
+    let timer=null;
+    let elapsed=0;
+    let mode="mc";
+    let difficulty="medium";
+    let numQuestions=8;
+    let currentQuestion=null;
 
-  // ---------- Generate questions ----------
-  function generateQuestions(level,count){
-    const qs=[];
-    for(let i=0;i<count;i++){
-      let a,b,c,h,k;
-      if(level==="easy"){
-        // a=1, vertex with small integers, expand to standard form
-        h=randInt(-4,4);
-        k=randInt(-5,5);
-        a=1;
-        // y=(x-h)^2+k => y=x^2-2hx+h^2+k
-        b=-2*h;
-        c=h*h+k;
-      }else if(level==="medium"){
-        // a is -2,-1,1,2, vertex integer
-        const aChoices=[-2,-1,1,2];
-        a=aChoices[randInt(0,aChoices.length-1)];
-        h=randInt(-5,5);
-        k=randInt(-6,6);
-        // expand y=a(x-h)^2+k
-        // y=a(x^2-2hx+h^2)+k = ax^2+(-2ah)x + (ah^2+k)
-        b=-2*a*h;
-        c=a*h*h+k;
-      }else{
-        // hard: random a,b,c, vertex may be fractional (ensure a≠0)
-        a=randInt(-3,3); if(a===0)a=1;
-        b=randInt(-8,8);
-        c=randInt(-10,10);
-        // true vertex
-        h=-b/(2*a);
-        k=a*h*h+b*h+c;
+    // ---------- Question Logic (Keep your existing math logic) ----------
+    function generateQuestions(level,count){
+      const qs=[];
+      for(let i=0;i<count;i++){
+        let a,b,c,h,k;
+        if(level==="easy"){
+          h=randInt(-4,4); k=randInt(-5,5); a=1;
+          b=-2*h; c=h*h+k;
+        }else if(level==="medium"){
+          const aChoices=[-2,-1,1,2];
+          a=aChoices[randInt(0,aChoices.length-1)];
+          h=randInt(-5,5); k=randInt(-6,6);
+          b=-2*a*h; c=a*h*h+k;
+        }else{
+          a=randInt(-3,3); if(a===0)a=1;
+          b=randInt(-8,8); c=randInt(-10,10);
+          h=-b/(2*a); k=a*h*h+b*h+c;
+        }
+        const eqString = "y = " + coefToText(a,"x²") + termToText(b,"x") + constantToText(c);
+        const question={ a,b,c,h,k, text:eqString, id:"Q"+(i+1) };
+        if(mode==="mc"){ question.options=makeOptionsForVertex(h,k); }
+        qs.push(question);
+      }
+      return qs;
+    }
+
+    function coefToText(coef,term){ if(coef===1) return term; if(coef===-1) return "-"+term; return coef+term; }
+    function termToText(coef,term){ if(coef===0) return ""; if(coef>0) return " + "+(coef===1?term:coef+term); return " - "+(Math.abs(coef)===1?term:Math.abs(coef)+term); }
+    function constantToText(c){ if(c===0) return ""; if(c>0) return " + "+c; return " - "+Math.abs(c); }
+
+    function makeOptionsForVertex(h,k){
+      const opts=[[h,k]];
+      const deltas=[[-1,0],[1,0],[0,1],[0,-1],[2,0],[0,2],[-2,0],[0,-2]];
+      shuffle(deltas);
+      let i=0;
+      while(opts.length<4 && i<deltas.length){
+        const cand=[Math.round((h+deltas[i][0])*10)/10, Math.round((k+deltas[i][1])*10)/10];
+        if(!opts.some(v=>approxEqual(v[0],cand[0],0.001)&&approxEqual(v[1],cand[1],0.001))){ opts.push(cand); }
+        i++;
+      }
+      return shuffle(opts);
+    }
+
+    // ---------- UI Elements ----------
+    const setupCard=document.getElementById("setupCard");
+    const quizCard=document.getElementById("quizCard");
+    const summaryCard=document.getElementById("summaryCard");
+    const startBtn=document.getElementById("startBtn");
+    const restartBtn=document.getElementById("restartBtn");
+    const studentNameInput=document.getElementById("studentName");
+    const studentClassInput=document.getElementById("studentClass");
+    const difficultySelect=document.getElementById("difficulty");
+    const modeSelect=document.getElementById("mode");
+    const numQuestionsSelect=document.getElementById("numQuestions");
+    const displayName=document.getElementById("displayName");
+    const displayClass=document.getElementById("displayClass");
+    const timeDisplay=document.getElementById("timeDisplay");
+    const scoreDisplay=document.getElementById("scoreDisplay");
+    const qNumber=document.getElementById("qNumber");
+    const qTotal=document.getElementById("qTotal");
+    const questionPrompt=document.getElementById("questionPrompt");
+    const equationText=document.getElementById("equationText");
+    const mcArea=document.getElementById("mcArea");
+    const saArea=document.getElementById("saArea");
+    const inputHx=document.getElementById("inputHx");
+    const inputKy=document.getElementById("inputKy");
+    const submitBtn=document.getElementById("submitBtn");
+    const nextBtn=document.getElementById("nextBtn");
+    const feedbackDiv=document.getElementById("feedback");
+    const aiHintBtn=document.getElementById("aiHintBtn");
+    const aiHintDiv=document.getElementById("aiHint");
+    const summaryText=document.getElementById("summaryText");
+    const smartComment=document.getElementById("smartComment");
+    const scoreboardContainer=document.getElementById("scoreboardContainer");
+    const scoreTableBody=document.querySelector("#scoreTable tbody");
+
+    function showQuestion(){
+      currentQuestion=questions[currentIndex];
+      qNumber.textContent=(currentIndex+1);
+      qTotal.textContent=questions.length;
+      scoreDisplay.textContent=score;
+      questionPrompt.textContent="Find the vertex of the quadratic function below.";
+      equationText.textContent=currentQuestion.text;
+      feedbackDiv.style.display="none";
+      aiHintDiv.style.display="none";
+      submitBtn.disabled=false;
+      nextBtn.style.display="none";
+      if(mode==="mc"){ mcArea.style.display="block"; saArea.style.display="none"; renderOptions(); }
+      else{ mcArea.style.display="none"; saArea.style.display="flex"; inputHx.value=""; inputKy.value=""; inputHx.focus(); }
+    }
+
+    function renderOptions(){
+      mcArea.innerHTML="";
+      currentQuestion.options.forEach((v,i)=>{
+        const opt=document.createElement("label");
+        opt.className="option";
+        opt.innerHTML=`<input type="radio" name="vertex" value="${v[0]},${v[1]}"> (${v[0]}, ${v[1]})`;
+        mcArea.appendChild(opt);
+      });
+    }
+
+    // ---------- Firebase Data Functions ----------
+    async function saveScoreToFirebase(entry) {
+      try {
+        await addDoc(scoresCol, {
+          ...entry,
+          createdAt: new Date() // Add server timestamp
+        });
+        console.log("Score saved to Firebase!");
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
+    }
+
+    async function renderScoresFromFirebase() {
+      scoreTableBody.innerHTML = "<tr><td colspan='7'>Loading leaderboard...</td></tr>";
+      try {
+        const q = query(scoresCol, orderBy("createdAt", "desc"), limit(10));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          scoreboardContainer.style.display = "none";
+          return;
+        }
+
+        scoreboardContainer.style.display = "block";
+        scoreTableBody.innerHTML = "";
+        querySnapshot.forEach((doc) => {
+          const s = doc.data();
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${s.timeStamp}</td>
+            <td>${s.name}</td>
+            <td>${s.className}</td>
+            <td>${s.difficulty}</td>
+            <td>${s.mode}</td>
+            <td>${s.score}/${s.total}</td>
+            <td>${formatTime(s.time)}</td>
+          `;
+          scoreTableBody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error("Error fetching scores: ", e);
+        scoreTableBody.innerHTML = "<tr><td colspan='7'>Error loading leaderboard.</td></tr>";
+      }
+    }
+
+    // ---------- Game Loop ----------
+    function startTimer(){
+      if(timer) clearInterval(timer);
+      elapsed=0;
+      timer=setInterval(()=>{ elapsed++; timeDisplay.textContent=formatTime(elapsed); },1000);
+    }
+
+    function checkAnswer(){
+      let studentH, studentK;
+      if(mode==="mc"){
+        const chosen=document.querySelector('input[name="vertex"]:checked');
+        if(!chosen) return alert("Select an answer.");
+        [studentH, studentK] = chosen.value.split(",").map(Number);
+      } else {
+        studentH = parseFloat(inputHx.value);
+        studentK = parseFloat(inputKy.value);
+        if(isNaN(studentH) || isNaN(studentK)) return alert("Enter numbers.");
       }
 
-      const eqString = "y = " + coefToText(a,"x²")
-                      + termToText(b,"x")
-                      + constantToText(c);
+      const isCorrect = approxEqual(studentH, currentQuestion.h, 0.1) && approxEqual(studentK, currentQuestion.k, 0.1);
+      if(isCorrect) score++;
 
-      const question={
-        a:a,b:b,c:c,
-        h:h,k:k,
-        text:eqString,
-        id:"Q"+(i+1)
+      feedbackDiv.style.display="block";
+      feedbackDiv.className = isCorrect ? "feedback correct" : "feedback incorrect";
+      feedbackDiv.innerHTML = isCorrect ? "✅ Correct!" : `❌ Wrong. It was (${Math.round(currentQuestion.h*10)/10}, ${Math.round(currentQuestion.k*10)/10})`;
+      
+      submitBtn.disabled=true;
+      nextBtn.style.display="inline-flex";
+      nextBtn.textContent = currentIndex < questions.length - 1 ? "Next question" : "View summary";
+    }
+
+    async function showSummary(){
+      quizCard.style.display="none";
+      summaryCard.style.display="block";
+      clearInterval(timer);
+
+      const entry = {
+        name: studentNameInput.value.trim() || "Anonymous",
+        className: studentClassInput.value.trim() || "Unknown",
+        difficulty,
+        mode: mode === "mc" ? "MC" : "SA",
+        score,
+        total: questions.length,
+        time: elapsed,
+        timeStamp: new Date().toLocaleString()
       };
 
-      if(mode==="mc"){
-        question.options=makeOptionsForVertex(h,k);
-      }
-      qs.push(question);
-    }
-    return qs;
-  }
-
-  function coefToText(coef,term){
-    if(coef===1) return term;
-    if(coef===-1) return "-"+term;
-    return coef+term;
-  }
-  function termToText(coef,term){
-    if(coef===0) return "";
-    if(coef>0) return " + "+(coef===1?term:coef+term);
-    return " - "+(Math.abs(coef)===1?term:Math.abs(coef)+term);
-  }
-  function constantToText(c){
-    if(c===0) return "";
-    if(c>0) return " + "+c;
-    return " - "+Math.abs(c);
-  }
-
-  function makeOptionsForVertex(h,k){
-    // correct vertex
-    const opts=[[h,k]];
-    // generate 3 distractors
-    const deltas=[[-1,0],[1,0],[0,1],[0,-1],[2,0],[0,2],[-2,0],[0,-2]];
-    shuffle(deltas);
-    let i=0;
-    while(opts.length<4 && i<deltas.length){
-      const dh=deltas[i][0], dk=deltas[i][1];
-      const cand=[roundNice(h+dh),roundNice(k+dk)];
-      if(!opts.some(v=>approxEqual(v[0],cand[0],0.001)&&approxEqual(v[1],cand[1],0.001))){
-        opts.push(cand);
-      }
-      i++;
-    }
-    // if still less than 4 (in some weird cases), add random integers
-    while(opts.length<4){
-      const cand=[randInt(-5,5),randInt(-6,6)];
-      if(!opts.some(v=>v[0]===cand[0]&&v[1]===cand[1])){
-        opts.push(cand);
-      }
-    }
-    return shuffle(opts);
-  }
-
-  function roundNice(x){
-    return Math.round(x*10)/10;
-  }
-
-  // ---------- Rendering ----------
-  const setupCard=document.getElementById("setupCard");
-  const quizCard=document.getElementById("quizCard");
-  const summaryCard=document.getElementById("summaryCard");
-  const startBtn=document.getElementById("startBtn");
-  const restartBtn=document.getElementById("restartBtn");
-  const resetScoresBtn=document.getElementById("resetScoresBtn");
-
-  const studentNameInput=document.getElementById("studentName");
-  const studentClassInput=document.getElementById("studentClass");
-  const difficultySelect=document.getElementById("difficulty");
-  const modeSelect=document.getElementById("mode");
-  const numQuestionsSelect=document.getElementById("numQuestions");
-
-  const displayName=document.getElementById("displayName");
-  const displayClass=document.getElementById("displayClass");
-  const timeDisplay=document.getElementById("timeDisplay");
-  const scoreDisplay=document.getElementById("scoreDisplay");
-  const qNumber=document.getElementById("qNumber");
-  const qTotal=document.getElementById("qTotal");
-
-  const questionPrompt=document.getElementById("questionPrompt");
-  const equationText=document.getElementById("equationText");
-  const mcArea=document.getElementById("mcArea");
-  const saArea=document.getElementById("saArea");
-  const inputHx=document.getElementById("inputHx");
-  const inputKy=document.getElementById("inputKy");
-  const submitBtn=document.getElementById("submitBtn");
-  const nextBtn=document.getElementById("nextBtn");
-  const feedbackDiv=document.getElementById("feedback");
-  const aiHintBtn=document.getElementById("aiHintBtn");
-  const aiHintDiv=document.getElementById("aiHint");
-
-  const summaryText=document.getElementById("summaryText");
-  const smartComment=document.getElementById("smartComment");
-  const scoreboardContainer=document.getElementById("scoreboardContainer");
-  const scoreTableBody=document.querySelector("#scoreTable tbody");
-
-  function showQuestion(){
-    currentQuestion=questions[currentIndex];
-    qNumber.textContent=(currentIndex+1);
-    qTotal.textContent=questions.length;
-    scoreDisplay.textContent=score;
-
-    questionPrompt.textContent="Find the vertex of the quadratic function below.";
-    equationText.textContent=currentQuestion.text;
-
-    feedbackDiv.style.display="none";
-    aiHintDiv.style.display="none";
-    submitBtn.disabled=false;
-    nextBtn.style.display="none";
-
-    if(mode==="mc"){
-      mcArea.style.display="block";
-      saArea.style.display="none";
-      renderOptions();
-    }else{
-      mcArea.style.display="none";
-      saArea.style.display="flex";
-      inputHx.value="";
-      inputKy.value="";
-      inputHx.focus();
-    }
-  }
-
-  function renderOptions(){
-    mcArea.innerHTML="";
-    currentQuestion.options.forEach((v,i)=>{
-      const id="opt"+i;
-      const opt=document.createElement("label");
-      opt.className="option";
-      opt.innerHTML='<input type="radio" name="vertex" id="'+id+'" value="'+v[0]+","+v[1]+'">('+
-        v[0]+", "+v[1]+")";
-      mcArea.appendChild(opt);
-    });
-  }
-
-  // ---------- Timer ----------
-  function startTimer(){
-    if(timer)clearInterval(timer);
-    elapsed=0;
-    timeDisplay.textContent="0:00";
-    timer=setInterval(()=>{
-      elapsed++;
-      timeDisplay.textContent=formatTime(elapsed);
-    },1000);
-  }
-  function stopTimer(){
-    if(timer)clearInterval(timer);
-    timer=null;
-  }
-
-  // ---------- Answer checking ----------
-  function parseNumberInput(str){
-    str=str.trim();
-    if(str==="")return null;
-    // allow fractions
-    if(str.includes("/")){
-      const parts=str.split("/");
-      if(parts.length===2){
-        const n=parseFloat(parts[0]);
-        const d=parseFloat(parts[1]);
-        if(!isNaN(n)&&!isNaN(d)&&d!==0)return n/d;
-      }
-    }
-    const x=parseFloat(str);
-    return isNaN(x)?null:x;
-  }
-
-  function checkAnswer(){
-    if(!currentQuestion)return;
-    let isCorrect=false;
-    let studentH,studentK;
-
-    if(mode==="mc"){
-      const chosen=document.querySelector('input[name="vertex"]:checked');
-      if(!chosen){
-        alert("Please select an answer first.");
-        return;
-      }
-      const parts=chosen.value.split(",");
-      studentH=parseFloat(parts[0]);
-      studentK=parseFloat(parts[1]);
-    }else{
-      const hStr=inputHx.value;
-      const kStr=inputKy.value;
-      studentH=parseNumberInput(hStr);
-      studentK=parseNumberInput(kStr);
-      if(studentH===null||studentK===null){
-        alert("Please enter numeric values for both h and k (fractions allowed).");
-        return;
-      }
+      summaryText.textContent = `${entry.name} scored ${score}/${questions.length}`;
+      
+      // Save and Refresh Leaderboard
+      await saveScoreToFirebase(entry);
+      await renderScoresFromFirebase();
     }
 
-    const trueH=currentQuestion.h;
-    const trueK=currentQuestion.k;
-
-    const tol=(difficulty==="hard")?0.05:0.01;
-    if(approxEqual(studentH,trueH,tol)&&approxEqual(studentK,trueK,tol)){
-      isCorrect=true;
-      score++;
-      scoreDisplay.textContent=score;
-    }
-
-    const prettyH=roundNice(trueH);
-    const prettyK=roundNice(trueK);
-
-    feedbackDiv.style.display="block";
-    if(isCorrect){
-      feedbackDiv.className="feedback correct";
-      feedbackDiv.innerHTML="Nice! ✅ The vertex is ("+prettyH+", "+prettyK+").";
-    }else{
-      feedbackDiv.className="feedback incorrect";
-      feedbackDiv.innerHTML="Not quite. ❌ The correct vertex is ("+prettyH+", "+prettyK+").";
-    }
-
-    submitBtn.disabled=true;
-    if(currentIndex<questions.length-1){
-      nextBtn.style.display="inline-flex";
-    }else{
-      nextBtn.style.display="inline-flex";
-      nextBtn.textContent="View summary";
-    }
-  }
-
-  // ---------- Simple built‑in "AI" helper ----------
-  function generateHint(q){
-    const a=q.a,b=q.b,c=q.c;
-    const hExact=-b/(2*a);
-    const kExact=a*hExact*hExact+b*hExact+c;
-
-    const pieces=[];
-    pieces.push("Think of the formula for the x‑coordinate of the vertex: h = -b / (2a).");
-    pieces.push("Here a = "+a+", b = "+b+", c = "+c+". So h = -("+b+") / (2·"+a+").");
-    pieces.push("Once you have h, plug it back into y = ax² + bx + c to find k.");
-    pieces.push("If arithmetic feels messy, estimate h first, then refine your value.");
-
-    // Small meta comment based on difficulty
-    if(difficulty==="easy"){
-      pieces.push("On this level the vertex has nice integer coordinates. Use that to quickly check your work.");
-    }else if(difficulty==="medium"){
-      pieces.push("On this level the vertex still lands on integer coordinates, even if the steps look a bit scary.");
-    }else{
-      pieces.push("Here the vertex might be a fraction. Writing h as a simplified fraction can keep your calculations cleaner.");
-    }
-
-    // Very small "next‑step" suggestion using current input if any
-    if(mode==="sa"){
-      const tryH=parseNumberInput(inputHx.value||"");
-      if(tryH!==null && !approxEqual(tryH,hExact,0.1)){
-        pieces.push("Your current h guess is about "+roundNice(tryH)+". Compare it with -b/(2a) to nudge it closer.");
-      }
-    }
-
-    return pieces.join(" ");
-  }
-
-  // ---------- LocalStorage scores ----------
-  const STORAGE_KEY="mcr3u_vertex_scores_v1";
-  function loadScores(){
-    try{
-      const raw=localStorage.getItem(STORAGE_KEY);
-      if(!raw)return[];
-      const data=JSON.parse(raw);
-      return Array.isArray(data)?data:[];
-    }catch(e){
-      return[];
-    }
-  }
-  function saveScoreEntry(entry){
-    const scores=loadScores();
-    scores.push(entry);
-    // keep only last 15
-    while(scores.length>15)scores.shift();
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(scores));
-  }
-  function renderScores(){
-    const scores=loadScores();
-    if(!scores.length){
-      scoreboardContainer.style.display="none";
-      return;
-    }
-    scoreboardContainer.style.display="block";
-    scoreTableBody.innerHTML="";
-    scores.slice().reverse().forEach(s=>{
-      const tr=document.createElement("tr");
-      tr.innerHTML="<td>"+s.timeStamp+"</td>"+
-                   "<td>"+s.name+"</td>"+
-                   "<td>"+s.className+"</td>"+
-                   "<td>"+s.difficulty+"</td>"+
-                   "<td>"+s.mode+"</td>"+
-                   "<td>"+s.score+"/"+s.total+"</td>"+
-                   "<td>"+formatTime(s.time)+"</td>";
-      scoreTableBody.appendChild(tr);
-    });
-  }
-
-  // ---------- Summary + "AI" comment ----------
-  function showSummary(){
-    quizCard.style.display="none";
-    summaryCard.style.display="block";
-    stopTimer();
-
-    const name=studentNameInput.value.trim()||"Anonymous";
-    const className=studentClassInput.value.trim()||"Unknown";
-    const percent=Math.round((score/questions.length)*100);
-
-    summaryText.textContent=name+" ("+className+") scored "+score+
-      " out of "+questions.length+" in "+formatTime(elapsed)+
-      " on "+difficulty+" difficulty ("+(mode==="mc"?"Multiple choice":"Short answer")+")";
-
-    const commentParts=[];
-    if(percent>=90){
-      commentParts.push("This looks exam‑ready. The quadratics are probably more nervous than you are.");
-    }else if(percent>=75){
-      commentParts.push("Solid work. A few more sets at this level should make the vertex formula automatic.");
-    }else if(percent>=50){
-      commentParts.push("You understand the idea. Focus on slowing down with the algebra to reduce slips.");
-    }else{
-      commentParts.push("Use this as a diagnostic, not a verdict. Re‑watch notes/examples, then try again on easy or medium.");
-    }
-
-    if(elapsed/questions.length<20){
-      commentParts.push("You are working quickly. Just check that speed is not costing you accuracy.");
-    }else{
-      commentParts.push("Your pace is careful. As you get more comfortable, try to nudge speed up a little.");
-    }
-
-    smartComment.textContent=commentParts.join(" ");
-
-    const now=new Date();
-    const stamp=now.toLocaleString();
-
-    const entry={
-      timeStamp:stamp,
-      name:name,
-      className:className,
-      difficulty:difficulty,
-      mode:(mode==="mc"?"MC":"SA"),
-      score:score,
-      total:questions.length,
-      time:elapsed
-    };
-    try{
-      saveScoreEntry(entry);
-    }catch(e){
-      // ignore storage issues (e.g., blocked in some environments)
-    }
-    renderScores();
-  }
-
-  // ---------- Event listeners ----------
-  startBtn.addEventListener("click",()=>{
-    const name=studentNameInput.value.trim();
-    const className=studentClassInput.value.trim();
-    if(!name||!className){
-      alert("Please enter your name and class before starting.");
-      return;
-    }
-    difficulty=difficultySelect.value;
-    mode=modeSelect.value;
-    numQuestions=parseInt(numQuestionsSelect.value,10);
-
-    questions=generateQuestions(difficulty,numQuestions);
-    currentIndex=0;
-    score=0;
-    displayName.textContent=name;
-    displayClass.textContent=className;
-
-    setupCard.style.display="none";
-    summaryCard.style.display="none";
-    quizCard.style.display="block";
-    startTimer();
-    showQuestion();
-  });
-
-  submitBtn.addEventListener("click",checkAnswer);
-
-  nextBtn.addEventListener("click",()=>{
-    if(currentIndex<questions.length-1){
-      currentIndex++;
+    // ---------- Events ----------
+    startBtn.addEventListener("click", () => {
+      if(!studentNameInput.value || !studentClassInput.value) return alert("Enter name/class");
+      difficulty = difficultySelect.value;
+      mode = modeSelect.value;
+      questions = generateQuestions(difficulty, parseInt(numQuestionsSelect.value));
+      currentIndex = 0; score = 0;
+      displayName.textContent = studentNameInput.value;
+      displayClass.textContent = studentClassInput.value;
+      setupCard.style.display="none";
+      quizCard.style.display="block";
+      startTimer();
       showQuestion();
-    }else{
-      showSummary();
-    }
-  });
+    });
 
-  aiHintBtn.addEventListener("click",()=>{
-    if(!currentQuestion)return;
-    aiHintDiv.style.display="block";
-    aiHintDiv.textContent=generateHint(currentQuestion);
-  });
+    submitBtn.addEventListener("click", checkAnswer);
+    nextBtn.addEventListener("click", () => {
+      if(currentIndex < questions.length - 1) { currentIndex++; showQuestion(); }
+      else showSummary();
+    });
+    
+    aiHintBtn.addEventListener("click", () => {
+      aiHintDiv.style.display="block";
+      aiHintDiv.textContent = `Hint: Use h = -b / (2a). For this equation, a=${currentQuestion.a} and b=${currentQuestion.b}.`;
+    });
 
-  restartBtn.addEventListener("click",()=>{
-    summaryCard.style.display="none";
-    setupCard.style.display="block";
-    nextBtn.textContent="Next question";
-    renderScores();
-  });
+    restartBtn.addEventListener("click", () => {
+      summaryCard.style.display="none";
+      setupCard.style.display="block";
+    });
 
-  resetScoresBtn.addEventListener("click",()=>{
-    if(confirm("Clear all saved scores on this device?")){
-      localStorage.removeItem(STORAGE_KEY);
-      renderScores();
-    }
-  });
-
-  // Load history on first load
-  renderScores();
-})();
+    // Initial Load
+    renderScoresFromFirebase();
+  })();
 </script>
 <a href="index.html" style="display: inline-block; padding: 10px 20px; margin: 15px; background-color: #fcd34d; color: #1e293b; text-decoration: none; font-weight: bold; font-family: sans-serif; border: 3px solid #1e293b; box-shadow: 4px 4px 0px #1e293b; border-radius: 8px; cursor: pointer;">
     🏠 Back to Home
