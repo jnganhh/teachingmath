@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MCR3U – Inverse Function Trainer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --accent: #38bdf8;
+        --accent-soft: #0ea5e9;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --correct: #22c55e;
+        --incorrect: #ef4444;
+        --warning: #facc15;
+    }
+    * {
+        box-sizing: border-box;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                     "Segoe UI", sans-serif;
+    }
+    body {
+        margin: 0;
+        background: radial-gradient(circle at top, #1f2937, #020617 55%);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        padding: 16px;
+    }
+    .app {
+        width: 100%;
+        max-width: 960px;
+        background: linear-gradient(135deg, #020617, #020617 30%, #0b1120);
+        border-radius: 18px;
+        box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+        padding: 20px;
+        border: 1px solid rgba(148,163,184,0.4);
+    }
+    .app-header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(148,163,184,0.3);
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
+    .title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: .03em;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .title span {
+        color: var(--muted);
+        font-size: .86rem;
+        font-weight: 400;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 3px 10px;
+        background: rgba(56,189,248,0.08);
+        color: var(--accent);
+        font-size: .78rem;
+        border: 1px solid rgba(56,189,248,0.5);
+    }
+    .badge-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 8px rgba(56,189,248,0.9);
+    }
+    .timer-box {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
+    .timer-label {
+        font-size: .78rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .16em;
+    }
+    .timer {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--accent);
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: radial-gradient(circle at top, #0f172a, #020617);
+        border: 1px solid rgba(56,189,248,0.5);
+        min-width: 84px;
+        text-align: center;
+    }
+    .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr);
+        gap: 16px;
+    }
+    @media (max-width: 800px) {
+        .layout {
+            grid-template-columns: 1fr;
+        }
+        .timer-box {
+            align-items: flex-start;
+        }
+    }
+    .card {
+        background: radial-gradient(circle at top left, #020617, #020617 45%, #020617);
+        border-radius: 16px;
+        border: 1px solid rgba(148,163,184,0.35);
+        padding: 14px 14px 12px;
+    }
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+    }
+    .card-title {
+        font-size: .95rem;
+        font-weight: 600;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    .card-sub {
+        font-size: .78rem;
+        color: var(--muted);
+    }
+    .field-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .field {
+        flex: 1 1 120px;
+        min-width: 100px;
+    }
+    .field label {
+        display: block;
+        font-size: .78rem;
+        color: var(--muted);
+        margin-bottom: 2px;
+    }
+    .field input,
+    .field select {
+        width: 100%;
+        padding: 6px 8px;
+        font-size: .85rem;
+        border-radius: 8px;
+        border: 1px solid rgba(148,163,184,0.58);
+        background: #020617;
+        color: var(--text);
+        outline: none;
+    }
+    .field input:focus,
+    .field select:focus {
+        border-color: var(--accent-soft);
+        box-shadow: 0 0 0 1px rgba(56,189,248,0.55);
+    }
+    .mode-toggle {
+        display: flex;
+        gap: 6px;
+        margin-top: 2px;
+    }
+    .chip {
+        flex: 1;
+        text-align: center;
+        font-size: .82rem;
+        padding: 5px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.6);
+        cursor: pointer;
+        user-select: none;
+        color: var(--muted);
+    }
+    .chip.active {
+        border-color: var(--accent-soft);
+        background: radial-gradient(circle at top, #0ea5e9, #0369a1);
+        color: #e5f4ff;
+        box-shadow: 0 0 14px rgba(56,189,248,0.75);
+    }
+    .chip.disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+
+    .question-panel {
+        margin-top: 6px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: radial-gradient(circle at top left, rgba(15,23,42,0.85), rgba(15,23,42,1));
+        border: 1px solid rgba(148,163,184,0.5);
+    }
+    .question-stem {
+        font-size: .93rem;
+        margin-bottom: 6px;
+    }
+    .function-stem {
+        font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+        display: inline-block;
+        padding: 3px 6px;
+        border-radius: 999px;
+        background: rgba(15,23,42,0.9);
+        border: 1px solid rgba(148,163,184,0.5);
+    }
+    .options {
+        margin-top: 4px;
+        display: grid;
+        gap: 6px;
+    }
+    .option-btn {
+        text-align: left;
+        padding: 6px 8px;
+        border-radius: 10px;
+        border: 1px solid rgba(148,163,184,0.6);
+        background: #020617;
+        color: var(--text);
+        cursor: pointer;
+        font-size: .88rem;
+    }
+    .option-btn:hover {
+        border-color: var(--accent-soft);
+        background: #020617;
+    }
+    .option-btn.selected {
+        border-color: var(--accent-soft);
+        background: radial-gradient(circle at left, #0ea5e9, #0369a1);
+        box-shadow: 0 0 12px rgba(56,189,248,0.75);
+    }
+    .answer-input {
+        margin-top: 4px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+    .answer-input input {
+        flex: 1;
+        padding: 6px 8px;
+        font-size: .9rem;
+        border-radius: 8px;
+        border: 1px solid rgba(148,163,184,0.6);
+        background: #020617;
+        color: var(--text);
+    }
+    .micro-hint {
+        font-size: .75rem;
+        color: var(--muted);
+    }
+
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+        margin-top: 8px;
+    }
+    button.primary,
+    button.secondary,
+    button.ghost {
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: .85rem;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+    button.primary {
+        background: radial-gradient(circle at top, #22c55e, #16a34a);
+        color: #e5ffe9;
+        box-shadow: 0 0 18px rgba(34,197,94,0.75);
+    }
+    button.primary:disabled {
+        opacity: .35;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+    button.secondary {
+        border: 1px solid rgba(148,163,184,0.9);
+        background: rgba(15,23,42,0.95);
+        color: var(--text);
+    }
+    button.ghost {
+        border: 1px dashed rgba(148,163,184,0.7);
+        background: transparent;
+        color: var(--muted);
+    }
+
+    .score-chip {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(15,23,42,0.95);
+        border: 1px solid rgba(148,163,184,0.6);
+        font-size: .85rem;
+        margin-bottom: 4px;
+    }
+    .score-chip strong {
+        color: var(--accent);
+        font-size: 1.05rem;
+    }
+    .score-detail {
+        font-size: .78rem;
+        color: var(--muted);
+    }
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(31,41,55,0.95);
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #22c55e, #0ea5e9);
+        width: 0%;
+        transition: width .3s ease;
+    }
+    .ai-panel {
+        margin-top: 4px;
+        padding: 8px 9px;
+        border-radius: 12px;
+        background: radial-gradient(circle at top left, #020617, #020617 50%, #020617);
+        border: 1px solid rgba(148,163,184,0.55);
+        font-size: .82rem;
+        color: var(--muted);
+    }
+    .ai-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .16em;
+    }
+    .ai-pill {
+        width: 7px;
+        height: 16px;
+        border-radius: 999px;
+        background: linear-gradient(to bottom, #22c55e, #0ea5e9);
+        box-shadow: 0 0 10px rgba(56,189,248,0.9);
+    }
+    .ai-body {
+        font-size: .82rem;
+        color: #d1d5db;
+        white-space: pre-line;
+    }
+    .solution-block {
+        margin-top: 6px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        background: rgba(15,23,42,0.95);
+        border: 1px solid rgba(148,163,184,0.55);
+        font-size: .82rem;
+        line-height: 1.35;
+    }
+    .solution-line {
+        font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+        font-size: .82rem;
+    }
+    .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: .72rem;
+    }
+    .tag-easy {
+        color: #22c55e;
+        background: rgba(34,197,94,0.1);
+        border: 1px solid rgba(34,197,94,0.6);
+    }
+    .tag-med {
+        color: #f97316;
+        background: rgba(249,115,22,0.1);
+        border: 1px solid rgba(249,115,22,0.6);
+    }
+    .tag-hard {
+        color: #fb7185;
+        background: rgba(248,113,113,0.1);
+        border: 1px solid rgba(248,113,113,0.6);
+    }
+    .tag-mc {
+        color: #38bdf8;
+        background: rgba(56,189,248,0.08);
+        border: 1px solid rgba(56,189,248,0.6);
+    }
+    .tag-sa {
+        color: #eab308;
+        background: rgba(234,179,8,0.08);
+        border: 1px solid rgba(234,179,8,0.6);
+    }
+    .pill-muted {
+        font-size: .72rem;
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.6);
+        color: var(--muted);
+    }
+    .leaderboard {
+        margin-top: 6px;
+        font-size: .78rem;
+        color: var(--muted);
+    }
+    .leader-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2px;
+    }
+    .leader-row span:first-child {
+        max-width: 70%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .badge-tiny {
+        font-size: .62rem;
+        padding: 1px 5px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.6);
+        text-transform: uppercase;
+        letter-spacing: .12em;
+    }
+    .muted {
+        color: var(--muted);
+    }
+    .pill-status {
+        font-size: .72rem;
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.5);
+    }
+    .pill-status.ready {
+        color: #22c55e;
+        border-color: rgba(34,197,94,0.75);
+    }
+    .pill-status.wait {
+        color: var(--warning);
+        border-color: rgba(250,204,21,0.75);
+    }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="app-header">
+        <div>
+            <div class="title">
+                MCR3U • Inverse Function Trainer
+                <span>Find \( f^{-1}(x) \) with timed practice.</span>
+            </div>
+            <div class="badge">
+                <span class="badge-dot"></span>
+                Local “AI-style” feedback • No internet or API needed
+            </div>
+        </div>
+        <div class="timer-box">
+            <div class="timer-label">Session time</div>
+            <div id="timer" class="timer">00:00</div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- LEFT: setup + question -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Session setup</div>
+                <div class="pill-status wait" id="statusPill">Waiting to start</div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Student name</label>
+                    <input id="studentName" placeholder="e.g. Alex Chan">
+                </div>
+                <div class="field">
+                    <label>Class</label>
+                    <input id="studentClass" placeholder="e.g. MCR3U‑05">
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Difficulty</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy: linear</option>
+                        <option value="medium">Medium: affine / rational</option>
+                        <option value="hard">Hard: mixed forms</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Mode</label>
+                    <div class="mode-toggle">
+                        <div class="chip active" data-mode="mc" id="modeMC">Multiple choice</div>
+                        <div class="chip" data-mode="sa" id="modeSA">Short answer</div>
+                    </div>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Number of questions</label>
+                    <select id="questionCount">
+                        <option value="5">5</option>
+                        <option value="8">8</option>
+                        <option value="10" selected>10</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Scoring</label>
+                    <div class="micro-hint">
+                        +1 correct, 0 incorrect. Time is recorded but not penalized.
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-panel" id="questionPanel" style="display:none;">
+                <div class="question-stem">
+                    <span id="questionLabel" class="pill-muted">Question 1</span>
+                </div>
+                <div class="question-stem">
+                    Given
+                    <span class="function-stem" id="functionStem">f(x) = 2x + 3</span>,
+                    find the inverse function \( f^{-1}(x) \).
+                </div>
+
+                <div id="mcContainer" class="options" style="margin-top:6px;"></div>
+
+                <div id="saContainer" class="answer-input" style="display:none;">
+                    <input id="saInput" placeholder='Enter as f^-1(x)=... , or just the expression'>
+                </div>
+
+                <div class="micro-hint" style="margin-top:4px;">
+                    Tip: Swap x and y, then solve for y.
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="ghost" id="newQuestionBtn" style="display:none;">Skip / New question</button>
+                <button class="secondary" id="startBtn">Start session</button>
+                <button class="primary" id="submitBtn" disabled>Submit answer</button>
+            </div>
+        </div>
+
+        <!-- RIGHT: score, AI feedback, solution, leaderboard -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Feedback & score</div>
+                <div class="card-sub">
+                    Built-in explainer for inverse functions
+                </div>
+            </div>
+
+            <div class="score-chip">
+                Score:
+                <strong id="scoreLabel">0 / 0</strong>
+                <span class="badge-tiny" id="accuracyLabel">–</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="score-detail" id="scoreDetail">
+                Start a session to see score, accuracy and pace.
+            </div>
+
+            <div class="ai-panel" id="aiPanel">
+                <div class="ai-header">
+                    <div class="ai-pill"></div>
+                    INVERSE COACH
+                </div>
+                <div class="ai-body" id="aiText">
+                    When you submit an answer, this coach will give you
+                    quick, heuristic feedback: what you did well, what to
+                    fix, and a next step. All logic runs locally in this
+                    page, so no data leaves your device.
+                </div>
+            </div>
+
+            <div class="solution-block" id="solutionBlock" style="display:none;">
+                <div class="micro-hint" id="correctnessLabel"></div>
+                <div class="solution-line" id="solutionLine1"></div>
+                <div class="solution-line" id="solutionLine2"></div>
+                <div class="solution-line" id="solutionLine3"></div>
+            </div>
+
+            <div class="leaderboard">
+                <div class="card-sub" style="margin-bottom:3px;">
+                    Local leaderboard (this browser)
+                </div>
+                <div id="leaderboardList">
+                    <span class="muted">
+                        Complete at least one session to appear here.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    // ---------- Utility ----------
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+    }
+    function randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+    function gcd(a,b){
+        a = Math.abs(a); b = Math.abs(b);
+        while(b !== 0){ const t = b; b = a % b; a = t;}
+        return a || 1;
+    }
+    function simplifyFraction(num, den){
+        if(den < 0){ num = -num; den = -den;}
+        const g = gcd(num, den);
+        num /= g; den /= g;
+        if(den === 1) return "" + num;
+        return num + "/" + den;
+    }
+    function niceLinear(a,b){
+        // a != 0
+        const invA = simplifyFraction(1, a);
+        let parts = [];
+        if(invA === "1") parts.push("x");
+        else if(invA === "-1") parts.push("-x");
+        else parts.push(invA + "x");
+        if(b > 0) parts.push("+" + b);
+        else if(b < 0) parts.push(b.toString());
+        return parts.join("");
+    }
+    function consistentFx(expr) {
+        // ensure there is "f(x)=" at the front
+        expr = expr.trim();
+        if(expr.toLowerCase().startsWith("f^-1(x")){
+            return expr.replace(/^f\^-1\(x\)\s*=?\s*/i,"");
+        }
+        if(expr.toLowerCase().startsWith("f^{-1}(x")){
+            return expr.replace(/^f\^{-1}\(x\)\s*=?\s*/i,"");
+        }
+        if(expr.toLowerCase().startsWith("f(x")){
+            return expr.replace(/^f\(x\)\s*=?\s*/i,"");
+        }
+        if(expr.toLowerCase().startsWith("y")){
+            return expr.replace(/^y\s*=?\s*/i,"");
+        }
+        // just an expression
+        return expr;
+    }
+    function normalizeAnswerText(txt){
+        return consistentFx(txt)
+            .replace(/\s+/g,"")
+            .replace(/\*+/g,"*")
+            .replace(/–/g,"-")
+            .toLowerCase();
+    }
+
+    // ---------- Question generation ----------
+    function generateQuestion(difficulty){
+        // We represent f(x) and f^-1(x) as simple strings plus metadata
+        let stem = "";
+        let inverse = "";
+        let type = "";
+        let structure;
+        if(difficulty === "easy") {
+            // f(x) = ax + b, a != 0
+            const a = randInt(-5,5) || 2;
+            const b = randInt(-9,9);
+            type = "linear";
+            stem = "f(x) = " + a + "x" + (b > 0 ? " + " + b : (b < 0 ? " - " + (-b) : ""));
+            const invA = simplifyFraction(1,a);
+            const invB = simplifyFraction(-b,a);
+            const parts = [];
+            if(invA === "1") parts.push("x");
+            else if(invA === "-1") parts.push("-x");
+            else parts.push(invA + "x");
+            if(invB[0] === "-") parts.push(invB);
+            else if(invB !== "0") parts.push("+" + invB);
+            inverse = parts.join("");
+            structure = {kind:"ax_plus_b", a, b};
+        } else if(difficulty === "medium") {
+            // Either affine + scaling inside, or simple rational
+            if(Math.random() < 0.5){
+                // f(x) = k(x - h) + c  => invert
+                const k = randInt(-5,5) || 2;
+                const h = randInt(-5,5);
+                const c = randInt(-5,5);
+                type = "affine_shift";
+                stem = "f(x) = " + k + "(x " + (h>=0 ? "- " + h : "+ " + (-h)) + ") " +
+                       (c>0 ? "+ " + c : c<0 ? "- " + (-c) : "");
+                // y = k(x-h)+c, y-c = k(x-h), (y-c)/k + h = x
+                // so f^{-1}(x) = (x-c)/k + h
+                const inv1 = simplifyFraction(1,k);
+                const inv2 = simplifyFraction(-c,k);
+                let core = "";
+                if(inv1 === "1") core = "x";
+                else if(inv1 === "-1") core = "-x";
+                else core = inv1 + "x";
+                if(inv2[0]==="-") core += inv2;
+                else if(inv2 !== "0") core += "+"+inv2;
+                const finalH = h;
+                if(finalH > 0) core += "+"+finalH;
+                else if(finalH < 0) core += finalH;
+                inverse = core;
+                structure = {kind:"k_x_minus_h_plus_c", k, h, c};
+            } else {
+                // rational: f(x) = (ax + b)/(cx + d)
+                // choose nice with invertible
+                let a,b,c,d,det;
+                do {
+                    a = randInt(-3,3) || 1;
+                    b = randInt(-5,5);
+                    c = randInt(-3,3);
+                    d = randInt(-5,5) || 1;
+                    det = a*d - b*c;
+                } while(det === 0);
+                type = "rational";
+                stem = "f(x) = ("+a+"x "+(b>=0?"+ "+b:"- "+(-b))+") / ("+c+"x "+(d>=0?"+ "+d:"- "+(-d))+")";
+                // invert linear fractional: inverse of matrix [[a,b],[c,d]]
+                // is (1/det)*[[d,-b],[-c,a]]
+                // So f^{-1}(x) = (d x - b)/( -c x + a)
+                const numA = d;
+                const numB = -b;
+                const denA = -c;
+                const denB = a;
+                const numStr = numA + "x " + (numB>=0?"+ "+numB:"- "+(-numB));
+                const denStr = denA + "x " + (denB>=0?"+ "+denB:"- "+(-denB));
+                inverse = "(" + numStr + ")/(" + denStr + ")";
+                structure = {kind:"frac_linear", a,b,c,d};
+            }
+        } else {
+            // hard: mixture of inside-outside transformations
+            // form: f(x) = (ax + b)^2 (monotonic by restricting to domain) – but we won't force domain;
+            // we focus on algebraic inverse
+            const a = randInt(1,4);
+            const b = randInt(-4,4);
+            const c = randInt(-5,5);
+            type = "quadratic_like";
+            stem = "f(x) = ("+a+"x "+(b>=0?"+ "+b:"- "+(-b))+")^2 "+(c>=0?"+ "+c:"- "+(-c));
+            // y-c = (ax+b)^2, sqrt both ways; just give principal inverse
+            // x = ( -b + sqrt(y-c) ) / a
+            const num1 = -b;
+            const numStr = (num1===0?"sqrt(x"+(c>=0?"-"+c:"+ "+(-c))+")": (num1 + " + sqrt(x"+(c>=0?"-"+c:"+ "+(-c))+")"));
+            if(a === 1){
+                inverse = "(" + numStr + ")";
+            } else {
+                inverse = "(" + numStr + ")/" + a;
+            }
+            structure = {kind:"square_shift", a,b,c};
+        }
+        return {stem, inverse, type, structure};
+    }
+
+    function generateMCOptions(correct, difficulty){
+        const options = [correct];
+        const baseNorm = normalizeAnswerText(correct);
+        // generate 3 distractors
+        while(options.length < 4){
+            let variant = "";
+            if(difficulty === "easy") {
+                if(Math.random() < 0.5){
+                    // sign error on b
+                    variant = correct.replace(/(\+|-)\s*([0-9]+)$/, function(_,sign, num){
+                        return (sign === "+" ? " - " : " + ") + num;
+                    });
+                } else {
+                    // forget reciprocal
+                    variant = correct.replace(/([0-9]+)\/([0-9]+)x/g, "x");
+                }
+            } else {
+                if(Math.random() < 0.5){
+                    variant = correct.replace(/x/g,"(x-1)");
+                } else {
+                    variant = correct.replace(/\+/g,"-").replace(/--/g,"+");
+                }
+            }
+            const norm = normalizeAnswerText(variant);
+            if(norm !== baseNorm && !options.some(o=>normalizeAnswerText(o)===norm)){
+                options.push(variant);
+            }
+        }
+        return shuffle(options);
+    }
+
+    // ---------- AI feedback (heuristic, no API) ----------
+    function buildAIFeedback(question, studentExpr, isCorrect, attemptCount){
+        if(!studentExpr){
+            return "I didn’t see an answer yet.\n\nTry writing the inverse as an equation, for example\nf^-1(x) = (x - 3)/2 or just (x - 3)/2.";
+        }
+        const qType = question.type;
+        const s = normalizeAnswerText(studentExpr);
+        const target = normalizeAnswerText(question.inverse);
+        const hints = [];
+
+        if(isCorrect){
+            hints.push("Nice work – your algebra for the inverse is consistent with the original function.");
+            if(qType === "linear"){
+                hints.push("You correctly swapped x and y, isolated y, and simplified the slope and intercept.");
+            } else if(qType === "rational"){
+                hints.push("You handled the linear-fractional (Mobius) inverse correctly by inverting the 2×2 matrix.");
+            } else if(qType === "quadratic_like"){
+                hints.push("You chose the principal square-root branch when undoing the square, which matches the restricted domain idea.");
+            } else {
+                hints.push("Your steps respect the idea “do the opposite in reverse order”.");
+            }
+            hints.push("Next step: Check a point. Pick a value of x, apply f, then your f^-1, and verify you get back to the original x.");
+        } else {
+            hints.push("The current expression doesn’t give the exact inverse I expect.");
+            // rough pattern checks
+            if(qType === "linear" && question.structure){
+                const {a,b} = question.structure;
+                const invSlope = simplifyFraction(1,a);
+                const normSlope = invSlope.replace("-","");
+                if(!s.includes(normSlope+"x") && !s.includes(normSlope+"*x")){
+                    hints.push("Remember that the coefficient of x in f^-1(x) should be the reciprocal of the original coefficient (1/"+a+").");
+                }
+                if(Math.abs(b) > 0 && !s.includes(""+b)){
+                    hints.push("Watch the constant term: after swapping x and y, you’ll need to move the original + "+b+" to the other side before dividing.");
+                }
+            }
+            if(qType === "rational"){
+                if(s.includes("(x+") || s.includes("(x-")){
+                    hints.push("It looks like you grouped x in the denominator. Make sure you’re solving the equation ax + b = (cx + d)·x for x cleanly.");
+                } else {
+                    hints.push("For rational functions of the form (ax + b)/(cx + d), think of a 2×2 matrix [[a,b],[c,d]] and invert it.");
+                }
+            }
+            if(qType === "quadratic_like"){
+                if(!s.includes("sqrt")){
+                    hints.push("Because the original has a square, the inverse will need a square root to undo that operation.");
+                } else {
+                    hints.push("Check carefully where you included the +c and inside/outside the square root.");
+                }
+            }
+            if(attemptCount === 1){
+                hints.push("Try this sequence: 1) Write y = f(x). 2) Swap x and y. 3) Solve for y step by step. 4) Rename y as f^-1(x).");
+            } else {
+                hints.push("Compare f(f^-1(x)) with x using a quick substitution. Wherever it’s not simplifying nicely, that’s the step to fix.");
+            }
+        }
+        return hints.join("\n\n");
+    }
+
+    // ---------- Local leaderboard (per browser) ----------
+    const LEADER_KEY = "mcr3u_inverse_leaderboard_v1";
+    function loadLeaderboard(){
+        try {
+            const raw = localStorage.getItem(LEADER_KEY);
+            if(!raw) return [];
+            const data = JSON.parse(raw);
+            if(!Array.isArray(data)) return [];
+            return data.slice(0,20);
+        } catch(e){
+            return [];
+        }
+    }
+    function saveLeaderboard(list){
+        try {
+            localStorage.setItem(LEADER_KEY, JSON.stringify(list.slice(0,20)));
+        } catch(e){}
+    }
+    function addResultToLeaderboard(entry){
+        const list = loadLeaderboard();
+        list.push(entry);
+        list.sort((a,b)=>{
+            if(b.score !== a.score) return b.score - a.score;
+            if(a.time !== b.time) return a.time - b.time;
+            return (a.name || "").localeCompare(b.name || "");
+        });
+        saveLeaderboard(list);
+        renderLeaderboard();
+    }
+    function renderLeaderboard(){
+        const list = loadLeaderboard();
+        const container = document.getElementById("leaderboardList");
+        if(!list.length){
+            container.innerHTML = '<span class="muted">Complete at least one session to appear here.</span>';
+            return;
+        }
+        container.innerHTML = "";
+        list.slice(0,5).forEach((e, idx)=>{
+            const row = document.createElement("div");
+            row.className = "leader-row";
+            const label = document.createElement("span");
+            label.textContent = (idx+1)+". "+(e.name || "Anonymous")+" ("+(e.className || "class?")+")";
+            const score = document.createElement("span");
+            score.textContent = e.score+"/"+e.total+" • "+formatTime(e.time);
+            row.appendChild(label);
+            row.appendChild(score);
+            container.appendChild(row);
+        });
+    }
+
+    // ---------- Session state ----------
+    let session = {
+        running:false,
+        startTime:null,
+        elapsed:0,
+        timerId:null,
+        totalQuestions:10,
+        currentIndex:0,
+        score:0,
+        currentQuestion:null,
+        mode:"mc",
+        difficulty:"easy",
+        attemptsForCurrent:0
+    };
+
+    const timerEl = document.getElementById("timer");
+    const startBtn = document.getElementById("startBtn");
+    const submitBtn = document.getElementById("submitBtn");
+    const newQuestionBtn = document.getElementById("newQuestionBtn");
+    const questionPanel = document.getElementById("questionPanel");
+    const functionStemSpan = document.getElementById("functionStem");
+    const mcContainer = document.getElementById("mcContainer");
+    const saContainer = document.getElementById("saContainer");
+    const saInput = document.getElementById("saInput");
+    const questionLabel = document.getElementById("questionLabel");
+    const scoreLabel = document.getElementById("scoreLabel");
+    const accuracyLabel = document.getElementById("accuracyLabel");
+    const progressFill = document.getElementById("progressFill");
+    const scoreDetail = document.getElementById("scoreDetail");
+    const aiText = document.getElementById("aiText");
+    const solutionBlock = document.getElementById("solutionBlock");
+    const solutionLine1 = document.getElementById("solutionLine1");
+    const solutionLine2 = document.getElementById("solutionLine2");
+    const solutionLine3 = document.getElementById("solutionLine3");
+    const correctnessLabel = document.getElementById("correctnessLabel");
+    const statusPill = document.getElementById("statusPill");
+
+    // mode chip handlers
+    let mode = "mc";
+    document.getElementById("modeMC").addEventListener("click", ()=>setMode("mc"));
+    document.getElementById("modeSA").addEventListener("click", ()=>setMode("sa"));
+    function setMode(newMode){
+        if(session.running && session.currentIndex>0){
+            // lock mode mid-session
+            return;
+        }
+        mode = newMode;
+        document.getElementById("modeMC").classList.toggle("active", newMode==="mc");
+        document.getElementById("modeSA").classList.toggle("active", newMode==="sa");
+    }
+
+    function updateTimer(){
+        if(!session.running) return;
+        const now = Date.now();
+        session.elapsed = Math.floor((now - session.startTime)/1000);
+        timerEl.textContent = formatTime(session.elapsed);
+    }
+    function startTimer(){
+        session.startTime = Date.now();
+        session.elapsed = 0;
+        timerEl.textContent = "00:00";
+        if(session.timerId) clearInterval(session.timerId);
+        session.timerId = setInterval(updateTimer, 1000);
+    }
+    function stopTimer(){
+        if(session.timerId){
+            clearInterval(session.timerId);
+            session.timerId = null;
+        }
+        updateTimer();
+    }
+
+    function startSession(){
+        const name = document.getElementById("studentName").value.trim();
+        const cls = document.getElementById("studentClass").value.trim();
+        const diff = document.getElementById("difficulty").value;
+        const count = parseInt(document.getElementById("questionCount").value,10) || 5;
+
+        if(!name || !cls){
+            alert("Please enter your name and class before starting.");
+            return;
+        }
+
+        session.running = true;
+        session.totalQuestions = count;
+        session.currentIndex = 0;
+        session.score = 0;
+        session.difficulty = diff;
+        session.mode = mode;
+        session.attemptsForCurrent = 0;
+        startTimer();
+        startBtn.textContent = "End session";
+        startBtn.classList.remove("secondary");
+        startBtn.classList.add("secondary");
+        submitBtn.disabled = false;
+        newQuestionBtn.style.display = "inline-flex";
+        questionPanel.style.display = "block";
+        solutionBlock.style.display = "none";
+        statusPill.textContent = "Session running";
+        statusPill.classList.remove("wait");
+        statusPill.classList.add("ready");
+        document.getElementById("modeMC").classList.add("disabled");
+        document.getElementById("modeSA").classList.add("disabled");
+
+        aiText.textContent = "Session started. I’ll analyse each response and highlight specific algebra moves that look solid or risky.";
+
+        nextQuestion();
+        renderScore();
+    }
+    function endSession(manual){
+        if(!session.running) return;
+        stopTimer();
+        session.running = false;
+        submitBtn.disabled = true;
+        newQuestionBtn.style.display = "none";
+        document.getElementById("modeMC").classList.remove("disabled");
+        document.getElementById("modeSA").classList.remove("disabled");
+        startBtn.textContent = "Start session";
+        statusPill.textContent = manual ? "Ended manually" : "Session complete";
+        statusPill.classList.remove("ready");
+        statusPill.classList.add("wait");
+
+        const name = document.getElementById("studentName").value.trim();
+        const cls = document.getElementById("studentClass").value.trim();
+        addResultToLeaderboard({
+            name,
+            className: cls,
+            score: session.score,
+            total: session.totalQuestions,
+            time: session.elapsed || 0
+        });
+
+        const acc = session.totalQuestions ? Math.round(100*session.score/session.totalQuestions) : 0;
+        const pace = session.elapsed ? (session.totalQuestions/session.elapsed).toFixed(2) : "–";
+        aiText.textContent =
+            "Session summary\n\n" +
+            "• Accuracy: " + acc + "%\n" +
+            "• Score: " + session.score + " out of " + session.totalQuestions + "\n" +
+            "• Pace: " + pace + " questions per second\n\n" +
+            "Suggestion: Pick 1–2 questions where you were unsure, rewrite the inverse carefully, and verify by composing f(f^-1(x)) and f^-1(f(x)).";
+
+        solutionBlock.style.display = "none";
+    }
+
+    startBtn.addEventListener("click", ()=>{
+        if(!session.running){
+            startSession();
+        } else {
+            if(confirm("End this session? Your current score will be recorded.")){
+                endSession(true);
+            }
+        }
+    });
+
+    function nextQuestion(){
+        if(session.currentIndex >= session.totalQuestions){
+            endSession(false);
+            return;
+        }
+        session.currentQuestion = generateQuestion(session.difficulty);
+        session.attemptsForCurrent = 0;
+        const q = session.currentQuestion;
+        functionStemSpan.textContent = q.stem;
+        questionLabel.textContent = "Question " + (session.currentIndex+1) +
+            " of " + session.totalQuestions;
+        mcContainer.innerHTML = "";
+        saInput.value = "";
+        solutionBlock.style.display = "none";
+
+        if(session.mode === "mc"){
+            mcContainer.style.display = "grid";
+            saContainer.style.display = "none";
+            const options = generateMCOptions(q.inverse, session.difficulty);
+            options.forEach(opt=>{
+                const btn = document.createElement("button");
+                btn.className = "option-btn";
+                btn.textContent = "f⁻¹(x) = " + opt;
+                btn.addEventListener("click", ()=>{
+                    Array.from(mcContainer.children).forEach(c=>c.classList.remove("selected"));
+                    btn.classList.add("selected");
+                });
+                mcContainer.appendChild(btn);
+            });
+        } else {
+            mcContainer.style.display = "none";
+            saContainer.style.display = "flex";
+            saInput.focus();
+        }
+    }
+
+    newQuestionBtn.addEventListener("click", ()=>{
+        if(!session.running) return;
+        session.currentIndex++;
+        renderScore(); // progress updates even if skipped
+        nextQuestion();
+        aiText.textContent =
+            "You skipped that question.\n\nAs you move on, try to notice patterns: for linear f(x), the inverse always has reciprocal slope and a shifted intercept.";
+    });
+
+    function renderScore(){
+        scoreLabel.textContent = session.score + " / " + session.totalQuestions;
+        if(session.currentIndex === 0){
+            accuracyLabel.textContent = "–";
+        } else {
+            const acc = Math.round(100*session.score/session.currentIndex);
+            accuracyLabel.textContent = acc + "% accuracy";
+        }
+        const progress = session.totalQuestions ? (100*session.currentIndex/session.totalQuestions) : 0;
+        progressFill.style.width = progress + "%";
+
+        const done = session.currentIndex;
+        const remaining = session.totalQuestions - done;
+        scoreDetail.textContent =
+            "Attempted " + done + " of " + session.totalQuestions +
+            " • Remaining: " + remaining +
+            (session.elapsed ? " • Time so far: " + formatTime(session.elapsed) : "");
+    }
+
+    function buildSolutionText(question){
+        const s = question.structure;
+        if(!s) {
+            return {
+                l1: "General method: Start from y = f(x), swap x and y, then solve for y.",
+                l2: "Finally, rename y as f^-1(x).",
+                l3: ""
+            };
+        }
+        if(s.kind === "ax_plus_b"){
+            const {a,b} = s;
+            const inv = question.inverse;
+            return {
+                l1: "1. Start from y = "+a+"x "+(b>=0?"+ "+b:"- "+(-b))+". Swap x and y: x = "+a+"y "+(b>=0?"+ "+b:"- "+(-b))+".",
+                l2: "2. Solve for y: x - "+b+" = "+a+"y, so y = (x - "+b+")/"+a+".",
+                l3: "3. Therefore f^-1(x) = "+inv+"."
+            };
+        }
+        if(s.kind === "k_x_minus_h_plus_c"){
+            const {k,h,c} = s;
+            const inv = question.inverse;
+            return {
+                l1: "1. Let y = "+k+"(x "+(h>=0?"- "+h:"+ "+(-h))+") "+(c>=0?"+ "+c:"- "+(-c))+". Swap x and y.",
+                l2: "2. Isolate x-step-by-step: x - "+c+" = "+k+"(y "+(h>=0?"- "+h:"+ "+(-h))+"), then (x - "+c+")/"+k+" = y "+(h>=0?"- "+h:"+ "+(-h))+".",
+                l3: "3. So y = (x - "+c+")/"+k+" + "+h+", and f^-1(x) = "+inv+"."
+            };
+        }
+        if(s.kind === "frac_linear"){
+            const {a,b,c,d} = s;
+            const inv = question.inverse;
+            return {
+                l1: "1. Write y = (ax + b)/(cx + d). Cross-multiply: y(cx + d) = ax + b.",
+                l2: "2. Rearrange for x: ycx + yd = ax + b ⇒ (yc - a)x = b - yd ⇒ x = (b - yd)/(yc - a).",
+                l3: "3. Swap x↔y in this final equation to get f^-1(x) = "+inv+"."
+            };
+        }
+        if(s.kind === "square_shift"){
+            const {a,b,c} = s;
+            const inv = question.inverse;
+            return {
+                l1: "1. Start with y = ("+a+"x "+(b>=0?"+ "+b:"- "+(-b))+")^2 "+(c>=0?"+ "+c:"- "+(-c))+". Move "+c+" to the other side.",
+                l2: "2. y - "+c+" = ("+a+"x "+(b>=0?"+ "+b:"- "+(-b))+")^2. Take square roots (using a restricted domain): sqrt(y - "+c+") = "+a+"x "+(b>=0?"+ "+b:"- "+(-b))+".",
+                l3: "3. Solve for x and rename y as x to get f^-1(x) = "+inv+"."
+            };
+        }
+        return {
+            l1: "General method: Start from y = f(x), swap x and y, then solve for y.",
+            l2: "Finally, rename y as f^-1(x).",
+            l3: ""
+        };
+    }
+
+    submitBtn.addEventListener("click", ()=>{
+        if(!session.running || !session.currentQuestion) return;
+
+        let studentAns = "";
+        if(session.mode === "mc"){
+            const selected = Array.from(mcContainer.children)
+                .find(btn => btn.classList.contains("selected"));
+            if(!selected){
+                alert("Please choose an option first.");
+                return;
+            }
+            studentAns = selected.textContent.replace(/^f⁻¹\(x\)\s*=\s*/,"");
+        } else {
+            studentAns = saInput.value.trim();
+            if(!studentAns){
+                alert("Please enter an answer.");
+                return;
+            }
+        }
+
+        session.attemptsForCurrent++;
+        const correctNorm = normalizeAnswerText(session.currentQuestion.inverse);
+        const studentNorm = normalizeAnswerText(studentAns);
+        const isCorrect = (correctNorm === studentNorm);
+
+        if(isCorrect){
+            session.score++;
+        }
+        session.currentIndex++;
+        renderScore();
+
+        // AI-style feedback
+        aiText.textContent = buildAIFeedback(
+            session.currentQuestion,
+            studentAns,
+            isCorrect,
+            session.attemptsForCurrent
+        );
+
+        // Show worked solution
+        const sol = buildSolutionText(session.currentQuestion);
+        solutionBlock.style.display = "block";
+        correctnessLabel.textContent = isCorrect ?
+            "Marked: correct. Here is one clean way to show the algebra." :
+            "Marked: not quite. Compare your work to this sample inverse derivation.";
+        correctnessLabel.style.color = isCorrect ? "var(--correct)" : "var(--incorrect)";
+        solutionLine1.textContent = sol.l1;
+        solutionLine2.textContent = sol.l2;
+        solutionLine3.textContent = sol.l3;
+
+        // Next question
+        setTimeout(()=>{
+            if(session.running){
+                nextQuestion();
+            }
+        }, 600);
+    });
+
+    renderLeaderboard();
+})();
+</script>
+</body>
+<a href="index.html" style="display: inline-block; padding: 10px 20px; margin: 15px; background-color: #fcd34d; color: #1e293b; text-decoration: none; font-weight: bold; font-family: sans-serif; border: 3px solid #1e293b; box-shadow: 4px 4px 0px #1e293b; border-radius: 8px; cursor: pointer;">
+    🏠 Back to Home
+</a>
+</html>
