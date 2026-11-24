@@ -47,18 +47,24 @@
           <button class="btn chip px-3 py-1" data-mode="solve">Solve</button>
           <button class="btn chip px-3 py-1" data-mode="transform">Transform</button>
           <button class="btn chip px-3 py-1" data-mode="linear">Linear Systems</button>
+          <button class="btn chip px-3 py-1" data-mode="analytic">Analytic Geometry</button>
           <button class="btn chip px-3 py-1" data-mode="trig">Trigonometry</button>
           <button class="btn chip px-3 py-1" data-mode="mixed">Mixed</button>
         </div>
         <div class="font-black mb-2">2. Choose skills</div>
         <div id="skillChips" class="flex flex-wrap gap-2"></div>
+        <details id="currBox" class="mt-3 pt-3 border-t-2 border-slate-200 text-xs text-slate-700">
+          <summary class="font-black text-blue-700 cursor-pointer select-none">📚 Ontario MPM2D Curriculum Expectations (click to view)</summary>
+          <div id="currContent" class="mt-2 space-y-2 leading-relaxed"></div>
+        </details>
       </section>
 
       <section id="card" class="comic bg-white p-5">
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-center mb-1">
           <span id="qSkill" class="text-xs font-black bg-blue-100 text-blue-800 px-3 py-1 border-2 border-slate-800 rounded-full"></span>
           <span id="qLevel" class="text-xs font-bold text-slate-500"></span>
         </div>
+        <div id="qExp" class="text-xs text-slate-500 italic mb-2"></div>
         <div id="qPrompt" class="font-bold text-slate-600"></div>
         <div id="qExpr" class="math text-3xl md:text-4xl font-bold my-4 text-center"></div>
 
@@ -745,6 +751,251 @@ const SKILLS = {
               `height = ${len} · sin(${ang}°) ≈ ${h.toFixed(1)} m.`],
       steps: [`sin(${ang}°) = height / ${len}`, `height = ${len} · sin(${ang}°) ≈ ${h.toFixed(1)} m`] };
   }},
+  // ---------- COMPLETING THE SQUARE & SIMILAR TRIANGLES ----------
+  t_complete: { mode: 'transform', name: 'Completing the Square', gen() {
+    const a = pick([1, 1, -1, 2, -2, 3]), h = rndNZ(-5, 5), k = rndNZ(-9, 9);
+    const co = mulP([a], mulP([-h, 1], [-h, 1])); co[0] += k;
+    const b = co[1], c = co[0], halfB = b / (2 * a), sq = halfB * halfB;
+    const aStr = a === 1 ? '' : a === -1 ? '−' : String(a);
+    const vf = `y = ${aStr}${paren(lin(1, -h))}^2 ${k < 0 ? '−' : '+'} ${Math.abs(k)}`;
+    return { expr: `y = ${poly(co)}`, co, vertexForm: true, h, k, a,
+      prompt: 'Complete the square to rewrite in vertex form y = a(x − h)² + k:',
+      hints: [a === 1 ? `Take half the x-coefficient (${b}/2 = ${halfB}) and square it (${sq}). Add and subtract ${sq}.`
+                      : `First factor ${a} out of the x² and x terms: y = ${a}(x² ${b / a < 0 ? '−' : '+'} ${Math.abs(b / a)}x) ${c < 0 ? '−' : '+'} ${Math.abs(c)}.`,
+              `Inside the bracket, half of ${b / a} is ${halfB}, and (${halfB})² = ${sq}. Add and subtract ${sq} inside.`,
+              `Bring −${sq} out of the bracket (multiply by ${a}): ${a}(−${sq}) + (${c}) = ${k}.`],
+      steps: [a === 1 ? `y = (x² ${b < 0 ? '−' : '+'} ${Math.abs(b)}x + ${sq} − ${sq}) ${c < 0 ? '−' : '+'} ${Math.abs(c)}`
+                      : `y = ${a}(x² ${b / a < 0 ? '−' : '+'} ${Math.abs(b / a)}x + ${sq} − ${sq}) ${c < 0 ? '−' : '+'} ${Math.abs(c)}`,
+              vf] };
+  }},
+  tr_similar: { mode: 'trig', name: 'Similar Triangles', gen() {
+    const a = rnd(3, 9), b = rnd(4, 11), sf = pick([1.5, 2, 2.5, 3, 3.5]);
+    const A2 = a * sf, B2 = b * sf;
+    const svg = `<svg viewBox="0 0 330 165" class="w-full max-w-[330px] bg-slate-50 rounded-lg border-2 border-slate-800">
+      <polygon points="20,135 110,135 55,55" fill="#dcfce7" stroke="#1e293b" stroke-width="2.5"/>
+      <polygon points="150,140 305,140 210,22" fill="#bbf7d0" stroke="#1e293b" stroke-width="2.5"/>
+      <text x="65" y="152" font-size="13" font-weight="bold" text-anchor="middle">${a}</text>
+      <text x="28" y="92" font-size="13" font-weight="bold">${b}</text>
+      <text x="228" y="156" font-size="13" font-weight="bold" text-anchor="middle">${A2}</text>
+      <text x="166" y="82" font-size="15" font-weight="bold" fill="#dc2626">x</text>
+      <text x="130" y="95" font-size="16" font-weight="bold" fill="#15803d">~</text>
+    </svg>`;
+    return { expr: 'ΔABC ~ ΔDEF. Find side x:', svg, numAns: B2, tol: 0.05,
+      prompt: 'Similar triangles have proportional corresponding sides:',
+      hints: ['Set up a proportion matching corresponding sides: x / corresponding side = known side / corresponding side.',
+              `x / ${b} = ${A2} / ${a}  (scale factor k = ${A2} / ${a} = ${sf}).`,
+              `Multiply both sides by ${b}: x = ${b} × ${sf} = ${B2}.`],
+      steps: [`Scale factor k = ${A2} / ${a} = ${sf}`, `x / ${b} = ${sf}  →  x = ${B2}`] };
+  }},
+  // ---------- ANALYTIC GEOMETRY ----------
+  ag_midpoint: { mode: 'analytic', name: 'Midpoint of a Segment', gen() {
+    const x1 = rnd(-8, 8), y1 = rnd(-8, 8), x2 = rnd(-8, 8), y2 = rnd(-8, 8);
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    return { expr: `A(${x1}, ${y1})   and   B(${x2}, ${y2})`, point: [mx, my],
+      prompt: 'Find the midpoint M(x, y) of line segment AB (fractions or decimals ok):',
+      hints: ['Use the midpoint formula: <b>M = ((x₁ + x₂)/2, (y₁ + y₂)/2)</b> — average the x\'s and average the y\'s.',
+              `x_M = (${x1} + (${x2})) / 2 = ${x1 + x2} / 2 = ${mx}.`,
+              `y_M = (${y1} + (${y2})) / 2 = ${y1 + y2} / 2 = ${my}. Write (${mx}, ${my}).`],
+      steps: [`M = ((${x1} + (${x2}))/2, (${y1} + (${y2}))/2)`, `M = (${mx}, ${my})`] };
+  }},
+  ag_distance: { mode: 'analytic', name: 'Length / Distance Formula', gen() {
+    const x1 = rnd(-6, 6), y1 = rnd(-6, 6);
+    let dx, dy;
+    do { dx = rnd(-7, 7); dy = rnd(-7, 7); } while (dx === 0 && dy === 0);
+    const x2 = x1 + dx, y2 = y1 + dy, d2 = dx * dx + dy * dy, d = Math.sqrt(d2);
+    return { expr: `A(${x1}, ${y1})   and   B(${x2}, ${y2})`, numAns: d, tol: 0.1,
+      prompt: 'Find the length of segment AB (exact √ like sqrt(13) or round to 1 decimal place):',
+      hints: ['Use the distance formula: <b>d = √((x₂ − x₁)² + (y₂ − y₁)²)</b>.',
+              `x₂ − x₁ = ${x2} − (${x1}) = ${dx};   y₂ − y₁ = ${y2} − (${y1}) = ${dy}.`,
+              `d = √((${dx})² + (${dy})²) = √(${dx * dx} + ${dy * dy}) = √${d2} ≈ ${d.toFixed(1)}.`],
+      steps: [`d = √((${dx})² + (${dy})²) = √${d2}`, Number.isInteger(d) ? `d = ${d}` : `d = √${d2} ≈ ${d.toFixed(1)}`] };
+  }},
+  ag_circle: { mode: 'analytic', name: 'Circle x² + y² = r²', gen() {
+    const sub = pick(['eq', 'radius', 'inout']);
+    if (sub === 'eq') {
+      const px = rndNZ(-6, 6), py = rndNZ(-6, 6), r2 = px * px + py * py;
+      return { expr: `Passes through P(${px}, ${py}), centred at (0, 0)`, numAns: r2, tol: 1e-6,
+        prompt: 'For the circle x² + y² = r², find the value of r²:',
+        hints: ['A circle centred at the origin has equation <b>x² + y² = r²</b>.',
+                `Substitute P(${px}, ${py}): r² = (${px})² + (${py})².`,
+                `r² = ${px * px} + ${py * py} = ${r2}.`],
+        steps: [`r² = (${px})² + (${py})² = ${px * px} + ${py * py} = ${r2}`, `(Equation: x² + y² = ${r2})`] };
+    }
+    if (sub === 'radius') {
+      const r = rnd(2, 11), k = pick([1, 1, 2, 4]);
+      const eq = k === 1 ? `x^2 + y^2 = ${r * r}` : `${k}x^2 + ${k}y^2 = ${k * r * r}`;
+      return { expr: eq, numAns: r, tol: 0.05,
+        prompt: 'Find the radius r of this circle:',
+        hints: [k > 1 ? `Divide every term by ${k} first so it matches x² + y² = r²: x² + y² = ${r * r}.` : 'Compare with x² + y² = r².',
+                `Here r² = ${r * r}.`,
+                `Take the positive square root: r = √${r * r} = ${r}.`],
+        steps: [...(k > 1 ? [`Divide by ${k}: x² + y² = ${r * r}`] : []), `r = √${r * r} = ${r}`] };
+    }
+    const r = rnd(4, 9), r2 = r * r;
+    let px, py, rel;
+    const modePick = pick(['inside', 'on', 'outside']);
+    if (modePick === 'on') {
+      const triples = [[3,4,5],[4,3,5],[6,8,10],[8,6,10],[5,12,13]];
+      const [a, b, c] = pick(triples); px = a * pick([1,-1]); py = b * pick([1,-1]);
+      return { expr: `Circle: x^2 + y^2 = ${c * c}\nPoint: P(${px}, ${py})`, choice: 'on',
+        choices: [{ val: 'inside', label: 'Inside the circle' }, { val: 'on', label: 'On the circle' }, { val: 'outside', label: 'Outside the circle' }],
+        prompt: 'Determine whether point P lies inside, on, or outside the circle:',
+        hints: [`Compute x² + y² for P(${px}, ${py}) and compare with r² = ${c * c}.`,
+                `(${px})² + (${py})² = ${px * px} + ${py * py} = ${px * px + py * py}.`,
+                'If x²+y² < r² → inside; if x²+y² = r² → on; if x²+y² > r² → outside.'],
+        steps: [`x² + y² = (${px})² + (${py})² = ${px * px + py * py} = r²`, 'Point P lies ON the circle'] };
+    }
+    do { px = rnd(-9, 9); py = rnd(-9, 9); } while (px * px + py * py === r2 || (modePick === 'inside' ? px * px + py * py > r2 : px * px + py * py < r2));
+    const d2 = px * px + py * py; rel = d2 < r2 ? 'inside' : 'outside';
+    return { expr: `Circle: x^2 + y^2 = ${r2}\nPoint: P(${px}, ${py})`, choice: rel,
+      choices: [{ val: 'inside', label: 'Inside the circle' }, { val: 'on', label: 'On the circle' }, { val: 'outside', label: 'Outside the circle' }],
+      prompt: 'Determine whether point P lies inside, on, or outside the circle:',
+      hints: [`Compute x² + y² for P(${px}, ${py}) and compare with r² = ${r2}.`,
+              `(${px})² + (${py})² = ${px * px} + ${py * py} = ${d2}. Compare ${d2} with ${r2}.`,
+              'If x²+y² < r² → inside; if x²+y² = r² → on; if x²+y² > r² → outside.'],
+      steps: [`x² + y² = (${px})² + (${py})² = ${d2} ${d2 < r2 ? '<' : '>'} ${r2}`, `Point P lies ${rel.toUpperCase()} the circle`] };
+  }},
+  ag_slopes: { mode: 'analytic', name: 'Parallel & Perpendicular Slopes', gen() {
+    const perp = Math.random() < 0.6;
+    const n = rndNZ(-5, 5), d = pick([1, 2, 3, 4]);
+    const g = gcd(n, d), mn = n / g, md = d / g;
+    const mStr = md === 1 ? `${mn}` : `${mn}/${md}`;
+    const b = rndNZ(-7, 7);
+    const eq = `y = ${mn === 1 && md === 1 ? '' : mn === -1 && md === 1 ? '−' : mStr}x ${b < 0 ? '−' : '+'} ${Math.abs(b)}`;
+    const ans = perp ? -md / mn : mn / md;
+    const ansFrac = perp
+      ? (Math.abs(mn) === 1 ? `${-md * Math.sign(mn)}` : `${-md * Math.sign(mn)}/${Math.abs(mn)}`)
+      : mStr;
+    return { expr: eq, numAns: ans, tol: 1e-4,
+      prompt: `State the slope of any line ${perp ? 'PERPENDICULAR (⊥)' : 'PARALLEL (∥)'} to this line (fraction like -3/2 ok):`,
+      hints: [`First read the slope m of the given line y = mx + b: here m = ${mStr}.`,
+              perp ? 'Perpendicular lines have <b>negative reciprocal</b> slopes: m_⊥ = −1 / m (flip the fraction and change the sign).'
+                   : 'Parallel lines have the <b>exact same slope</b>: m_∥ = m.',
+              `Answer: ${ansFrac}.`],
+      steps: [`Given slope m = ${mStr}`, perp ? `Negative reciprocal m_⊥ = ${ansFrac}` : `Parallel slope m_∥ = ${ansFrac}`] };
+  }},
+  ag_lines: { mode: 'analytic', name: 'Median, Right Bisector & Altitude', gen() {
+    const kind = pick(['bisector', 'median', 'altitude']);
+    if (kind === 'bisector') {
+      // Choose A, B with midpoint M integers and non-zero slope so perpendicular bisector is clean
+      const mx = rnd(-3, 3), my = rnd(-3, 3), dx = rndNZ(-3, 3), dy = rndNZ(-3, 3);
+      const ax = mx - dx, ay = my - dy, bx = mx + dx, by = my + dy;
+      const mPerp = -dx / dy, bInt = my - mPerp * mx;
+      const g = gcd(dx, dy), pn = -dx / g * Math.sign(dy), pd = Math.abs(dy / g);
+      const mStr = pd === 1 ? `${pn}` : `${pn}/${pd}`;
+      return { expr: `Segment AB with A(${ax}, ${ay}) and B(${bx}, ${by})`, lineEq: { m: mPerp, b: bInt },
+        prompt: 'Find the equation y = mx + b of the RIGHT BISECTOR (perpendicular bisector) of AB:',
+        hints: [`Step 1: Find the midpoint M of AB → M = (${mx}, ${my}).`,
+                `Step 2: Slope of AB = (${by} − (${ay})) / (${bx} − (${ax})) = ${2 * dy}/${2 * dx}. Negative reciprocal slope m_⊥ = ${mStr}.`,
+                `Step 3: Plug M(${mx}, ${my}) and m = ${mStr} into y = mx + b to solve for b.`],
+        steps: [`Midpoint M = (${mx}, ${my})`, `Slope of AB = ${dy}/${dx}  ⇒  m_⊥ = ${mStr}`, `Using (${mx}, ${my}): b = ${Number.isInteger(bInt) ? bInt : bInt.toFixed(2)}  ⇒  y = ${mStr}x ${bInt >= 0 ? '+ ' + (Number.isInteger(bInt) ? bInt : bInt.toFixed(2)) : '− ' + Math.abs(Number.isInteger(bInt) ? bInt : +bInt.toFixed(2))}`] };
+    }
+    if (kind === 'median') {
+      const mx = rnd(-3, 3), my = rnd(-3, 3), dx = rndNZ(-3, 3), dy = rndNZ(-3, 3);
+      const bx = mx - dx, by = my - dy, cx = mx + dx, cy = my + dy;
+      let ax, ay;
+      do { ax = rnd(-5, 5); ay = rnd(-5, 5); } while (ax === mx);
+      const mMed = (my - ay) / (mx - ax), bInt = ay - mMed * ax;
+      const g = gcd(my - ay, mx - ax), mn = (my - ay) / g * Math.sign(mx - ax), md = Math.abs((mx - ax) / g);
+      const mStr = md === 1 ? `${mn}` : `${mn}/${md}`;
+      return { expr: `ΔABC with A(${ax}, ${ay}), B(${bx}, ${by}), C(${cx}, ${cy})`, lineEq: { m: mMed, b: bInt },
+        prompt: 'Find the equation y = mx + b of the MEDIAN from vertex A to side BC:',
+        hints: [`A median from A goes to the <b>midpoint M of opposite side BC</b>. First find M = (${mx}, ${my}).`,
+                `Find the slope of line AM using A(${ax}, ${ay}) and M(${mx}, ${my}): m = ${mStr}.`,
+                `Substitute m = ${mStr} and A(${ax}, ${ay}) into y = mx + b to find b.`],
+        steps: [`Midpoint of BC: M = (${mx}, ${my})`, `Slope AM = (${my} − (${ay})) / (${mx} − (${ax})) = ${mStr}`, `Equation: y = ${mStr}x ${bInt >= 0 ? '+ ' : '− '}${Math.abs(Math.round(bInt * 100) / 100)}`] };
+    }
+    // Altitude from A perpendicular to BC
+    const bx = rnd(-4, 0), by = rnd(-4, 4), dx = rnd(1, 4), dy = rndNZ(-4, 4);
+    const cx = bx + dx, cy = by + dy, ax = rnd(-3, 4), ay = rnd(-3, 4);
+    const mAlt = -dx / dy, bInt = ay - mAlt * ax;
+    const g = gcd(dx, dy), pn = -dx / g * Math.sign(dy), pd = Math.abs(dy / g);
+    const mStr = pd === 1 ? `${pn}` : `${pn}/${pd}`;
+    return { expr: `ΔABC with A(${ax}, ${ay}), B(${bx}, ${by}), C(${cx}, ${cy})`, lineEq: { m: mAlt, b: bInt },
+      prompt: 'Find the equation y = mx + b of the ALTITUDE from vertex A to side BC:',
+      hints: [`An altitude from A is <b>perpendicular to opposite side BC</b> and passes through A(${ax}, ${ay}).`,
+              `Slope of BC = (${cy} − (${by})) / (${cx} − (${bx})) = ${dy}/${dx}, so perpendicular slope m_⊥ = ${mStr}.`,
+              `Use m = ${mStr} and point A(${ax}, ${ay}) in y = mx + b to find b.`],
+      steps: [`Slope of BC = ${dy}/${dx}  ⇒  altitude slope m_⊥ = ${mStr}`, `Through A(${ax}, ${ay}): y = ${mStr}x ${bInt >= 0 ? '+ ' : '− '}${Math.abs(Math.round(bInt * 100) / 100)}`] };
+  }},
+};
+
+/* ================= Ontario MPM2D Curriculum Expectations ================= */
+const CURRICULUM = {
+  expand: {
+    strand: 'Quadratic Relations of the Form y = ax² + bx + c',
+    overall: 'QR2: Manipulate algebraic expressions as needed to understand quadratic relations.',
+    specific: 'Expand and simplify second-degree polynomial expressions [e.g., (2x + 5)², (2x − y)(x + 3y)], using a variety of tools and strategies.'
+  },
+  factor: {
+    strand: 'Quadratic Relations of the Form y = ax² + bx + c',
+    overall: 'QR2: Manipulate algebraic expressions as needed to understand quadratic relations.',
+    specific: 'Factor polynomial expressions involving common factors, trinomials (x² + bx + c and ax² + bx + c), and differences of squares.'
+  },
+  solve: {
+    strand: 'Quadratic Relations of the Form y = ax² + bx + c',
+    overall: 'QR4: Solve problems involving quadratic relations.',
+    specific: 'Solve quadratic equations that have real roots, using a variety of methods (factoring, taking square roots, and the quadratic formula), and interpret the discriminant.'
+  },
+  transform: {
+    strand: 'Quadratic Relations of the Form y = ax² + bx + c',
+    overall: 'QR3: Identify characteristics of quadratic relations; QR2: Manipulate algebraic expressions.',
+    specific: 'Identify the effect on the graph of y = x² of transformations (a, h, k) in y = a(x − h)² + k, state the vertex, map points, and express y = ax² + bx + c in vertex form by completing the square.'
+  },
+  linear: {
+    strand: 'Analytic Geometry — Modelling Linear Relations & Solving Linear Systems',
+    overall: 'AG1: Model and solve problems involving the intersection of two linear relations.',
+    specific: 'Graph lines y = mx + b; solve systems of two linear equations graphically and algebraically (substitution and elimination); determine the number of solutions from slope & y-intercept; solve real-world problems arising from linear systems.'
+  },
+  analytic: {
+    strand: 'Analytic Geometry — Line Segments, Circles & Geometric Properties',
+    overall: 'AG2: Solve problems using analytic geometry involving properties of lines and line segments; AG3: Verify geometric properties of triangles and quadrilaterals.',
+    specific: 'Determine midpoint and length of a line segment; determine and apply the equation of a circle x² + y² = r²; use parallel and perpendicular slopes; determine equations of medians, right bisectors, and altitudes.'
+  },
+  trig: {
+    strand: 'Trigonometry',
+    overall: 'TR1: Use knowledge of ratio and proportion to investigate similar triangles; TR2: Solve problems involving right triangles; TR3: Solve problems involving acute triangles.',
+    specific: 'Solve problems involving similar triangles; determine side lengths and angles in right triangles (primary trig ratios SOH-CAH-TOA & compound triangles) and acute triangles (Sine Law and Cosine Law), including real-world applications.'
+  }
+};
+const SKILL_EXP = {
+  e_mono: 'MPM2D QR2.1 — Distributive property (monomial × polynomial)',
+  e_binom: 'MPM2D QR2.1 — Expand binomial products',
+  e_special: 'MPM2D QR2.1 — Expand special quadratic products',
+  e_simplify: 'MPM2D QR2.1 — Expand and simplify quadratic expressions',
+  f_gcf: 'MPM2D QR2.2 — Common factoring',
+  f_simple: 'MPM2D QR2.2 — Factor simple trinomials x² + bx + c',
+  f_complex: 'MPM2D QR2.2 — Factor trinomials ax² + bx + c',
+  f_special: 'MPM2D QR2.2 — Factor difference of squares & perfect-square trinomials',
+  f_full: 'MPM2D QR2.2 — Factor polynomial expressions fully',
+  s_factored: 'MPM2D QR4.2 — Solve quadratic equations from factored form',
+  s_factor: 'MPM2D QR4.2 — Solve quadratic equations by factoring',
+  s_sqrt: 'MPM2D QR4.2 — Solve quadratic equations using square roots',
+  s_formula: 'MPM2D QR4.2 — Solve quadratic equations using the quadratic formula',
+  t_write: 'MPM2D QR3.2 — Relate transformations of y = x² to y = a(x − h)² + k',
+  t_vertex: 'MPM2D QR3.1 — Identify key features (vertex) from vertex form',
+  t_point: 'MPM2D QR3.2 — Apply transformations to points on y = x²',
+  t_complete: 'MPM2D QR2.3 — Express y = ax² + bx + c in the form y = a(x − h)² + k by completing the square',
+  l_plot: 'MPM2D AG1.1 — Graph linear relations y = mx + b using slope and y-intercept',
+  l_graph: 'MPM2D AG1.1 — Solve linear systems graphically (Point of Intersection)',
+  l_sub: 'MPM2D AG1.2 — Solve linear systems algebraically by substitution',
+  l_elim: 'MPM2D AG1.2 — Solve linear systems algebraically by elimination',
+  l_poi_type: 'MPM2D AG1.1 — Determine number of solutions by comparing slopes & y-intercepts',
+  l_app: 'MPM2D AG1.3 — Model and solve real-world problems involving two linear relations',
+  ag_midpoint: 'MPM2D AG2.1 — Determine the midpoint of a line segment',
+  ag_distance: 'MPM2D AG2.2 — Determine the length of a line segment',
+  ag_circle: 'MPM2D AG2.3 — Connect the equation of a circle x² + y² = r² to the distance formula',
+  ag_slopes: 'MPM2D AG3.1 — Use slopes of parallel and perpendicular lines',
+  ag_lines: 'MPM2D AG2.4 / AG3.2 — Determine equations of medians, right bisectors, and altitudes',
+  tr_similar: 'MPM2D TR1.2 — Solve problems involving similar triangles using proportions',
+  tr_sin: 'MPM2D TR2.2 — Primary trigonometric ratios (sine) in right triangles',
+  tr_cos: 'MPM2D TR2.2 — Primary trigonometric ratios (cosine) in right triangles',
+  tr_tan: 'MPM2D TR2.2 — Primary trigonometric ratios (tangent) in right triangles',
+  tr_sohcahtoa: 'MPM2D TR2.2 — Select and apply SOH-CAH-TOA in right triangles',
+  tr_compound: 'MPM2D TR2.3 — Solve multi-step problems involving two right triangles',
+  tr_sinelaw: 'MPM2D TR3.1 — Apply the Sine Law in acute triangles',
+  tr_coslaw: 'MPM2D TR3.2 — Apply the Cosine Law in acute triangles',
+  tr_app: 'MPM2D TR2.3 / TR3.3 — Solve real-world problems using trigonometry'
 };
 
 function genRightTrig(fn) {
@@ -811,6 +1062,20 @@ function genRightTrig(fn) {
 }
 
 /* ================= Answer checking ================= */
+function checkLineEq(input, q) {
+  const raw = String(input || '').trim().replace(/^y\s*=\s*/i, '');
+  let ast;
+  try { ast = parse(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
+  const target = x => q.lineEq.m * x + q.lineEq.b;
+  if (SAMPLES.every(x => Math.abs(evalAst(ast, x) - target(x)) < 0.03)) {
+    return { ok: true, msg: '🎉 Correct! Your line equation matches.' };
+  }
+  const slopeUser = evalAst(ast, 1) - evalAst(ast, 0);
+  if (Math.abs(slopeUser - q.lineEq.m) < 0.03) {
+    return { ok: false, msg: '❌ Your slope m is right, but the y-intercept b is off. Plug a point on the line into y = mx + b to check b.' };
+  }
+  return { ok: false, msg: '❌ Not quite. Check your slope m first, then solve for b using a point on the line.' };
+}
 function checkGraph(q) {
   const needed = q.lines.length;
   if (graphPts.length < needed * 2) {
@@ -834,12 +1099,12 @@ function checkChoice(input, q) {
   if (/^(1|one|unique)/.test(s)) pickVal = 'one';
   else if (/^(0|no|none|parallel)/.test(s)) pickVal = 'none';
   else if (/^(inf|many|same|coincid)/.test(s)) pickVal = 'many';
-  if (pickVal === q.choice) return { ok: true, msg: '🎉 Correct! Great comparison of slope and y-intercept.' };
-  return { ok: false, msg: '❌ Not quite. Compare both slopes (m) and y-intercepts (b) after writing both in y = mx + b form.' };
+  if (pickVal === q.choice) return { ok: true, msg: '🎉 Correct!' };
+  return { ok: false, msg: '❌ Not quite. Use <b>Hint 💡</b> to review the rule and try again.' };
 }
 function checkNumber(input, q) {
   const raw = String(input || '').trim()
-    .replace(/^(?:[a-z]|θ|\\theta)\s*=\s*/i, '')
+    .replace(/^(?:[a-z]|r\^2|θ|\\theta)\s*=\s*/i, '')
     .replace(/\s*(?:°|\\circ|deg|degrees?|cm|m|hours?|tickets?|dollars?)\s*$/i, '');
   let ast;
   try { ast = parse(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
@@ -927,6 +1192,7 @@ function check(input, q) {
     const pt = checkPoint(input, q);
     return pt.ok ? { ok: true, msg: '🎉 Both lines and the Point of Intersection are correct!' } : pt;
   }
+  if (q.lineEq) return checkLineEq(input, q);
   if (q.choice) return checkChoice(input, q);
   if (q.numAns !== undefined) return checkNumber(input, q);
   if (q.solve) return checkSolve(input, q);
@@ -1069,6 +1335,16 @@ function renderProgress() {
 /* ================= UI state ================= */
 let mode = 'expand', selected = new Set(Object.keys(SKILLS)), q = null, qId = null, hintsShown = 0, attemptedWrong = false, done = false;
 
+function renderCurriculum() {
+  const entries = mode === 'mixed' ? Object.values(CURRICULUM) : [CURRICULUM[mode]].filter(Boolean);
+  $('currContent').innerHTML = entries.map(c =>
+    `<div class="p-2 bg-slate-50 rounded border border-slate-200">
+       <div class="font-black text-slate-800">${c.strand}</div>
+       <div><b>Overall Expectation:</b> ${c.overall}</div>
+       <div><b>Specific Expectations:</b> ${c.specific}</div>
+     </div>`
+  ).join('');
+}
 function renderChips() {
   $('skillChips').innerHTML = Object.entries(SKILLS).filter(([, S]) => mode === 'mixed' || S.mode === mode)
     .map(([id, S]) => `<button class="btn chip px-2 py-1 text-sm ${selected.has(id) ? 'active' : ''}" data-skill="${id}">${S.name}</button>`).join('');
@@ -1076,6 +1352,7 @@ function renderChips() {
     const id = b.dataset.skill; if (selected.has(id)) selected.delete(id); else selected.add(id);
     renderChips(); newQuestion();
   });
+  renderCurriculum();
 }
 function available() {
   const ids = Object.keys(SKILLS).filter(id => (mode === 'mixed' || SKILLS[id].mode === mode) && selected.has(id));
@@ -1194,8 +1471,9 @@ function newQuestion() {
   hintsShown = 0; attemptedWrong = false; done = false; graphPts = [];
   $('qSkill').textContent = SKILLS[qId].name;
   $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
+  $('qExp').textContent = SKILL_EXP[qId] ? `🎯 ${SKILL_EXP[qId]}` : '';
   $('qPrompt').textContent = q.prompt || (q.solve ? 'Solve for x (separate multiple roots with a comma, e.g. -3, 2):' : q.factor ? 'Factor fully:' : 'Expand and simplify:');
-  const isText = q.vertexForm || q.textCard;
+  const isText = (q.vertexForm && qId === 't_write') || q.textCard;
   $('qExpr').className = isText ? 'text-lg md:text-xl font-bold my-4 text-center text-slate-800 whitespace-pre-line' : 'math text-2xl md:text-3xl font-bold my-4 text-center whitespace-pre-line';
   $('qExpr').textContent = isText ? q.expr : pretty(q.expr);
 
