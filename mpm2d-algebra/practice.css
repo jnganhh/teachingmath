@@ -39,3 +39,14 @@ ol{padding-left:1.3rem}
 li+li{margin-top:.4rem}
 .tip{border-top:1px solid var(--line);padding-top:.65rem;color:#38534a;margin-bottom:0}
 @media(max-width:720px){.layout{grid-template-columns:1fr}}
+.table-wrap{overflow:auto;margin:.75rem 0}
+table{width:100%;border-collapse:collapse;text-align:left}
+th,td{padding:.5rem .65rem;border-bottom:1px solid var(--line)}
+th{background:var(--wash)}
+#report-form{align-items:end}
+#report-form label{font-weight:650}
+#student-id{display:block;font:inherit;max-width:100%;border:1px solid #9dafaa;border-radius:.35rem;padding:.35rem;margin-top:.25rem}
+#progress-status:empty{display:none}
+.practice-navigation{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.practice-navigation nav{margin:1rem 0 0}
+.practice-navigation a{color:var(--teal);font-weight:650;margin-top:1rem}

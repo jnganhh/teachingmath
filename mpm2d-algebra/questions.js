@@ -69,3 +69,83 @@ const algebraTopics = [
     ]
   }
 ];
+
+algebraTopics.push(
+  {
+    name: "Trigonometry",
+    example: ["Right triangle: opposite = 6, hypotenuse = 10", ["Use sine because the known sides are opposite and hypotenuse.", "Write sin θ = 6/10.", "In degree mode, θ = sin⁻¹(0.6) ≈ 36.9°."], "Label opposite and adjacent from the angle you are using. The hypotenuse stays the same."],
+    levels: [
+      [
+        item("Find sin θ in this right triangle.", "Opposite = 8, adjacent = 15, hypotenuse = 17", "8/17", [["15/17","That uses the adjacent side, which gives cosine."],["8/15","Opposite divided by adjacent gives tangent."]], "SOH: sine is opposite over hypotenuse.", "sin θ = opposite ÷ hypotenuse = 8/17."),
+        item("A similar right triangle is enlarged by a scale factor of 3. What happens to the sine of a corresponding angle?", "Original opposite = 5 and hypotenuse = 13", "It stays 5/13.", [["It becomes 15/13.","The hypotenuse is scaled too."],["It becomes 5/39.","The opposite side is scaled too."]], "Multiply both sides in the ratio by 3.", "The new sine ratio is 15/39 = 5/13.")
+      ],
+      [
+        item("Find the side opposite θ to the nearest tenth.", "θ = 38°, hypotenuse = 12 m", "7.4 m", [["9.5 m","That is the adjacent side, found using cosine."],["19.5 m","The opposite side must be shorter than the hypotenuse."]], "Use sin 38° = opposite/12 with a calculator in degree mode.", "Opposite = 12 sin 38° ≈ 7.4 m."),
+        item("Find θ to the nearest degree.", "Opposite = 9 cm, adjacent = 14 cm", "33°", [["57°","That is the complementary acute angle."],["40°","Use tangent with the two legs."]], "Use the inverse of the ratio that compares opposite and adjacent.", "tan θ = 9/14, so θ = tan⁻¹(9/14) ≈ 33°.")
+      ],
+      [
+        item("A ramp rises 0.8 m over a horizontal run of 5 m. Find its angle with the ground.", "Round to the nearest tenth of a degree.", "9.1°", [["80.9°","The angle with the vertical is complementary to the one with the ground."],["9.2°","The 5 m measurement is the horizontal leg, not the hypotenuse."]], "Draw the rise opposite the angle and the horizontal run adjacent to it.", "tan θ = 0.8/5 = 0.16. In degree mode, θ = tan⁻¹(0.16) ≈ 9.1°."),
+        item("A ladder is 6 m long and makes a 62° angle with the ground. How far is its base from the wall?", "Round to the nearest tenth of a metre.", "2.8 m", [["5.3 m","That is the height the ladder reaches."],["3.2 m","Use the ladder length as the hypotenuse, with cosine."]], "The horizontal gap is adjacent to the ground angle.", "The gap is 6 cos 62° ≈ 2.8 m.")
+      ]
+    ]
+  },
+  {
+    name: "Analytic geometry",
+    example: ["Find the midpoint and distance between A(−2, 1) and B(4, 9).", ["Average the x-coordinates and y-coordinates separately to get (1, 5).", "The horizontal change is 6 and the vertical change is 8.", "The distance is √(6² + 8²) = 10."], "Slope uses a ratio of coordinate differences. Midpoint uses averages. Distance uses the Pythagorean theorem."],
+    levels: [
+      [
+        item("Find the slope of AB.", "A(−1, 2), B(3, 10)", "2", [["1/2","Slope is rise divided by run."],["3","Subtract the starting coordinate before taking the ratio."]], "Find the vertical change and divide by the horizontal change.", "Slope = (10 − 2)/(3 − (−1)) = 8/4 = 2."),
+        item("Find the midpoint of AB.", "A(−4, 9), B(6, −3)", "(1, 3)", [["(2, 6)","Divide each coordinate sum by 2."],["(5, −6)","Use averages, not half the differences."]], "Average the x-values and y-values separately.", "The midpoint is ((−4 + 6)/2, (9 − 3)/2) = (1, 3).")
+      ],
+      [
+        item("Find the distance between A and B.", "A(−3, 2), B(2, 14)", "13", [["17","The coordinate changes are perpendicular legs, so use the Pythagorean theorem."],["169","Take the square root after adding the squares."]], "The legs of a right triangle have lengths 5 and 12.", "Distance = √(5² + 12²) = √169 = 13."),
+        item("Find the line through (2, −1) parallel to y = 3x + 4.", "Use slope-intercept form.", "y = 3x − 7", [["y = 3x + 4","Use the same slope, then find the intercept of the line through the new point."],["y = −3x + 5","Parallel nonvertical lines have equal slopes."]], "Use m = 3 and substitute the point into y = mx + b.", "−1 = 3(2) + b, so b = −7 and the line is y = 3x − 7.")
+      ],
+      [
+        item("Find the equation of the perpendicular bisector of AB.", "A(0, 0), B(6, 4)", "y = −3x/2 + 13/2", [["y = 2x/3","That is the original segment’s slope."],["y = −3x/2 + 2","Check that the line passes through the midpoint (3, 2)."]], "Use the midpoint and the negative reciprocal of the segment’s slope.", "The midpoint is (3, 2), and AB has slope 2/3. Use 2 = (−3/2)(3) + b to get b = 13/2."),
+        item("Classify triangle ABC by its side lengths and angles.", "A(0, 0), B(4, 0), C(0, 4)", "Isosceles right", [["Equilateral","The diagonal BC is longer than either leg."],["Isosceles acute","AB is horizontal and AC is vertical."]], "Look for equal side lengths and perpendicular sides.", "AB and AC both measure 4 and meet at 90°. BC measures 4√2.")
+      ]
+    ]
+  },
+  {
+    name: "Exponent laws",
+    example: ["Simplify (x³)²/x⁴, where x ≠ 0.", ["Use the power-of-a-power rule: (x³)² = x⁶.", "Divide like bases by subtracting exponents: x⁶/x⁴ = x²."], "Add exponents for a product of like bases. Multiply exponents for a power raised to another power."],
+    levels: [
+      [
+        item("Simplify.", "x⁴ · x³", "x⁷", [["x¹²","Multiply exponents only for a power raised to a power."],["x","Subtract exponents for division of like bases."]], "Count how many factors of x are multiplied.", "x⁴ · x³ = x⁴⁺³ = x⁷."),
+        item("Evaluate.", "5⁰", "1", [["0","A nonzero base to the zero power equals 1."],["5","That would be 5 to the first power."]], "Compare 5³/5³ with 5³⁻³.", "5³/5³ = 1. Subtracting the exponents gives 5⁰, so 5⁰ = 1.")
+      ],
+      [
+        item("Simplify using positive exponents.", "x³/x⁷, x ≠ 0", "1/x⁴", [["x⁴","Subtract the denominator exponent from the numerator exponent."],["1/x¹⁰","Add the exponents for multiplication, not division."]], "First write the quotient as x³⁻⁷.", "x³/x⁷ = x⁻⁴ = 1/x⁴."),
+        item("Simplify.", "(−2x³)²", "4x⁶", [["−4x⁶","Squaring the negative coefficient gives a positive result."],["4x⁵","Multiply the two exponents on the x."]], "Square both the coefficient and the variable factor.", "(−2x³)² = (−2)²x⁶ = 4x⁶.")
+      ],
+      [
+        item("Simplify using positive exponents.", "(6a⁻²b³)/(3ab⁻¹), a ≠ 0, b ≠ 0", "2b⁴/a³", [["2b²/a³","Subtracting −1 from 3 gives 4."],["2a³b⁴","The exponent on a is −3, which puts a³ in the denominator."]], "Divide the coefficients and subtract exponents separately for a and b.", "6/3 = 2, a⁻²/a = a⁻³, and b³/b⁻¹ = b⁴. The result is 2b⁴/a³."),
+        item("Write the product in scientific notation.", "(3 × 10⁴)(8 × 10⁻⁶)", "2.4 × 10⁻¹", [["2.4 × 10⁻²","Rewriting 24 as 2.4 × 10 raises the exponent by 1."],["2.4 × 10¹¹","Add 4 and −6 before normalizing the coefficient."]], "Multiply 3 and 8, and add the powers of 10.", "The product is 24 × 10⁻² = 2.4 × 10⁻¹.")
+      ]
+    ]
+  },
+  {
+    name: "Linear equations",
+    example: ["Solve 4(x − 2) = 2x + 6.", ["Expand to get 4x − 8 = 2x + 6.", "Subtract 2x and add 8 on both sides to get 2x = 14.", "Divide by 2 to get x = 7. Substituting gives 20 on each side."], "Keep the equation balanced by doing the same operation to both sides."],
+    levels: [
+      [
+        item("Solve for x.", "3x − 8 = 13", "x = 7", [["x = 5/3","Undo subtraction by adding 8 to both sides."],["x = 21","After adding 8, divide by the coefficient of x."]], "Isolate the 3x term first.", "Add 8 to get 3x = 21, then divide by 3."),
+        item("Solve for x.", "x/4 + 5 = 2", "x = −12", [["x = −3","That is the value of x/4."],["x = 12","Subtracting 5 from 2 gives a negative number."]], "Subtract 5, then multiply by 4.", "x/4 = −3, so x = −12.")
+      ],
+      [
+        item("Solve for x.", "5x − 4 = 2x + 11", "x = 5", [["x = 7/3","Add 4 to the right side when moving the constant."],["x = 15","Divide by 3 after collecting the x-terms."]], "Subtract 2x from both sides first.", "3x − 4 = 11, so 3x = 15 and x = 5."),
+        item("Solve for x.", "3(2x − 1) = 4x + 9", "x = 6", [["x = 5","Multiply −1 by 3 when expanding."],["x = 3","After subtracting 4x, add 3 to both sides."]], "Distribute 3 across both terms in the bracket.", "6x − 3 = 4x + 9 gives 2x = 12, so x = 6.")
+      ],
+      [
+        item("Solve for x.", "(x − 2)/3 + (x + 1)/2 = 4", "x = 5", [["x = 24/5","Be careful with the constants when expanding 2(x − 2) + 3(x + 1)."],["x = 23/5","The combined constant on the left is −1, so add 1 to the right."]], "Multiply every term by 6 to clear denominators.", "2(x − 2) + 3(x + 1) = 24. Simplify to 5x − 1 = 24, so x = 5."),
+        item("How many solutions does this equation have?", "4(x + 2) = 4x + 5", "No solution", [["One solution","The x-terms cancel when you subtract 4x."],["Infinitely many","The constants would need to match for this to hold for every x."]], "Expand the left side and subtract 4x from both sides.", "The result is 8 = 5, which is false for every value of x.")
+      ]
+    ]
+  }
+);
+
+const systemsLevels = algebraTopics.find(({name}) => name === "Linear systems").levels;
+systemsLevels[0].push(item("Which point satisfies both equations?", "x + y = 7\n2x − y = 2", "(3, 4)", [["(4, 3)","That satisfies the first equation only."],["(2, 5)","Check the second equation as well as the first."]], "Substitute each ordered pair into both equations.", "3 + 4 = 7 and 2(3) − 4 = 2, so (3, 4) satisfies both."));
+systemsLevels[1].push(item("How many solutions does this system have?", "y = 2x − 3\n4x − 2y = 6", "Infinitely many", [["No solution","Rearrange the second equation and compare intercepts."],["Exactly one","Check whether the equations describe different lines."]], "Isolate y in the second equation.", "The second equation rearranges to y = 2x − 3. Both equations describe the same line."));
+systemsLevels[2].push(item("Plan A charges $18 plus $3 per visit. Plan B charges $6 plus $5 per visit. When do they cost the same?", "A = 18 + 3v\nB = 6 + 5v", "6 visits, $36", [["6 visits, $30","Substitute 6 into the full cost of either plan."],["12 visits, $54","The costs differ by $2 per visit."]], "Set the two cost expressions equal.", "18 + 3v = 6 + 5v gives 12 = 2v, so v = 6. Both plans cost $36."));

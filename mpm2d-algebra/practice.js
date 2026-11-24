@@ -140,6 +140,9 @@ get("solution-button").addEventListener("click", () => {
 });
 get("next").addEventListener("click", () => {
   questionIndex++;
+  if (questionIndex === questionSet().length) {
+    recordAlgebraAttempt(algebraTopics[topicIndex].name, levels[levelSelect.selectedIndex], firstTry, questionSet().length);
+  }
   renderQuestion();
   if (questionIndex < questionSet().length) get("choices").querySelector("input").focus();
 });

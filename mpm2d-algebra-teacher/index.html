@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Math Practice Progress | Teacher Review</title>
+<link rel="stylesheet" href="../mpm2d-algebra/practice.css">
+<script src="../mpm2d-algebra/questions.js" defer></script>
+<script src="review.js" defer></script>
+</head>
+<body>
+<header><div class="wrap"><p class="course">MPM2D · Teacher review</p><h1>Math practice progress</h1><p>Review completed practice sets by student, topic, and level.</p></div></header>
+<main class="wrap">
+<section class="practice" aria-labelledby="reports-title">
+<h2 id="reports-title">Student reports</h2>
+<p>Assign each student a unique course ID. Ask students to download a report from My progress and submit it through your class’s usual channel. Imported reports stay in this browser.</p>
+<div class="actions"><label>Import student reports <input id="import" type="file" accept=".json,application/json" multiple></label><button id="export" type="button">Export summary CSV</button></div>
+<p id="status" role="status"></p>
+<label for="student-filter">Student</label> <select id="student-filter"><option value="">All students</option></select>
+<div class="table-wrap"><table>
+<thead><tr><th scope="col">Student ID</th><th scope="col">Topic</th><th scope="col">Level</th><th scope="col">Sets completed</th><th scope="col">Latest</th><th scope="col">Best</th><th scope="col">Last completed</th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+</section>
+</main>
+</body>
+</html>
