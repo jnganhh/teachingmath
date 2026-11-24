@@ -338,6 +338,7 @@
               <th class="py-2.5 px-2 text-center">HW Part</th>
               <th class="py-2.5 px-2 text-center">HW Miss</th>
               <th class="py-2.5 px-2 text-center">📵 Phone Flags</th>
+              <th class="py-2.5 px-2 text-center">🚪 Out of Room</th>
             </tr>
           </thead>
           <tbody id="weeklyTableBody" class="divide-y divide-slate-200"></tbody>
@@ -1736,12 +1737,13 @@
       }
 
       if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center font-bold text-slate-500">No students in this period.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center font-bold text-slate-500">No students in this period.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = students.map(s => {
-        let p = 0, l = 0, a = 0, hwDone = 0, hwPart = 0, hwMiss = 0, phones = 0;
+        let p = 0, l = 0, a = 0, hwDone = 0, hwPart = 0, hwMiss = 0, phones = 0, passCount = 0, passMs = 0;
+        const reasonCounts = {};
         dates.forEach(d => {
           const rec = state.records[d]?.[s.id];
           if (!rec) return;
@@ -1752,7 +1754,20 @@
           else if (rec.homework === 'Part') hwPart++;
           else if (rec.homework === 'Miss') hwMiss++;
           phones += (rec.phoneCount || 0);
+          (rec.hallPasses || []).forEach(hp => {
+            passCount++;
+            if (hp.inTs) passMs += (hp.inTs - hp.outTs);
+            const r = hp.reason || 'Out';
+            reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+          });
         });
+
+        const reasonSummary = Object.entries(reasonCounts)
+          .map(([r, cnt]) => `${PASS_REASON_ICONS[r] || '🚪'}${cnt}`)
+          .join(' ');
+        const passCell = passCount > 0
+          ? `<span class="font-mono font-black text-orange-800">${passCount}× (${formatPassDuration(passMs)})</span><div class="text-[10px] text-slate-600">${reasonSummary}</div>`
+          : `<span class="text-slate-400 font-mono">0</span>`;
 
         const alertClass = (a >= 2 || hwMiss >= 2 || phones >= 2) ? 'bg-red-50/60' : '';
         return `
@@ -1765,6 +1780,7 @@
             <td class="py-2.5 px-2 text-center font-mono font-bold text-amber-600">${hwPart}</td>
             <td class="py-2.5 px-2 text-center font-mono font-bold ${hwMiss >= 2 ? 'text-red-700 bg-red-100 rounded' : 'text-red-600'}">${hwMiss}</td>
             <td class="py-2.5 px-2 text-center font-mono font-black ${phones >= 2 ? 'text-red-700 bg-red-100 rounded' : 'text-slate-700'}">${phones}</td>
+            <td class="py-2.5 px-2 text-center">${passCell}</td>
           </tr>
         `;
       }).join('');
@@ -2313,7 +2329,13 @@
         const obsBadges = (r.observations || []).map(o => {
           const cls = o.weight > 0 ? 'badge-E' : 'badge-N';
           return `<span class="inline-block px-2 py-0.5 rounded mr-1 mb-1 font-bold ${cls}">[${o.skill}] ${o.text}</span>`;
-        }).join('') || '<span class="text-slate-400 italic">—</span>';
+        }).join('');
+        const passBadges = (r.hallPasses || []).map(hp => {
+          const icon = PASS_REASON_ICONS[hp.reason] || '🚪';
+          const dur = hp.inTs ? formatPassDuration(hp.inTs - hp.outTs) : 'Still Out';
+          return `<span class="inline-block px-2 py-0.5 rounded mr-1 mb-1 font-bold bg-orange-100 text-orange-900 border border-orange-300">${icon} ${hp.reason || 'Out'}${hp.note ? ` (${hp.note})` : ''}: ${formatPassTime(hp.outTs)} (${dur})</span>`;
+        }).join('');
+        const combinedBadges = (obsBadges + passBadges) || '<span class="text-slate-400 italic">—</span>';
 
         return `
           <tr class="hover:bg-yellow-50/60">
@@ -2322,7 +2344,7 @@
             <td class="py-2.5 px-3 text-center">${hwBadge}</td>
             <td class="py-2.5 px-3 text-center">${phoneBadge}</td>
             <td class="py-2.5 px-3">${tallyBadges}</td>
-            <td class="py-2.5 px-3">${obsBadges}</td>
+            <td class="py-2.5 px-3">${combinedBadges}</td>
           </tr>
         `;
       }).join('');
