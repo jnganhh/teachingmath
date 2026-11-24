@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MPM2D Algebra Problem String Presenter</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <style>
     .comic-border {
       border: 3px solid #1e293b;
@@ -234,6 +237,690 @@
       }
     ];
 
+    const CURRICULUM_100_STRINGS = [
+  {
+    "id": "expa-1-5",
+    "unit": "Exp A: Quadratics (Expand/Factor)",
+    "title": "Quadratics (Expand/Factor) — Set 1 (#1–5)",
+    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Expand and simplify: $(x + 4)(x - 7)$",
+        "hint": "",
+        "answer": "$x^2 - 3x - 28$"
+      },
+      {
+        "prompt": "Expand and simplify: $(2x - 3)(3x + 5)$",
+        "hint": "",
+        "answer": "$6x^2 + x - 15$"
+      },
+      {
+        "prompt": "Expand and simplify: $(4x - 1)^2$",
+        "hint": "",
+        "answer": "$16x^2 - 8x + 1$"
+      },
+      {
+        "prompt": "Expand and simplify: $3(x - 2)^2 - 5x + 1$",
+        "hint": "",
+        "answer": "$3x^2 - 17x + 13$"
+      },
+      {
+        "prompt": "Expand and simplify: $(5x + 2y)(5x - 2y)$",
+        "hint": "",
+        "answer": "$25x^2 - 4y^2$"
+      }
+    ]
+  },
+  {
+    "id": "expa-6-10",
+    "unit": "Exp A: Quadratics (Expand/Factor)",
+    "title": "Quadratics (Expand/Factor) — Set 2 (#6–10)",
+    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Common factor completely: $12x^3y^2 - 18x^2y^3 + 6xy$",
+        "hint": "",
+        "answer": "$6xy(2x^2y - 3xy^2 + 1)$"
+      },
+      {
+        "prompt": "Factor the simple trinomial: $x^2 - 11x + 24$",
+        "hint": "",
+        "answer": "$(x - 3)(x - 8)$"
+      },
+      {
+        "prompt": "Factor the simple trinomial: $x^2 + 5x - 36$",
+        "hint": "",
+        "answer": "$(x + 9)(x - 4)$"
+      },
+      {
+        "prompt": "Factor the complex trinomial: $3x^2 + 11x + 6$",
+        "hint": "",
+        "answer": "$(3x + 2)(x + 3)$"
+      },
+      {
+        "prompt": "Factor the complex trinomial: $6x^2 - 7x - 5$",
+        "hint": "",
+        "answer": "$(2x + 1)(3x - 5)$"
+      }
+    ]
+  },
+  {
+    "id": "expa-11-15",
+    "unit": "Exp A: Quadratics (Expand/Factor)",
+    "title": "Quadratics (Expand/Factor) — Set 3 (#11–15)",
+    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Factor the complex trinomial: $4x^2 - 16x + 15$",
+        "hint": "",
+        "answer": "$(2x - 3)(2x - 5)$"
+      },
+      {
+        "prompt": "Factor the difference of squares: $49x^2 - 81$",
+        "hint": "",
+        "answer": "$(7x - 9)(7x + 9)$"
+      },
+      {
+        "prompt": "Factor the difference of squares: $100a^2 - 9b^2$",
+        "hint": "",
+        "answer": "$(10a - 3b)(10a + 3b)$"
+      },
+      {
+        "prompt": "Factor completely: $2x^2 - 50$",
+        "hint": "",
+        "answer": "$2(x - 5)(x + 5)$"
+      },
+      {
+        "prompt": "Factor completely: $5x^2 + 25x + 30$",
+        "hint": "",
+        "answer": "$5(x + 2)(x + 3)$"
+      }
+    ]
+  },
+  {
+    "id": "expa-16-20",
+    "unit": "Exp A: Quadratics (Expand/Factor)",
+    "title": "Quadratics (Expand/Factor) — Set 4 (#16–20)",
+    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Factor the perfect square trinomial: $9x^2 + 24x + 16$",
+        "hint": "",
+        "answer": "$(3x + 4)^2$"
+      },
+      {
+        "prompt": "Factor the perfect square trinomial: $25x^2 - 30x + 9$",
+        "hint": "",
+        "answer": "$(5x - 3)^2$"
+      },
+      {
+        "prompt": "Factor by grouping: $ax + ay + 2x + 2y$",
+        "hint": "",
+        "answer": "$(x + y)(a + 2)$"
+      },
+      {
+        "prompt": "Factor completely: $3x^3 - 12x$",
+        "hint": "",
+        "answer": "$3x(x - 2)(x + 2)$"
+      },
+      {
+        "prompt": "Expand and simplify: $(2x + 1)(x - 4) - (x + 3)(x - 3)$",
+        "hint": "",
+        "answer": "$x^2 - 7x + 5$"
+      }
+    ]
+  },
+  {
+    "id": "expa-21-25",
+    "unit": "Exp A: Quadratics (Expand/Factor)",
+    "title": "Quadratics (Expand/Factor) — Set 5 (#21–25)",
+    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Factor completely: $8x^2 - 2x - 3$",
+        "hint": "",
+        "answer": "$(4x - 3)(2x + 1)$"
+      },
+      {
+        "prompt": "Factor completely: $-x^2 + 9x - 14$",
+        "hint": "",
+        "answer": "$-(x - 2)(x - 7)$"
+      },
+      {
+        "prompt": "Expand and simplify: $2(3x - 4)(x + 2)$",
+        "hint": "",
+        "answer": "$6x^2 + 4x - 16$"
+      },
+      {
+        "prompt": "Factor completely: $12x^2 - 27y^2$",
+        "hint": "",
+        "answer": "$3(2x - 3y)(2x + 3y)$"
+      },
+      {
+        "prompt": "Find $k$ so that the expression is a perfect square trinomial: $x^2 + kx + 64$",
+        "hint": "",
+        "answer": "$k = \\pm 16$"
+      }
+    ]
+  },
+  {
+    "id": "expb-1-5",
+    "unit": "Exp B: Quadratic Equations",
+    "title": "Quadratic Equations — Set 1 (#1–5)",
+    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Solve by factoring: $x^2 - 9x + 20 = 0$",
+        "hint": "",
+        "answer": "$x = 4, x = 5$"
+      },
+      {
+        "prompt": "Solve by factoring: $2x^2 + 5x - 3 = 0$",
+        "hint": "",
+        "answer": "$x = \\frac{1}{2}, x = -3$"
+      },
+      {
+        "prompt": "Solve by factoring: $4x^2 - 25 = 0$",
+        "hint": "",
+        "answer": "$x = \\frac{5}{2}, x = -\\frac{5}{2}$"
+      },
+      {
+        "prompt": "Solve by factoring: $3x^2 - 12x = 0$",
+        "hint": "",
+        "answer": "$x = 0, x = 4$"
+      },
+      {
+        "prompt": "Solve using the quadratic formula (exact values): $x^2 + 4x - 2 = 0$",
+        "hint": "",
+        "answer": "$x = -2 \\pm \\sqrt{6}$"
+      }
+    ]
+  },
+  {
+    "id": "expb-6-10",
+    "unit": "Exp B: Quadratic Equations",
+    "title": "Quadratic Equations — Set 2 (#6–10)",
+    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Solve using the quadratic formula (exact values): $2x^2 - 3x - 4 = 0$",
+        "hint": "",
+        "answer": "$x = \\frac{3 \\pm \\sqrt{41}}{4}$"
+      },
+      {
+        "prompt": "Determine the number of real roots using the discriminant: $3x^2 - 5x + 4 = 0$",
+        "hint": "",
+        "answer": "$0$ real roots ($D = -23$)"
+      },
+      {
+        "prompt": "Determine the number of real roots using the discriminant: $4x^2 - 12x + 9 = 0$",
+        "hint": "",
+        "answer": "$1$ real root ($D = 0$)"
+      },
+      {
+        "prompt": "Convert to vertex form by completing the square: $y = x^2 + 6x + 5$",
+        "hint": "",
+        "answer": "$y = (x + 3)^2 - 4$"
+      },
+      {
+        "prompt": "Convert to vertex form by completing the square: $y = x^2 - 10x + 28$",
+        "hint": "",
+        "answer": "$y = (x - 5)^2 + 3$"
+      }
+    ]
+  },
+  {
+    "id": "expb-11-15",
+    "unit": "Exp B: Quadratic Equations",
+    "title": "Quadratic Equations — Set 3 (#11–15)",
+    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Convert to vertex form by completing the square: $y = 2x^2 + 8x - 3$",
+        "hint": "",
+        "answer": "$y = 2(x + 2)^2 - 11$"
+      },
+      {
+        "prompt": "Convert to vertex form by completing the square: $y = -3x^2 + 12x - 7$",
+        "hint": "",
+        "answer": "$y = -3(x - 2)^2 + 5$"
+      },
+      {
+        "prompt": "State the vertex of the parabola: $y = -2(x - 4)^2 + 9$",
+        "hint": "",
+        "answer": "$(4, 9)$"
+      },
+      {
+        "prompt": "Find the axis of symmetry of the parabola: $y = 3(x + 7)(x - 1)$",
+        "hint": "",
+        "answer": "$x = -3$"
+      },
+      {
+        "prompt": "Find the $y$-intercept of the quadratic relation: $y = 2(x - 3)^2 - 5$",
+        "hint": "",
+        "answer": "$(0, 13)$"
+      }
+    ]
+  },
+  {
+    "id": "expb-16-20",
+    "unit": "Exp B: Quadratic Equations",
+    "title": "Quadratic Equations — Set 4 (#16–20)",
+    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Find the equation in vertex form with vertex $(2, -5)$ passing through $(4, 7)$:",
+        "hint": "",
+        "answer": "$y = 3(x - 2)^2 - 5$"
+      },
+      {
+        "prompt": "Find the equation in factored form with $x$-intercepts $-3$ and $5$, passing through $(1, -16)$:",
+        "hint": "",
+        "answer": "$y = (x + 3)(x - 5)$"
+      },
+      {
+        "prompt": "Find the maximum or minimum value of: $y = -4x^2 + 16x + 3$",
+        "hint": "",
+        "answer": "$\\text{Maximum value of } 19$"
+      },
+      {
+        "prompt": "Solve for $x$: $(x - 3)^2 = 16$",
+        "hint": "",
+        "answer": "$x = 7, x = -1$"
+      },
+      {
+        "prompt": "Solve for $x$: $5x^2 - 20 = 0$",
+        "hint": "",
+        "answer": "$x = 2, x = -2$"
+      }
+    ]
+  },
+  {
+    "id": "expb-21-25",
+    "unit": "Exp B: Quadratic Equations",
+    "title": "Quadratic Equations — Set 5 (#21–25)",
+    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Rewrite in standard form: $y = -2(x + 1)^2 + 6$",
+        "hint": "",
+        "answer": "$y = -2x^2 - 4x + 4$"
+      },
+      {
+        "prompt": "Rewrite in standard form: $y = 4(x - 2)(x + 5)$",
+        "hint": "",
+        "answer": "$y = 4x^2 + 12x - 40$"
+      },
+      {
+        "prompt": "A ball's height is modeled by $h = -5t^2 + 20t + 1$. Find the maximum height.",
+        "hint": "",
+        "answer": "$21\\text{ m}$"
+      },
+      {
+        "prompt": "Find two consecutive positive integers whose product is $72$.",
+        "hint": "",
+        "answer": "$8 \\text{ and } 9$"
+      },
+      {
+        "prompt": "Determine the $x$-intercepts of: $y = 6x^2 + x - 2$",
+        "hint": "",
+        "answer": "$\\left(\\frac{1}{2}, 0\\right) \\text{ and } \\left(-\\frac{2}{3}, 0\\right)$"
+      }
+    ]
+  },
+  {
+    "id": "expc-1-5",
+    "unit": "Exp C: Linear Systems",
+    "title": "Linear Systems — Set 1 (#1–5)",
+    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Solve the linear system by substitution: $y = 2x - 1$ and $3x + y = 14$",
+        "hint": "",
+        "answer": "$(3, 5)$"
+      },
+      {
+        "prompt": "Solve the linear system by substitution: $x = 4y + 3$ and $2x - 5y = 12$",
+        "hint": "",
+        "answer": "$(11, 2)$"
+      },
+      {
+        "prompt": "Solve the linear system by elimination: $2x + 3y = 12$ and $5x - 3y = 9$",
+        "hint": "",
+        "answer": "$(3, 2)$"
+      },
+      {
+        "prompt": "Solve the linear system by elimination: $4x + 5y = 23$ and $4x + 2y = 14$",
+        "hint": "",
+        "answer": "$(2, 3)$"
+      },
+      {
+        "prompt": "Solve the linear system by elimination: $3x + 2y = 16$ and $5x + 3y = 25$",
+        "hint": "",
+        "answer": "$(2, 5)$"
+      }
+    ]
+  },
+  {
+    "id": "expc-6-10",
+    "unit": "Exp C: Linear Systems",
+    "title": "Linear Systems — Set 2 (#6–10)",
+    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Solve the linear system by elimination: $2x - 3y = -13$ and $4x + 5y = 7$",
+        "hint": "",
+        "answer": "$(-2, 3)$"
+      },
+      {
+        "prompt": "Solve the linear system with fractions: $\\frac{x}{2} + \\frac{y}{3} = 4$ and $x - y = 3$",
+        "hint": "",
+        "answer": "$(6, 3)$"
+      },
+      {
+        "prompt": "Solve the linear system with decimals: $0.2x + 0.5y = 2.6$ and $0.4x - 0.1y = 0.8$",
+        "hint": "",
+        "answer": "$(3, 4)$"
+      },
+      {
+        "prompt": "Determine the number of solutions for the system: $2x - y = 5$ and $4x - 2y = 10$",
+        "hint": "",
+        "answer": "$\\text{Infinitely many solutions}$"
+      },
+      {
+        "prompt": "Determine the number of solutions for the system: $3x + 6y = 12$ and $x + 2y = 5$",
+        "hint": "",
+        "answer": "$\\text{No solution (parallel lines)}$"
+      }
+    ]
+  },
+  {
+    "id": "expc-11-15",
+    "unit": "Exp C: Linear Systems",
+    "title": "Linear Systems — Set 3 (#11–15)",
+    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Find the point of intersection of: $y = -3x + 7$ and $y = 2x - 8$",
+        "hint": "",
+        "answer": "$(3, -2)$"
+      },
+      {
+        "prompt": "Find the point of intersection of: $x + y = 10$ and $x - y = 4$",
+        "hint": "",
+        "answer": "$(7, 3)$"
+      },
+      {
+        "prompt": "Solve for $x$ and $y$: $7x - 2y = 5$ and $3x + 4y = 21$",
+        "hint": "",
+        "answer": "$\\left(\\frac{31}{17}, \\frac{66}{17}\\right)$"
+      },
+      {
+        "prompt": "The sum of two numbers is $45$ and their difference is $13$. Find the numbers.",
+        "hint": "",
+        "answer": "$29 \\text{ and } 16$"
+      },
+      {
+        "prompt": "Tickets cost $\\$8$ for students and $\\$12$ for adults. If $50$ tickets sold for $\\$480$, how many student tickets were sold?",
+        "hint": "",
+        "answer": "$30 \\text{ student tickets}$"
+      }
+    ]
+  },
+  {
+    "id": "expc-16-20",
+    "unit": "Exp C: Linear Systems",
+    "title": "Linear Systems — Set 4 (#16–20)",
+    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Solve the system: $3(x - 1) + 2y = 7$ and $2x - (y + 2) = 5$",
+        "hint": "",
+        "answer": "$(3, -1)$"
+      },
+      {
+        "prompt": "Find $k$ so that the lines $kx + 4y = 8$ and $3x + 2y = 5$ have no point of intersection.",
+        "hint": "",
+        "answer": "$k = 6$"
+      },
+      {
+        "prompt": "Solve the system: $5x + 4y = -2$ and $3x - 2y = 12$",
+        "hint": "",
+        "answer": "$(2, -3)$"
+      },
+      {
+        "prompt": "A chemistry lab needs $100\\text{ mL}$ of $20\\%$ acid using $10\\%$ and $35\\%$ solutions. How much $10\\%$ solution is needed?",
+        "hint": "",
+        "answer": "$60\\text{ mL}$"
+      },
+      {
+        "prompt": "Solve the system: $y = \\frac{1}{2}x + 3$ and $y = -\\frac{3}{2}x + 11$",
+        "hint": "",
+        "answer": "$(4, 5)$"
+      }
+    ]
+  },
+  {
+    "id": "expc-21-25",
+    "unit": "Exp C: Linear Systems",
+    "title": "Linear Systems — Set 5 (#21–25)",
+    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Two angles are supplementary. One angle is $24^\\circ$ more than twice the other. Find both angles.",
+        "hint": "",
+        "answer": "$52^\\circ \\text{ and } 128^\\circ$"
+      },
+      {
+        "prompt": "Solve for $x$ and $y$: $6x - 5y = 27$ and $2x + 3y = -5$",
+        "hint": "",
+        "answer": "$(2, -3)$"
+      },
+      {
+        "prompt": "Find the point of intersection of $x = -4$ and $3x - 2y = 6$.",
+        "hint": "",
+        "answer": "$(-4, -9)$"
+      },
+      {
+        "prompt": "Solve the system: $4x - 3y = 18$ and $6x + 5y = 8$",
+        "hint": "",
+        "answer": "$(3, -2)$"
+      },
+      {
+        "prompt": "A boat travels $36\\text{ km}$ downstream in $2\\text{ hours}$ and returns upstream in $3\\text{ hours}$. Find the speed of the current.",
+        "hint": "",
+        "answer": "$3\\text{ km/h}$"
+      }
+    ]
+  },
+  {
+    "id": "expd-1-5",
+    "unit": "Exp D: Analytic Geometry",
+    "title": "Analytic Geometry — Set 1 (#1–5)",
+    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Find the midpoint of the line segment joining $A(-4, 7)$ and $B(8, -3)$.",
+        "hint": "",
+        "answer": "$(2, 2)$"
+      },
+      {
+        "prompt": "Find the exact length of the line segment joining $P(1, -2)$ and $Q(6, 10)$.",
+        "hint": "",
+        "answer": "$13$"
+      },
+      {
+        "prompt": "Find the exact length of the line segment joining $M(-3, 4)$ and $N(2, -1)$.",
+        "hint": "",
+        "answer": "$5\\sqrt{2}$"
+      },
+      {
+        "prompt": "If $M(3, -1)$ is the midpoint of $AB$ and $A$ is $(-2, 5)$, find the coordinates of $B$.",
+        "hint": "",
+        "answer": "$(8, -7)$"
+      },
+      {
+        "prompt": "Find the equation of a circle centered at $(0, 0)$ with radius $7$.",
+        "hint": "",
+        "answer": "$x^2 + y^2 = 49$"
+      }
+    ]
+  },
+  {
+    "id": "expd-6-10",
+    "unit": "Exp D: Analytic Geometry",
+    "title": "Analytic Geometry — Set 2 (#6–10)",
+    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Find the radius of the circle with equation $x^2 + y^2 = 121$.",
+        "hint": "",
+        "answer": "$r = 11$"
+      },
+      {
+        "prompt": "Find the equation of a circle centered at $(0, 0)$ passing through $(-3, 4)$.",
+        "hint": "",
+        "answer": "$x^2 + y^2 = 25$"
+      },
+      {
+        "prompt": "Determine whether the point $(4, -5)$ lies inside, outside, or on the circle $x^2 + y^2 = 40$.",
+        "hint": "",
+        "answer": "$\\text{Outside } (4^2 + (-5)^2 = 41 > 40)$"
+      },
+      {
+        "prompt": "Find the slope of the line perpendicular to $3x - 4y + 12 = 0$.",
+        "hint": "",
+        "answer": "$m = -\\frac{4}{3}$"
+      },
+      {
+        "prompt": "Find the equation of the line parallel to $y = 2x - 5$ passing through $(3, 1)$.",
+        "hint": "",
+        "answer": "$y = 2x - 5$"
+      }
+    ]
+  },
+  {
+    "id": "expd-11-15",
+    "unit": "Exp D: Analytic Geometry",
+    "title": "Analytic Geometry — Set 3 (#11–15)",
+    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Find the equation of the right bisector of the segment joining $A(2, 6)$ and $B(6, 2)$.",
+        "hint": "",
+        "answer": "$y = x$"
+      },
+      {
+        "prompt": "Find the equation of the right bisector of the segment joining $P(-2, 1)$ and $Q(4, 5)$.",
+        "hint": "",
+        "answer": "$3x + 2y = 9$"
+      },
+      {
+        "prompt": "Find the equation of the median from vertex $A(0, 6)$ to side $BC$ where $B(-4, 0)$ and $C(4, 2)$.",
+        "hint": "",
+        "answer": "$y = 6$"
+      },
+      {
+        "prompt": "Find the equation of the altitude from $A(1, 5)$ to $BC$ if the slope of $BC$ is $-\\frac{1}{3}$.",
+        "hint": "",
+        "answer": "$y = 3x + 2$"
+      },
+      {
+        "prompt": "Classify $\\triangle ABC$ with vertices $A(0, 0)$, $B(4, 0)$, and $C(2, 3)$ by side lengths.",
+        "hint": "",
+        "answer": "$\\text{Isosceles } (AC = BC = \\sqrt{13}, AB = 4)$"
+      }
+    ]
+  },
+  {
+    "id": "expd-16-20",
+    "unit": "Exp D: Analytic Geometry",
+    "title": "Analytic Geometry — Set 4 (#16–20)",
+    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Solve the literal equation for $h$: $A = \\frac{1}{2}bh$",
+        "hint": "",
+        "answer": "$h = \\frac{2A}{b}$"
+      },
+      {
+        "prompt": "Solve the literal equation for $y$: $5x - 3y = 18$",
+        "hint": "",
+        "answer": "$y = \\frac{5}{3}x - 6$"
+      },
+      {
+        "prompt": "Solve the literal equation for $r^2$: $V = \\pi r^2 h$",
+        "hint": "",
+        "answer": "$r^2 = \\frac{V}{\\pi h}$"
+      },
+      {
+        "prompt": "Simplify the algebraic expression: $\\frac{12x^4y^2 - 8x^2y^3}{4x^2y}$",
+        "hint": "",
+        "answer": "$3x^2y - 2y^2$"
+      },
+      {
+        "prompt": "Simplify the radical: $\\sqrt{72}$",
+        "hint": "",
+        "answer": "$6\\sqrt{2}$"
+      }
+    ]
+  },
+  {
+    "id": "expd-21-25",
+    "unit": "Exp D: Analytic Geometry",
+    "title": "Analytic Geometry — Set 5 (#21–25)",
+    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
+    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "steps": [
+      {
+        "prompt": "Simplify the radical expression: $3\\sqrt{12} + 2\\sqrt{27}$",
+        "hint": "",
+        "answer": "$12\\sqrt{3}$"
+      },
+      {
+        "prompt": "Solve for $x$: $\\frac{2x - 1}{3} - \\frac{x + 2}{4} = 2$",
+        "hint": "",
+        "answer": "$x = \\frac{34}{5}$"
+      },
+      {
+        "prompt": "Find the $x$-intercepts of the circle $x^2 + y^2 = 64$.",
+        "hint": "",
+        "answer": "$(8, 0) \\text{ and } (-8, 0)$"
+      },
+      {
+        "prompt": "Verify if $\\triangle PQR$ with $P(1, 1)$, $Q(4, 5)$, and $R(8, 2)$ is a right triangle.",
+        "hint": "",
+        "answer": "$\\text{Yes, right angle at } Q \\left(m_{PQ} = \\frac{4}{3}, m_{QR} = -\\frac{3}{4}\\right)$"
+      },
+      {
+        "prompt": "Find the shortest distance from the origin $(0, 0)$ to the line $y = -x + 6$.",
+        "hint": "",
+        "answer": "$3\\sqrt{2}$"
+      }
+    ]
+  }
+];
+    BUILTIN_STRINGS.push(...CURRICULUM_100_STRINGS);
+
     const CUSTOM_KEY = 'mpm2d_custom_problem_strings_v1';
     let customStrings = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
     let activeUnit = 'All';
@@ -350,6 +1037,16 @@
       } else {
         conBox.classList.add('hidden');
       }
+
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.getElementById('stepsContainer'), {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
+      }
     }
 
     function toggleProjectorMode() {
@@ -458,6 +1155,7 @@
     renderUnitFilters();
     renderStringSelector();
     renderStage();
+    window.addEventListener('load', renderStage);
   </script>
 </body>
 </html>
