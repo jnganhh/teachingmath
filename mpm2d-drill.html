@@ -50,11 +50,22 @@
           <button class="btn chip px-3 py-1" data-mode="analytic">Analytic Geometry</button>
           <button class="btn chip px-3 py-1" data-mode="trig">Trigonometry</button>
           <button class="btn chip px-3 py-1" data-mode="mixed">Mixed</button>
+          <button class="btn chip px-3 py-1 bg-amber-100 text-amber-900" data-mode="levelled">🌶️ Levelled Assessment</button>
           <button class="btn chip px-3 py-1 bg-purple-100 text-purple-900" data-mode="beauty">✨ Beauty of Math</button>
         </div>
         <div id="skillSection">
           <div class="font-black mb-2">2. Choose skills</div>
           <div id="skillChips" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div id="levelledSection" class="hidden space-y-3">
+          <div>
+            <div class="font-black mb-1">2. Choose Overall Expectation</div>
+            <div id="lvlExpChips" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div>
+            <div class="font-black mb-1">3. Choose Growing Success Level <span class="text-xs font-normal text-slate-500">(try consecutive levels to self-assess)</span></div>
+            <div id="lvlTierChips" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+          </div>
         </div>
         <details id="currBox" class="mt-3 pt-3 border-t-2 border-slate-200 text-xs text-slate-700">
           <summary class="font-black text-blue-700 cursor-pointer select-none">📚 Ontario MPM2D Curriculum Expectations (click to view)</summary>
@@ -1125,9 +1136,11 @@ function checkChoice(input, q) {
   const s = String(input || '').toLowerCase().trim();
   if (!s) return { ok: false, syntax: true, msg: '✏️ Choose one of the options above.' };
   let pickVal = s;
-  if (/^(1|one|unique)/.test(s)) pickVal = 'one';
-  else if (/^(0|no|none|parallel)/.test(s)) pickVal = 'none';
-  else if (/^(inf|many|same|coincid)/.test(s)) pickVal = 'many';
+  if (!q.choices || !q.choices.some(c => c.val === s)) {
+    if (/^(1|one|unique)/.test(s)) pickVal = 'one';
+    else if (/^(0|no|none|parallel)/.test(s)) pickVal = 'none';
+    else if (/^(inf|many|same|coincid)/.test(s)) pickVal = 'many';
+  }
   if (pickVal === q.choice) return { ok: true, msg: '🎉 Correct!' };
   return { ok: false, msg: '❌ Not quite. Use <b>Hint 💡</b> to review the rule and try again.' };
 }
@@ -1295,6 +1308,11 @@ function record(id, correct, hintsUsed, input) {
   const d = store.days[today()] ||= { attempts: 0, correct: 0 }; d.attempts++; if (correct) d.correct++;
   store.history.unshift({ t: Date.now(), id, expr: q.expr, input, correct, hints: hintsUsed });
   store.history = store.history.slice(0, 100);
+  if (correct && q && q.lvlKey) {
+    store.levelled ||= {};
+    store.levelled[q.lvlKey] = true;
+    renderLevelled();
+  }
   save(); renderProgress();
   if (correct) checkMilestone();
 }
@@ -1365,7 +1383,9 @@ function renderProgress() {
 let mode = 'expand', selected = new Set(Object.keys(SKILLS)), q = null, qId = null, hintsShown = 0, attemptedWrong = false, done = false;
 
 function renderCurriculum() {
-  const entries = mode === 'mixed' ? Object.values(CURRICULUM) : [CURRICULUM[mode]].filter(Boolean);
+  const entries = mode === 'mixed' ? Object.values(CURRICULUM)
+    : mode === 'levelled' ? [CURRICULUM[LEVELLED_META[lvlExp].curr]].filter(Boolean)
+    : [CURRICULUM[mode]].filter(Boolean);
   $('currContent').innerHTML = entries.map(c =>
     `<div class="p-2 bg-slate-50 rounded border border-slate-200">
        <div class="font-black text-slate-800">${c.strand}</div>
@@ -1491,16 +1511,133 @@ $('coordSvg').addEventListener('click', e => {
 $('undoPtBtn').onclick = () => { if (!done && graphPts.length) { graphPts.pop(); renderGraph(); } };
 $('clearGraphBtn').onclick = () => { if (!done) { graphPts = []; renderGraph(); } };
 
+let lvlExp = 'AG1', lvlTier = 1;
+const LEVELLED_META = {
+  AG1: { label: 'AG1: Linear Systems', curr: 'linear', desc: 'Model and solve problems involving the intersection of two straight lines' },
+  AG2: { label: 'AG2: Lines & Analytic Geometry', curr: 'analytic', desc: 'Solve problems using analytic geometry involving properties of lines and line segments' },
+  QR2: { label: 'QR2/QR4: Quadratics', curr: 'solve', desc: 'Manipulate quadratic expressions and solve quadratic equations' },
+  TR2: { label: 'TR2/TR3: Trigonometry', curr: 'trig', desc: 'Solve problems involving right triangles (SOH-CAH-TOA) and acute triangles (Sine & Cosine Law)' }
+};
+const LEVEL_TIERS = [
+  { tier: 1, pep: '🌶️', name: 'Level 1: Beginning', pct: '50–59%' },
+  { tier: 2, pep: '🌶️🌶️', name: 'Level 2: Developing', pct: '60–69%' },
+  { tier: 3, pep: '🌶️🌶️🌶️', name: 'Level 3: Refining', pct: '70–79%' },
+  { tier: 4, pep: '🌶️🌶️🌶️🌶️', name: 'Level 4: Proficient', pct: '80–100%' }
+];
+
+const LEVELLED_TASKS = {
+  AG1: {
+    1: () => {
+      const m = rndNZ(-3, 3), b = rnd(-5, 5), x = rnd(-4, 4), isSat = Math.random() < 0.5;
+      const y = m * x + b + (isSat ? 0 : rndNZ(-3, 3));
+      const eq = `y = ${m === 1 ? '' : m === -1 ? '−' : m}x ${b < 0 ? '−' : '+'} ${Math.abs(b)}`;
+      return { skillId: 'l_poi_type', expr: `Point: (${x}, ${y})\nEquation: ${eq}`, choice: isSat ? 'yes' : 'no',
+        choices: [{ val: 'yes', label: 'Yes — satisfies the equation' }, { val: 'no', label: 'No — does not satisfy' }],
+        prompt: '🌶️ Level 1 — Does the given point satisfy the linear equation?',
+        hints: [`Substitute x = ${x} and y = ${y} into ${eq}.`, `Right side: ${m}(${x}) + (${b}) = ${m * x + b}. Compare with y = ${y}.`, `Since ${m * x + b} ${isSat ? '=' : '≠'} ${y}, the answer is ${isSat ? 'Yes' : 'No'}.`],
+        steps: [`Substitute x = ${x}, y = ${y}: LHS = ${y}, RHS = ${m * x + b}`, isSat ? 'LHS = RHS → Yes' : 'LHS ≠ RHS → No'] };
+    },
+    2: () => {
+      const a = rndNZ(-4, 4), b = pick([2, 3, -2, -3]), m = rndNZ(-3, 3), k = rnd(-5, 5);
+      const c = b * k, A = -b * m; // A x + b y = c => y = m x + k
+      const eq = `${A === 1 ? '' : A === -1 ? '−' : A}x ${b < 0 ? '−' : '+'} ${Math.abs(b)}y = ${c}`;
+      return { skillId: 'l_sub', expr: eq, lineEq: { m, b: k },
+        prompt: '🌶️🌶️ Level 2 — Rearrange the equation into slope y-intercept form (y = mx + b):',
+        hints: [`Isolate the y-term on the left: ${b}y = ${-A}x + ${c}.`, `Divide every term by ${b}.`, `y = ${m}x ${k < 0 ? '−' : '+'} ${Math.abs(k)}.`],
+        steps: [`${b}y = ${-A}x + (${c})`, `y = ${m}x ${k < 0 ? '−' : '+'} ${Math.abs(k)}`] };
+    },
+    3: () => SKILLS.l_sub.gen(),
+    4: () => {
+      // Two-equation system where both equations require multipliers + check POI
+      let a1, b1, a2, b2, px, py;
+      do {
+        px = rnd(-4, 4); py = rnd(-4, 4);
+        a1 = pick([2, 3, -2, -3]); b1 = pick([2, 3, 5, -2, -3]);
+        a2 = pick([2, 3, 4, -2, -3]); b2 = pick([2, 3, 4, -2, -3]);
+      } while (a1 * b2 - a2 * b1 === 0 || Math.abs(a1) === Math.abs(a2) || Math.abs(b1) === Math.abs(b2));
+      const c1 = a1 * px + b1 * py, c2 = a2 * px + b2 * py;
+      const fmt = (a, b, c) => `${a}x ${b < 0 ? '−' : '+'} ${Math.abs(b)}y = ${c}`;
+      return { skillId: 'l_elim', expr: `${fmt(a1, b1, c1)}\n${fmt(a2, b2, c2)}`, point: [px, py],
+        prompt: '🌶️🌶️🌶️🌶️ Level 4 — Solve the linear system (multiply both equations as needed). Enter POI (x, y):',
+        hints: [`Multiply Eq. 1 by ${Math.abs(b2)} and Eq. 2 by ${Math.abs(b1)} to match the y-coefficients.`,
+                'Add or subtract the new equations to eliminate y and solve for x.',
+                `x = ${px}, then substitute back to get y = ${py}.`],
+        steps: [`Match y-coefficients (${Math.abs(b1 * b2)}y)`, `Solve → x = ${px}, y = ${py}  ⇒  POI: (${px}, ${py})`] };
+    }
+  },
+  AG2: {
+    1: () => {
+      const m = pick([2, -2, 3, -3]), b = rndNZ(-6, 6);
+      const eq = `y = ${m}x ${b < 0 ? '−' : '+'} ${Math.abs(b)}`;
+      return { skillId: 'ag_slopes', expr: eq, numAns: m, tol: 1e-4,
+        prompt: '🌶️ Level 1 — State the slope of any line PARALLEL to this line:',
+        hints: ['In y = mx + b, m is the slope.', 'Parallel lines have the exact same slope.', `m = ${m}.`],
+        steps: [`Slope of ${eq} is m = ${m}`, `Parallel slope = ${m}`] };
+    },
+    2: () => SKILLS.ag_midpoint.gen(),
+    3: () => SKILLS.ag_slopes.gen(),
+    4: () => SKILLS.ag_lines.gen()
+  },
+  QR2: {
+    1: () => SKILLS.f_gcf.gen(),
+    2: () => SKILLS.f_simple.gen(),
+    3: () => SKILLS.s_factor.gen(),
+    4: () => SKILLS.t_complete.gen()
+  },
+  TR2: {
+    1: () => SKILLS.tr_similar.gen(),
+    2: () => SKILLS.tr_sohcahtoa.gen(),
+    3: () => pick([SKILLS.tr_sinelaw, SKILLS.tr_coslaw]).gen(),
+    4: () => SKILLS.tr_compound.gen()
+  }
+};
+
+function renderLevelled() {
+  store.levelled ||= {};
+  $('lvlExpChips').innerHTML = Object.entries(LEVELLED_META).map(([k, M]) =>
+    `<button type="button" class="btn chip px-2.5 py-1 text-xs sm:text-sm ${lvlExp === k ? 'active' : ''}" data-lexp="${k}">${M.label}</button>`
+  ).join('');
+  $('lvlExpChips').querySelectorAll('[data-lexp]').forEach(b => b.onclick = () => {
+    lvlExp = b.dataset.lexp; renderLevelled(); renderCurriculum(); newQuestion();
+  });
+  $('lvlTierChips').innerHTML = LEVEL_TIERS.map(t => {
+    const passed = !!store.levelled[`${lvlExp}_${t.tier}`];
+    const active = lvlTier === t.tier;
+    return `<button type="button" class="btn p-2 text-left text-xs ${active ? 'bg-amber-300' : 'bg-white'}" data-ltier="${t.tier}">
+      <div class="flex justify-between items-center"><span>${t.pep}</span>${passed ? '<span class="text-green-700 font-black">✓</span>' : ''}</div>
+      <div class="font-black mt-0.5">${t.name}</div>
+      <div class="text-slate-600 font-normal">${t.pct}</div>
+    </button>`;
+  }).join('');
+  $('lvlTierChips').querySelectorAll('[data-ltier]').forEach(b => b.onclick = () => {
+    lvlTier = +b.dataset.ltier; renderLevelled(); newQuestion();
+  });
+}
+
 function newQuestion() {
-  // Adaptive: weight weaker skills more
-  const ids = available(), w = ids.map(id => 110 - masteryOf(id)), tot = w.reduce((a, b) => a + b, 0);
-  let r = Math.random() * tot; qId = ids[ids.length - 1];
-  for (let i = 0; i < ids.length; i++) { r -= w[i]; if (r <= 0) { qId = ids[i]; break; } }
-  q = SKILLS[qId].gen(); q.factor = SKILLS[qId].mode === 'factor'; q.solve = SKILLS[qId].mode === 'solve';
+  if (mode === 'beauty') return;
+  if (mode === 'levelled') {
+    const genFn = LEVELLED_TASKS[lvlExp][lvlTier];
+    q = genFn();
+    qId = q.skillId || (lvlExp === 'AG1' ? 'l_sub' : lvlExp === 'AG2' ? 'ag_lines' : lvlExp === 'QR2' ? (lvlTier <= 2 ? 'f_simple' : lvlTier === 3 ? 's_factor' : 't_complete') : (lvlTier === 1 ? 'tr_similar' : lvlTier === 2 ? 'tr_sohcahtoa' : lvlTier === 3 ? 'tr_sinelaw' : 'tr_compound'));
+    q.factor = lvlExp === 'QR2' && lvlTier <= 2;
+    q.solve = lvlExp === 'QR2' && lvlTier === 3;
+    q.lvlKey = `${lvlExp}_${lvlTier}`;
+    const tierInfo = LEVEL_TIERS[lvlTier - 1];
+    $('qSkill').textContent = `${tierInfo.pep} ${tierInfo.name} (${tierInfo.pct})`;
+    $('qLevel').textContent = LEVELLED_META[lvlExp].label;
+    $('qExp').textContent = `🎯 Overall Expectation: ${LEVELLED_META[lvlExp].desc}`;
+  } else {
+    // Adaptive: weight weaker skills more
+    const ids = available(), w = ids.map(id => 110 - masteryOf(id)), tot = w.reduce((a, b) => a + b, 0);
+    let r = Math.random() * tot; qId = ids[ids.length - 1];
+    for (let i = 0; i < ids.length; i++) { r -= w[i]; if (r <= 0) { qId = ids[i]; break; } }
+    q = SKILLS[qId].gen(); q.factor = SKILLS[qId].mode === 'factor'; q.solve = SKILLS[qId].mode === 'solve';
+    $('qSkill').textContent = SKILLS[qId].name;
+    $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
+    $('qExp').textContent = SKILL_EXP[qId] ? `🎯 ${SKILL_EXP[qId]}` : '';
+  }
   hintsShown = 0; attemptedWrong = false; done = false; graphPts = [];
-  $('qSkill').textContent = SKILLS[qId].name;
-  $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
-  $('qExp').textContent = SKILL_EXP[qId] ? `🎯 ${SKILL_EXP[qId]}` : '';
   $('qPrompt').textContent = q.prompt || (q.solve ? 'Solve for x (separate multiple roots with a comma, e.g. -3, 2):' : q.factor ? 'Factor fully:' : 'Expand and simplify:');
   const isText = (q.vertexForm && qId === 't_write') || q.textCard;
   $('qExpr').className = isText ? 'text-lg md:text-xl font-bold my-4 text-center text-slate-800 whitespace-pre-line' : 'math text-2xl md:text-3xl font-bold my-4 text-center whitespace-pre-line';
@@ -1576,12 +1713,14 @@ $('mathAnswer').addEventListener('input', () => markActive());
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
   mode = b.dataset.mode;
   document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
-  const isBeauty = mode === 'beauty';
-  $('skillSection').classList.toggle('hidden', isBeauty);
+  const isBeauty = mode === 'beauty', isLvl = mode === 'levelled';
+  $('skillSection').classList.toggle('hidden', isBeauty || isLvl);
+  $('levelledSection').classList.toggle('hidden', !isLvl);
   $('currBox').classList.toggle('hidden', isBeauty);
   $('card').classList.toggle('hidden', isBeauty);
   $('beautySection').classList.toggle('hidden', !isBeauty);
   if (isBeauty) renderBeauty();
+  else if (isLvl) { renderLevelled(); renderCurriculum(); newQuestion(); }
   else { renderChips(); newQuestion(); }
 });
 
