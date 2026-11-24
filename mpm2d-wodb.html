@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MPM2D Which One Doesn't Belong? (WODB)</title>
+  <title>MPM2D 800 Which One Doesn't Belong? (WODB)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -36,20 +36,23 @@
         <div class="flex items-center gap-2 flex-wrap">
           <a href="index.html" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-100 hover:bg-slate-200 border-2 border-slate-800">← Hub</a>
           <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
-          <span class="px-2.5 py-1 text-xs font-black rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800">Building Thinking Classrooms</span>
+          <span class="px-2.5 py-1 text-xs font-black rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800">800 WODB Puzzles</span>
         </div>
-        <h1 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">🤔 Which One Doesn't Belong? (WODB)</h1>
+        <h1 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">🤔 Which One Doesn't Belong? (800 MPM2D Set)</h1>
         <p class="text-xs font-bold text-slate-600">Every quadrant has a valid mathematical reason! Tap a card to tally class votes, then reveal reasons.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <button onclick="pickRandomPuzzle()" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-300 text-slate-900 comic-btn">
+          🎲 Random WODB
+        </button>
         <button onclick="toggleReasons()" id="reasonsToggleBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-emerald-600 text-white comic-btn">
           👁️ Show Reasons
         </button>
-        <button onclick="resetVotes()" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
+        <button onclick="resetVotes()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-100 text-slate-900 comic-btn">
           🔄 Reset Votes
         </button>
         <button onclick="openCustomWodbModal()" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">
-          ➕ Custom WODB
+          ➕ Custom
         </button>
         <button onclick="toggleLargeFont()" id="fontBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
           ⛶ Large Font
@@ -60,12 +63,6 @@
       </div>
     </header>
 
-    <!-- Unit Filter & Puzzle Selector -->
-    <section class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3">
-      <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar"></div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2" id="puzzleSelectorGrid"></div>
-    </section>
-
     <!-- Active WODB 2x2 Stage -->
     <section class="bg-white rounded-xl comic-border p-4 sm:p-6 space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
@@ -73,10 +70,33 @@
           <span id="activeUnitBadge" class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800">Unit</span>
           <h2 id="activeTitle" class="text-lg sm:text-2xl font-black text-slate-900 mt-1">Puzzle Title</h2>
         </div>
-        <div class="text-xs font-bold text-slate-500">Tap any box to add a class vote • Tap − to undo</div>
+        <div class="flex items-center gap-2">
+          <button onclick="stepPuzzle(-1)" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200">◀ Prev</button>
+          <button onclick="stepPuzzle(1)" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200">Next ▶</button>
+        </div>
       </div>
 
       <div id="wodbGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- Expectation Filter, Search & Paginated 800-Puzzle Browser -->
+    <section class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar"></div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="wodbSearch" oninput="onSearchChange()" placeholder="Search # (e.g. 250) or topic..." class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none w-48 sm:w-56" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2" id="puzzleSelectorGrid"></div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs font-black">
+        <span id="pageInfo" class="text-slate-600">Showing 1–12 of 800</span>
+        <div class="flex items-center gap-2">
+          <button onclick="changePage(-1)" id="prevPageBtn" class="px-3 py-1 rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">◀ Prev 12</button>
+          <button onclick="changePage(1)" id="nextPageBtn" class="px-3 py-1 rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">Next 12 ▶</button>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -105,129 +125,274 @@
   </div>
 
   <script>
-    const BUILTIN_WODB = [
-      {
-        id: 'quad-parabolas',
-        unit: 'Quadratics',
-        title: 'Four Parabolas',
-        items: [
-          { label: 'A', expr: '$y = x^2 - 4$', reason: 'Only one in standard form with no middle $x$ term AND $a=1$ opening up with 2 roots.' },
-          { label: 'B', expr: '$y = (x - 2)^2$', reason: 'Only one with 1 $x$-intercept (vertex on the $x$-axis at $(2, 0)$).' },
-          { label: 'C', expr: '$y = -x^2 + 4$', reason: 'Only parabola that opens downward ($a < 0$, has a maximum).' },
-          { label: 'D', expr: '$y = 2x^2 - 8$', reason: 'Only one with a vertical stretch ($a = 2 \\neq \\pm 1$).' }
-        ]
-      },
-      {
-        id: 'quad-factoring',
-        unit: 'Factoring',
-        title: 'Four Quadratic Expressions',
-        items: [
-          { label: 'A', expr: '$x^2 - 9$', reason: 'Only difference of squares (only 2 terms, no $bx$ term).' },
-          { label: 'B', expr: '$x^2 + 6x + 9$', reason: 'Only perfect square trinomial: $(x + 3)^2$.' },
-          { label: 'C', expr: '$x^2 + 5x + 6$', reason: 'Only trinomial with two different linear factors $(x+2)(x+3)$.' },
-          { label: 'D', expr: '$2x^2 + 6x$', reason: 'Only one with a GCF ($2x$) and constant term $c = 0$.' }
-        ]
-      },
-      {
-        id: 'quad-forms',
-        unit: 'Quadratics',
-        title: 'Quadratic Forms & Features',
-        items: [
-          { label: 'A', expr: '$y = 2(x - 1)(x - 5)$', reason: 'Only one written in factored form.' },
-          { label: 'B', expr: '$y = 2(x - 3)^2 - 8$', reason: 'Only one written in vertex form.' },
-          { label: 'C', expr: '$y = 2x^2 - 12x + 10$', reason: 'Only one written in standard form.' },
-          { label: 'D', expr: '$y = (x - 3)^2 - 4$', reason: 'Only parabola with $a = 1$ (A, B, and C are actually the SAME parabola!).' }
-        ]
-      },
-      {
-        id: 'lin-lines',
-        unit: 'Linear Systems',
-        title: 'Four Linear Equations',
-        items: [
-          { label: 'A', expr: '$y = 2x + 3$', reason: 'Only one in slope-intercept form with positive slope AND $y$-intercept $3$.' },
-          { label: 'B', expr: '$y = -2x + 3$', reason: 'Only line with a negative slope ($m = -2$).' },
-          { label: 'C', expr: '$2x - y = -3$', reason: 'Only equation written in standard form (and it is the same line as A!).' },
-          { label: 'D', expr: '$y = 2x - 5$', reason: 'Only line with a negative $y$-intercept ($b = -5$).' }
-        ]
-      },
-      {
-        id: 'lin-systems',
-        unit: 'Linear Systems',
-        title: 'Four Systems of Equations',
-        items: [
-          { label: 'A', expr: '$y = 2x + 1$ & $y = 2x - 3$', reason: 'Only system with NO solution (parallel lines).' },
-          { label: 'B', expr: '$y = 2x + 1$ & $4x - 2y = -2$', reason: 'Only system with INFINITELY many solutions (coincident lines).' },
-          { label: 'C', expr: '$y = 2x + 1$ & $y = -\\frac{1}{2}x + 6$', reason: 'Only pair of perpendicular lines.' },
-          { label: 'D', expr: '$x + y = 7$ & $x - y = 1$', reason: 'Only system where neither equation has $y$ isolated.' }
-        ]
-      },
-      {
-        id: 'ana-geo',
-        unit: 'Analytic Geometry',
-        title: 'Circles & Points',
-        items: [
-          { label: 'A', expr: '$x^2 + y^2 = 25$', reason: 'Only circle with integer radius $r = 5$ (and equation).' },
-          { label: 'B', expr: '$x^2 + y^2 = 20$', reason: 'Only circle with an irrational radius $r = \\sqrt{20} = 2\\sqrt{5}$.' },
-          { label: 'C', expr: '$(3, 4)$', reason: 'Only point in Quadrant I (lies on $x^2 + y^2 = 25$).' },
-          { label: 'D', expr: '$(0, -5)$', reason: 'Only point on an axis ($y$-intercept of $x^2 + y^2 = 25$).' }
-        ]
-      },
-      {
-        id: 'trig-ratios',
-        unit: 'Trigonometry',
-        title: 'Four Trig Values',
-        items: [
-          { label: 'A', expr: '$\\sin(30^\\circ)$', reason: 'Only sine ratio (equals $0.5$).' },
-          { label: 'B', expr: '$\\cos(60^\\circ)$', reason: 'Only cosine ratio (also equals $0.5$!).' },
-          { label: 'C', expr: '$\\tan(45^\\circ)$', reason: 'Only expression equal to $1$ (an integer).' },
-          { label: 'D', expr: '$\\sin(45^\\circ)$', reason: 'Only irrational value ($\\frac{\\sqrt{2}}{2} \\approx 0.707$).' }
-        ]
-      },
-      {
-        id: 'num-warmup',
-        unit: 'Warm-Up',
-        title: 'Four Numbers',
-        items: [
-          { label: 'A', expr: '$9$', reason: 'Only single-digit number.' },
-          { label: 'B', expr: '$16$', reason: 'Only even number (and $2^4$).' },
-          { label: 'C', expr: '$25$', reason: 'Only multiple of $5$.' },
-          { label: 'D', expr: '$43$', reason: 'Only prime number (not a perfect square!).' }
-        ]
-      }
-    ];
+    function fmtSign(n) { return n >= 0 ? `+ ${n}` : `- ${Math.abs(n)}`; }
+    function fmtTermX(b) {
+      if (b === 0) return '';
+      if (b === 1) return '+ x';
+      if (b === -1) return '- x';
+      return b > 0 ? `+ ${b}x` : `- ${Math.abs(b)}x`;
+    }
 
+    // Deterministic generator producing 800 distinct MPM2D WODB puzzles (200 per Expectation A, B, C, D)
+    function generate800Puzzles() {
+      const list = [];
+      let num = 1;
+
+      // EXPECTATION A (1–200): Quadratic Expressions (Expanding & Factoring)
+      // A1: 100 puzzles — Four Quadratic Expressions
+      for (let i = 0; i < 100; i++) {
+        const r = (i % 10) + 2;
+        const p = Math.floor(i / 10) + 1;
+        const m = (i % 7) + 1;
+        const n = ((i + 3) % 8) + 2;
+        const bSum = m + n;
+        const cProd = m * n;
+        const k = (i % 5) + 2;
+        const q = (i % 6) + 2;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp A: Factoring & Expanding',
+          title: `#${num} — Four Quadratic Expressions`,
+          items: [
+            { label: 'A', expr: `$x^2 - ${r * r}$`, reason: `Only difference of squares: $(x - ${r})(x + ${r})$ (2 terms, $b = 0$).` },
+            { label: 'B', expr: `$x^2 + ${2 * p}x + ${p * p}$`, reason: `Only perfect square trinomial: $(x + ${p})^2$.` },
+            { label: 'C', expr: `$x^2 + ${bSum}x + ${cProd}$`, reason: `Only trinomial with two distinct factors: $(x + ${m})(x + ${n})$.` },
+            { label: 'D', expr: `$${k}x^2 + ${k * q}x$`, reason: `Only one with a GCF ($${k}x$) and constant term $c = 0$.` }
+          ]
+        });
+        num++;
+      }
+
+      // A2: 100 puzzles — Four Factored / Product Expressions
+      for (let i = 0; i < 100; i++) {
+        const a = (i % 9) + 1;
+        const b = (Math.floor(i / 9) % 8) + 2;
+        const bUse = b === a ? b + 1 : b;
+        const c = (i % 4) + 2;
+        const d = ((i + 1) % 5) + 1;
+        const k = (i % 3) + 2;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp A: Factoring & Expanding',
+          title: `#${num} — Four Binomial Products`,
+          items: [
+            { label: 'A', expr: `$(x + ${a})(x + ${bUse})$`, reason: `Only one with two distinct positive constants (expands to $x^2 + ${a + bUse}x + ${a * bUse}$).` },
+            { label: 'B', expr: `$(x - ${a})(x + ${a})$`, reason: `Only conjugate pair (expands to difference of squares $x^2 - ${a * a}$ with no $x$ term).` },
+            { label: 'C', expr: `$(${c}x + ${d})^2$`, reason: `Only squared binomial with leading coefficient $> 1$ (leading term $${c * c}x^2$).` },
+            { label: 'D', expr: `$${k}(x + ${a})(x - ${bUse})$`, reason: `Only expression with a numerical GCF ($${k}$) factored out in front.` }
+          ]
+        });
+        num++;
+      }
+
+      // EXPECTATION B (201–400): Quadratic Equations & Relations
+      // B1: 100 puzzles — Four Parabolas
+      for (let i = 0; i < 100; i++) {
+        const r = (i % 8) + 2;
+        const h = (Math.floor(i / 8) % 9) + 1;
+        const k = (i % 7) + 1;
+        const a = (i % 4) + 2;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp B: Quadratic Relations',
+          title: `#${num} — Four Parabolas`,
+          items: [
+            { label: 'A', expr: `$y = x^2 - ${r * r}$`, reason: `Only one in standard form with $2$ $x$-intercepts at $x = \\pm ${r}$.` },
+            { label: 'B', expr: `$y = (x - ${h})^2$`, reason: `Only parabola with exactly $1$ $x$-intercept (vertex on the $x$-axis at $(${h}, 0)$).` },
+            { label: 'C', expr: `$y = -x^2 + ${k}$`, reason: `Only parabola that opens downward ($a = -1 < 0$, has a maximum).` },
+            { label: 'D', expr: `$y = ${a}(x - ${h})^2 + ${k}$`, reason: `Only parabola with vertical stretch $a = ${a}$ AND $0$ $x$-intercepts.` }
+          ]
+        });
+        num++;
+      }
+
+      // B2: 100 puzzles — Four Quadratic Equations
+      for (let i = 0; i < 100; i++) {
+        const r1 = (i % 7) + 1;
+        const r2 = (Math.floor(i / 7) % 7) + 2;
+        const r2Use = r2 === r1 ? r2 + 1 : r2;
+        const s = (i % 9) + 2;
+        const p = (i % 6) + 1;
+        const q = (Math.floor(i / 6) % 5) + 1;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp B: Quadratic Relations',
+          title: `#${num} — Four Quadratic Equations`,
+          items: [
+            { label: 'A', expr: `$(x - ${r1})(x - ${r2Use}) = 0$`, reason: `Only equation already in factored form (roots immediately $x = ${r1}, ${r2Use}$).` },
+            { label: 'B', expr: `$x^2 - ${s * s} = 0$`, reason: `Only equation with symmetric opposite roots $x = \\pm ${s}$.` },
+            { label: 'C', expr: `$x^2 ${fmtTermX(-(r1 + r2Use))} + ${r1 * r2Use} = 0$`, reason: `Only unfactored standard trinomial with $2$ real roots ($x = ${r1}, ${r2Use}$).` },
+            { label: 'D', expr: `$(x + ${p})^2 + ${q} = 0$`, reason: `Only equation with NO real solutions (since $(x + ${p})^2 \\ge 0$).` }
+          ]
+        });
+        num++;
+      }
+
+      // EXPECTATION C (401–600): Linear Systems
+      // C1: 100 puzzles — Four Linear Equations
+      for (let i = 0; i < 100; i++) {
+        const m = (i % 8) + 2;
+        const b = (Math.floor(i / 8) % 9) + 1;
+        const d = (i % 7) + 2;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp C: Linear Systems',
+          title: `#${num} — Four Linear Equations`,
+          items: [
+            { label: 'A', expr: `$y = ${m}x + ${b}$`, reason: `Only one in slope-intercept form with positive slope AND positive $y$-intercept.` },
+            { label: 'B', expr: `$y = -${m}x + ${b}$`, reason: `Only line with a negative slope ($m = -${m}$).` },
+            { label: 'C', expr: `$${m}x - y = -${b}$`, reason: `Only equation in standard form (and it represents the exact same line as A!).` },
+            { label: 'D', expr: `$y = ${m}x - ${d}$`, reason: `Only line with a negative $y$-intercept ($b = -${d}$, parallel to A).` }
+          ]
+        });
+        num++;
+      }
+
+      // C2: 100 puzzles — Four Linear Systems
+      for (let i = 0; i < 100; i++) {
+        const m = (i % 5) + 2;
+        const b1 = (Math.floor(i / 5) % 6) + 1;
+        const b2 = b1 + ((i % 4) + 2);
+        const xSol = (i % 6) + 2;
+        const ySol = (Math.floor(i / 6) % 5) + 1;
+        const sum = xSol + ySol;
+        const diff = xSol - ySol;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp C: Linear Systems',
+          title: `#${num} — Four Linear Systems`,
+          items: [
+            { label: 'A', expr: `$y = ${m}x + ${b1}$ & $y = ${m}x + ${b2}$`, reason: `Only system with NO solution (parallel distinct lines).` },
+            { label: 'B', expr: `$y = ${m}x + ${b1}$ & $${2 * m}x - 2y = -${2 * b1}$`, reason: `Only system with INFINITELY many solutions (coincident lines).` },
+            { label: 'C', expr: `$y = ${m}x + ${b1}$ & $y = -\\frac{1}{${m}}x + ${b2}$`, reason: `Only pair of perpendicular lines (negative reciprocal slopes).` },
+            { label: 'D', expr: `$x + y = ${sum}$ & $x - y = ${diff}$`, reason: `Only system where neither equation has $y$ isolated (POI: $(${xSol}, ${ySol})$).` }
+          ]
+        });
+        num++;
+      }
+
+      // EXPECTATION D (601–800): Analytic Geometry & Trigonometry
+      // D1: 100 puzzles — Circles & Points
+      for (let i = 0; i < 100; i++) {
+        const triples = [[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15]];
+        const t = triples[i % triples.length];
+        const scale = Math.floor(i / triples.length) % 4 + 1;
+        const px = t[0] * scale;
+        const py = t[1] * scale;
+        const r = t[2] * scale;
+        const nonSq = r * r + ((i % 5) + 2);
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp D: Analytic & Trig',
+          title: `#${num} — Circles & Coordinate Points`,
+          items: [
+            { label: 'A', expr: `$x^2 + y^2 = ${r * r}$`, reason: `Only circle equation with an integer radius ($r = ${r}$).` },
+            { label: 'B', expr: `$x^2 + y^2 = ${nonSq}$`, reason: `Only circle with an irrational radius ($r = \\sqrt{${nonSq}}$).` },
+            { label: 'C', expr: `$(${px}, ${py})$`, reason: `Only point in Quadrant I (lies directly on circle $x^2 + y^2 = ${r * r}$).` },
+            { label: 'D', expr: `$(0, -${r})$`, reason: `Only point on an axis ($y$-intercept of $x^2 + y^2 = ${r * r}$).` }
+          ]
+        });
+        num++;
+      }
+
+      // D2: 100 puzzles — Trigonometry & Line Segments
+      for (let i = 0; i < 100; i++) {
+        const k = (i % 10) + 1;
+        const angleA = [30, 45, 60][i % 3];
+        const compA = 90 - angleA;
+        const s = (i % 7) + 2;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          unit: 'Exp D: Analytic & Trig',
+          title: `#${num} — Trig Ratios & Exact Values`,
+          items: [
+            { label: 'A', expr: `$\\sin(${angleA}^\\circ)$`, reason: `Only sine expression.` },
+            { label: 'B', expr: `$\\cos(${compA}^\\circ)$`, reason: `Only cosine expression (equals $\\sin(${angleA}^\\circ)$!).` },
+            { label: 'C', expr: `$\\tan(45^\\circ) \\cdot ${k}$`, reason: `Only tangent expression (evaluates to integer $${k}$).` },
+            { label: 'D', expr: `$${s}\\sqrt{2}$`, reason: `Only expression written as a simplified radical (hypotenuse of a ${s}-${s}-${s}\\sqrt{2}$ triangle).` }
+          ]
+        });
+        num++;
+      }
+
+      return list;
+    }
+
+    const BUILTIN_WODB = generate800Puzzles();
     const CUSTOM_WODB_KEY = 'mpm2d_custom_wodb_v1';
     let customWodb = JSON.parse(localStorage.getItem(CUSTOM_WODB_KEY) || '[]');
     let activeUnit = 'All';
     let activeId = BUILTIN_WODB[0].id;
     let showReasons = false;
     let largeFont = false;
+    let currentPage = 0;
+    const PAGE_SIZE = 12;
     let votes = { A: 0, B: 0, C: 0, D: 0 };
 
-    function getAllPuzzles() { return [...BUILTIN_WODB, ...customWodb]; }
+    function getAllPuzzles() { return [...customWodb, ...BUILTIN_WODB]; }
+    function getFilteredPuzzles() {
+      const q = (document.getElementById('wodbSearch')?.value || '').trim().toLowerCase();
+      return getAllPuzzles().filter(p => {
+        const unitOk = activeUnit === 'All' || p.unit === activeUnit;
+        if (!unitOk) return false;
+        if (!q) return true;
+        return p.title.toLowerCase().includes(q) || p.unit.toLowerCase().includes(q) || String(p.num || '') === q.replace('#', '');
+      });
+    }
     function getActivePuzzle() { return getAllPuzzles().find(p => p.id === activeId) || BUILTIN_WODB[0]; }
 
     function renderUnitFilters() {
-      const units = ['All', ...new Set(getAllPuzzles().map(p => p.unit))];
+      const units = ['All', 'Exp A: Factoring & Expanding', 'Exp B: Quadratic Relations', 'Exp C: Linear Systems', 'Exp D: Analytic & Trig'];
+      if (customWodb.length > 0) units.push('Custom');
       document.getElementById('unitFilterBar').innerHTML = units.map(u => `
-        <button onclick="setUnitFilter('${u}')" class="px-3 py-1 text-xs font-black rounded-lg border-2 border-slate-800 transition ${activeUnit === u ? 'tab-active' : 'bg-slate-50 hover:bg-slate-100'}">${u}</button>
+        <button onclick="setUnitFilter('${u}')" class="px-2.5 py-1 text-[11px] font-black rounded-lg border-2 border-slate-800 transition ${activeUnit === u ? 'tab-active' : 'bg-slate-50 hover:bg-slate-100'}">${u}</button>
       `).join('');
     }
 
     function setUnitFilter(u) {
       activeUnit = u;
+      currentPage = 0;
       renderUnitFilters();
       renderSelector();
     }
 
+    function onSearchChange() {
+      currentPage = 0;
+      renderSelector();
+    }
+
+    function changePage(delta) {
+      const total = getFilteredPuzzles().length;
+      const maxPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+      currentPage = Math.max(0, Math.min(maxPage, currentPage + delta));
+      renderSelector();
+    }
+
     function renderSelector() {
-      const list = getAllPuzzles().filter(p => activeUnit === 'All' || p.unit === activeUnit);
-      document.getElementById('puzzleSelectorGrid').innerHTML = list.map(p => `
+      const filtered = getFilteredPuzzles();
+      const total = filtered.length;
+      const start = currentPage * PAGE_SIZE;
+      const slice = filtered.slice(start, start + PAGE_SIZE);
+
+      document.getElementById('puzzleSelectorGrid').innerHTML = slice.map(p => `
         <button onclick="selectPuzzle('${p.id}')" class="text-left p-2.5 rounded-xl border-2 border-slate-800 transition ${p.id === activeId ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-yellow-50'}">
           <div class="text-[10px] font-black uppercase text-blue-700">${p.unit}</div>
           <div class="text-xs font-black text-slate-900 mt-0.5">${p.title}</div>
         </button>
-      `).join('');
+      `).join('') || `<div class="col-span-full text-center py-4 text-xs font-bold text-slate-500">No matching WODB puzzles found.</div>`;
+
+      const end = Math.min(start + PAGE_SIZE, total);
+      document.getElementById('pageInfo').textContent = total > 0 ? `Showing ${start + 1}–${end} of ${total}` : '0 puzzles';
+      document.getElementById('prevPageBtn').disabled = currentPage === 0;
+      document.getElementById('nextPageBtn').disabled = end >= total;
     }
 
     function selectPuzzle(id) {
@@ -237,6 +402,21 @@
       updateReasonsBtn();
       renderSelector();
       renderStage();
+    }
+
+    function pickRandomPuzzle() {
+      const filtered = getFilteredPuzzles();
+      if (filtered.length === 0) return;
+      const rand = filtered[Math.floor(Math.random() * filtered.length)];
+      selectPuzzle(rand.id);
+    }
+
+    function stepPuzzle(delta) {
+      const filtered = getFilteredPuzzles();
+      if (filtered.length === 0) return;
+      const idx = filtered.findIndex(p => p.id === activeId);
+      const nextIdx = idx === -1 ? 0 : (idx + delta + filtered.length) % filtered.length;
+      selectPuzzle(filtered[nextIdx].id);
     }
 
     function addVote(label, delta) {
@@ -326,10 +506,11 @@
           { label: 'D', expr: d, reason: document.getElementById('cwRD').value.trim() }
         ]
       };
-      customWodb.push(newP);
+      customWodb.unshift(newP);
       localStorage.setItem(CUSTOM_WODB_KEY, JSON.stringify(customWodb));
       closeCustomWodbModal();
       activeUnit = 'All';
+      currentPage = 0;
       renderUnitFilters();
       selectPuzzle(newP.id);
     }
