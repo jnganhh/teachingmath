@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPM2D Factoring & Expansion Drill</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .comic { border: 3px solid #1e293b; box-shadow: 5px 5px 0 #1e293b; border-radius: 14px; }
+  .btn { border: 3px solid #1e293b; box-shadow: 3px 3px 0 #1e293b; border-radius: 10px; font-weight: 800; transition: .1s; }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #1e293b; }
+  .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #1e293b; }
+  .chip.active { background:#2563eb; color:white; }
+  .math { font-family: "Cambria Math", Cambria, Georgia, serif; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  .shake { animation: shake .3s; }
+</style>
+</head>
+<body class="bg-yellow-50 text-slate-800 min-h-screen p-4">
+<div class="max-w-5xl mx-auto">
+
+  <header class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div>
+      <a href="index.html" class="text-sm font-bold text-blue-600">← Learning Hub</a>
+      <h1 class="text-3xl font-black text-blue-600">MPM2D Factoring & Expansion Drill</h1>
+    </div>
+    <div class="comic bg-white px-4 py-2 text-sm font-bold flex gap-4 items-center">
+      <span title="Active work time this session">⏱️ <span id="sessTime">0:00</span></span>
+      <span title="Current streak">🔥 <span id="streak">0</span></span>
+      <span title="Today correct">✅ <span id="todayCorrect">0</span></span>
+    </div>
+  </header>
+
+  <div class="grid md:grid-cols-3 gap-5">
+    <!-- Main practice -->
+    <main class="md:col-span-2 space-y-5">
+      <section class="comic bg-white p-4">
+        <div class="font-black mb-2">1. Choose a mode</div>
+        <div class="flex gap-2 mb-3">
+          <button class="btn chip px-3 py-1 active" data-mode="expand">Expand</button>
+          <button class="btn chip px-3 py-1" data-mode="factor">Factor</button>
+          <button class="btn chip px-3 py-1" data-mode="mixed">Mixed</button>
+        </div>
+        <div class="font-black mb-2">2. Choose skills</div>
+        <div id="skillChips" class="flex flex-wrap gap-2"></div>
+      </section>
+
+      <section id="card" class="comic bg-white p-5">
+        <div class="flex justify-between items-center mb-2">
+          <span id="qSkill" class="text-xs font-black bg-blue-100 text-blue-800 px-3 py-1 border-2 border-slate-800 rounded-full"></span>
+          <span id="qLevel" class="text-xs font-bold text-slate-500"></span>
+        </div>
+        <div id="qPrompt" class="font-bold text-slate-600"></div>
+        <div id="qExpr" class="math text-3xl md:text-4xl font-bold my-4 text-center"></div>
+
+        <label class="font-bold text-sm">Your answer</label>
+        <input id="answer" autocomplete="off" spellcheck="false"
+          class="w-full p-3 border-4 border-slate-800 rounded-lg text-xl math focus:outline-none focus:ring-4 focus:ring-blue-300"
+          placeholder="e.g. (x+3)(x-2)  or  2x^2+5x-3">
+        <div class="text-xs text-slate-500 mt-1">Use <b>^</b> for powers (x^2). Multiplication can be implied: 3x(x+1).</div>
+        <div id="preview" class="math text-lg text-slate-600 mt-1 min-h-[28px]"></div>
+
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button id="checkBtn" class="btn bg-green-400 px-4 py-2">Check ✔</button>
+          <button id="hintBtn" class="btn bg-yellow-300 px-4 py-2">Hint 💡 <span id="hintCount" class="text-xs"></span></button>
+          <button id="skipBtn" class="btn bg-slate-200 px-4 py-2">Show solution</button>
+          <button id="nextBtn" class="btn bg-blue-400 text-white px-4 py-2 hidden">Next →</button>
+        </div>
+
+        <div id="feedback" class="mt-4 hidden p-3 rounded-lg border-2 font-bold"></div>
+        <div id="hints" class="mt-3 space-y-2"></div>
+      </section>
+    </main>
+
+    <!-- Progress -->
+    <aside class="space-y-5">
+      <section class="comic bg-white p-4">
+        <div class="font-black mb-3">📊 My Progress <span class="text-xs font-normal text-slate-500">(saved on this device)</span></div>
+        <div id="mastery" class="space-y-3 text-sm"></div>
+      </section>
+      <section class="comic bg-white p-4">
+        <div class="font-black mb-2">🕘 Recent attempts</div>
+        <ul id="history" class="text-sm space-y-1 max-h-60 overflow-auto"></ul>
+      </section>
+      <section class="comic bg-white p-4 text-sm space-y-2">
+        <div class="font-black">⚙️ Settings</div>
+        <label class="flex justify-between items-center">Break reminder after
+          <select id="breakAfter" class="border-2 border-slate-800 rounded px-1">
+            <option value="15">15 min</option><option value="20">20 min</option>
+            <option value="25">25 min</option><option value="30">30 min</option><option value="45">45 min</option>
+          </select></label>
+        <div class="text-xs text-slate-500">The timer only counts while you are actively working on this page.</div>
+        <div class="flex gap-2 pt-1">
+          <button id="exportBtn" class="btn bg-white px-2 py-1 text-xs">Export progress</button>
+          <button id="resetBtn" class="btn bg-red-200 px-2 py-1 text-xs">Reset</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- Break modal -->
+<div id="breakModal" class="fixed inset-0 bg-slate-900/70 hidden items-center justify-center p-4 z-50">
+  <div class="comic bg-white p-6 max-w-md text-center">
+    <div class="text-5xl mb-2">🧘</div>
+    <h2 class="text-2xl font-black mb-2">Time for a break!</h2>
+    <p class="mb-3">You've been working for <b id="breakWorked"></b> minutes. Your brain consolidates learning when you rest. Stand up, stretch, drink water, look at something far away.</p>
+    <div class="math text-4xl font-black text-blue-600 mb-4" id="breakCountdown">5:00</div>
+    <div class="flex gap-2 justify-center">
+      <button id="breakDone" class="btn bg-green-400 px-4 py-2" disabled style="opacity:.5">I'm back!</button>
+      <button id="breakSnooze" class="btn bg-slate-200 px-4 py-2">5 more min</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= Utilities ================= */
+const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const rndNZ = (a, b) => { let v; do { v = rnd(a, b); } while (v === 0); return v; };
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+
+// Format polynomial from coefficient array [c0, c1, c2, ...]
+function poly(coefs, v = 'x') {
+  let s = '';
+  for (let d = coefs.length - 1; d >= 0; d--) {
+    const c = coefs[d]; if (!c) continue;
+    const abs = Math.abs(c);
+    const sign = c < 0 ? (s ? ' − ' : '−') : (s ? ' + ' : '');
+    const num = (abs === 1 && d > 0) ? '' : abs;
+    const vv = d === 0 ? '' : d === 1 ? v : v + '^' + d;
+    s += sign + num + vv;
+  }
+  return s || '0';
+}
+// binomial (a x + b)
+const lin = (a, b) => poly([b, a]);
+const paren = s => '(' + s + ')';
+const mono = (k, d) => poly(Array.from({length: d + 1}, (_, i) => i === d ? k : 0));
+const mulP = (p, q) => { const r = Array(p.length + q.length - 1).fill(0); p.forEach((a, i) => q.forEach((b, j) => r[i + j] += a * b)); return r; };
+
+// Pretty display (superscripts)
+const sup = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹' };
+const pretty = s => s.replace(/\^(\d+)/g, (_, d) => d.split('').map(c => sup[c]).join('')).replace(/\*/g, '·').replace(/-/g, '−');
+
+/* ================= Expression parser ================= */
+function tokenize(str) {
+  str = str.replace(/[−–]/g, '-').replace(/[·×]/g, '*').replace(/²/g, '^2').replace(/³/g, '^3').replace(/\s+/g, '').replace(/X/g, 'x');
+  const t = []; let i = 0;
+  while (i < str.length) {
+    const c = str[i];
+    if (/[0-9.]/.test(c)) { let n = ''; while (i < str.length && /[0-9.]/.test(str[i])) n += str[i++]; t.push({ type: 'num', v: parseFloat(n) }); continue; }
+    if (c === 'x') { t.push({ type: 'var' }); i++; continue; }
+    if ('+-*/^()'.includes(c)) { t.push({ type: c }); i++; continue; }
+    if (c === '[' ) { t.push({ type: '(' }); i++; continue; }
+    if (c === ']' ) { t.push({ type: ')' }); i++; continue; }
+    throw new Error(`I don't understand the symbol "${c}". Use only x, numbers, + − ^ and brackets.`);
+  }
+  return t;
+}
+// AST: {op:'+', terms:[{sign, node}]}, {op:'*', factors:[node]}, {op:'^', base, exp}, {op:'num'}, {op:'var'}, {op:'neg', node}
+function parse(str) {
+  const t = tokenize(str); let p = 0;
+  if (!t.length) throw new Error('Type an answer first.');
+  const peek = () => t[p], eat = ty => { if (!t[p] || t[p].type !== ty) throw new Error(ty === ')' ? 'A bracket is missing ")".' : 'Something looks incomplete.'); return t[p++]; };
+  function expr() {
+    const terms = [];
+    let sign = 1;
+    if (peek() && (peek().type === '+' || peek().type === '-')) { sign = peek().type === '-' ? -1 : 1; p++; }
+    terms.push({ sign, node: term() });
+    while (peek() && (peek().type === '+' || peek().type === '-')) { const s = peek().type === '-' ? -1 : 1; p++; terms.push({ sign: s, node: term() }); }
+    return terms.length === 1 && terms[0].sign === 1 ? terms[0].node : { op: '+', terms };
+  }
+  function term() {
+    const f = [power()];
+    while (peek() && (peek().type === '*' || peek().type === '/' || ['num','var','('].includes(peek().type))) {
+      if (peek().type === '*') p++;
+      else if (peek().type === '/') { p++; f.push({ op: 'inv', node: power() }); continue; }
+      f.push(power());
+    }
+    return f.length === 1 ? f[0] : { op: '*', factors: f };
+  }
+  function power() {
+    let b = atom();
+    if (peek() && peek().type === '^') { p++; let neg = false; if (peek() && peek().type === '-') { neg = true; p++; } const e = atom(); b = { op: '^', base: b, exp: neg ? { op: 'neg', node: e } : e }; }
+    return b;
+  }
+  function atom() {
+    const k = peek(); if (!k) throw new Error('Your answer ends too early.');
+    if (k.type === 'num') { p++; return { op: 'num', v: k.v }; }
+    if (k.type === 'var') { p++; return { op: 'var' }; }
+    if (k.type === '(') { p++; const e = expr(); eat(')'); return { op: 'grp', node: e }; }
+    if (k.type === '-') { p++; return { op: 'neg', node: power() }; }
+    throw new Error('Something is out of place near "' + k.type + '".');
+  }
+  const r = expr();
+  if (p < t.length) throw new Error(t[p].type === ')' ? 'There is an extra ")".' : 'Something is out of place.');
+  return r;
+}
+function evalAst(n, x) {
+  switch (n.op) {
+    case 'num': return n.v;
+    case 'var': return x;
+    case 'grp': return evalAst(n.node, x);
+    case 'neg': return -evalAst(n.node, x);
+    case 'inv': return 1 / evalAst(n.node, x);
+    case '^': return Math.pow(evalAst(n.base, x), evalAst(n.exp, x));
+    case '*': return n.factors.reduce((a, f) => a * evalAst(f, x), 1);
+    case '+': return n.terms.reduce((a, t) => a + t.sign * evalAst(t.node, x), 0);
+  }
+}
+const SAMPLES = [-2.7, -1.3, 0.4, 1.9, 3.1, 0.77, -0.55];
+const equiv = (ast, fn) => SAMPLES.every(x => Math.abs(evalAst(ast, x) - fn(x)) < 1e-6 * Math.max(1, Math.abs(fn(x))));
+// Recover integer coefficients (degree ≤ 4) of an AST by sampling
+function coefsOf(ast) {
+  const xs = [0, 1, -1, 2, -2]; const ys = xs.map(x => evalAst(ast, x));
+  // Solve Vandermonde (5x5) via Gaussian elimination
+  const A = xs.map((x, i) => [...[0,1,2,3,4].map(d => Math.pow(x, d)), ys[i]]);
+  for (let c = 0; c < 5; c++) {
+    let piv = c; for (let r = c + 1; r < 5; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+    [A[c], A[piv]] = [A[piv], A[c]];
+    for (let r = 0; r < 5; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k < 6; k++) A[r][k] -= f * A[c][k]; }
+  }
+  const co = A.map((row, i) => row[5] / row[i]);
+  const ok = Math.abs(co.reduce((s, c, d) => s + c * Math.pow(3, d), 0) - evalAst(ast, 3)) < 1e-6;
+  return ok ? co.map(c => Math.round(c * 1e6) / 1e6) : null;
+}
+const degree = co => { for (let d = co.length - 1; d >= 0; d--) if (Math.abs(co[d]) > 1e-9) return d; return -1; };
+const hasGroup = n => !n ? false : n.op === 'grp' ? true : n.op === 'neg' || n.op === 'inv' ? hasGroup(n.node) : n.op === '^' ? hasGroup(n.base) || hasGroup(n.exp) : n.op === '*' ? n.factors.some(hasGroup) : n.op === '+' ? n.terms.some(t => hasGroup(t.node)) : false;
+// Top-level factors of a product (unwrapping negation)
+function topFactors(n) {
+  if (n.op === 'neg') return topFactors(n.node);
+  if (n.op === '*') return n.factors.flatMap(f => f.op === '^' && f.base.op === 'grp' ? [f.base.node, f.base.node] : [f.op === 'grp' ? f.node : f]);
+  if (n.op === '^' && n.base.op === 'grp') return [n.base.node, n.base.node];
+  if (n.op === 'grp') return [n.node];
+  return [n];
+}
+
+/* ================= Skills & generators ================= */
+// Each generator returns {expr, target(fn), answer (string), hints[], steps[]}
+const SKILLS = {
+  // ---------- EXPANSION ----------
+  e_mono: { mode: 'expand', name: 'Monomial × Polynomial', gen() {
+    const k = rndNZ(-6, 6), a = rndNZ(-5, 5), b = rndNZ(-9, 9), d = rnd(0, 1);
+    const left = mono(k, d), inner = lin(a, b), res = mulP(Array.from({length: d+1},(_, i)=> i===d?k:0), [b, a]);
+    return { expr: left + paren(inner), co: res,
+      hints: ['Use the <b>distributive property</b>: multiply the outside term by <i>every</i> term inside the brackets.',
+              `Multiply ${left} × ${mono(a,1)} and then ${left} × ${b}. Watch the signs!`,
+              `${left}·${mono(a,1)} = ${mono(k*a,d+1)}. Now do ${left}·(${b}) = ?`],
+      steps: [`${left}(${inner})`, `= ${left}·${paren(mono(a,1))} + ${left}·(${b})`, `= ${poly(res)}`] };
+  }},
+  e_binom: { mode: 'expand', name: 'Binomial × Binomial', gen() {
+    const a = pick([1,1,1,2,3]), b = rndNZ(-9, 9), c = pick([1,1,2,3,-1]), d = rndNZ(-9, 9);
+    const res = mulP([b, a], [d, c]);
+    return { expr: paren(lin(a,b)) + paren(lin(c,d)), co: res,
+      hints: ['Use <b>FOIL</b>: First, Outer, Inner, Last — every term in the first bracket times every term in the second.',
+              `First: ${mono(a,1)}·${mono(c,1)} = ${mono(a*c,2)}. Outer: ${mono(a,1)}·(${d}) = ${mono(a*d,1)}. Now find Inner and Last.`,
+              `Inner: (${b})·${mono(c,1)} = ${mono(b*c,1)}. Last: (${b})(${d}) = ${b*d}. Add the like terms ${mono(a*d,1)} and ${mono(b*c,1)}.`],
+      steps: [`${paren(lin(a,b))}${paren(lin(c,d))}`, `= ${mono(a*c,2)} ${a*d<0?'−':'+'} ${mono(Math.abs(a*d),1)} ${b*c<0?'−':'+'} ${mono(Math.abs(b*c),1)} ${b*d<0?'−':'+'} ${Math.abs(b*d)}`, `= ${poly(res)}`] };
+  }},
+  e_special: { mode: 'expand', name: 'Special Products', gen() {
+    const a = pick([1,1,2,3]), b = rndNZ(-8, 8), type = pick(['sq','sq','dos']);
+    if (type === 'sq') { const res = mulP([b,a],[b,a]);
+      return { expr: paren(lin(a,b)) + '^2', co: res,
+        hints: ['This is a <b>perfect square</b>: (a + b)² = a² + 2ab + b². It is NOT a² + b²!',
+                `Here the first term is ${mono(a,1)} and the second term is ${b}.`,
+                `a² = ${mono(a*a,2)}, 2ab = 2·${mono(a,1)}·(${b}) = ${mono(2*a*b,1)}, b² = ${b*b}.`],
+        steps: [`${paren(lin(a,b))}² = ${paren(lin(a,b))}${paren(lin(a,b))}`, `= (${mono(a,1)})² + 2(${mono(a,1)})(${b}) + (${b})²`, `= ${poly(res)}`] };
+    }
+    const B = Math.abs(b), res = mulP([B,a],[-B,a]);
+    return { expr: paren(lin(a,B)) + paren(lin(a,-B)), co: res,
+      hints: ['Notice the brackets are the same except for the sign: (a + b)(a − b) = a² − b².',
+              'The middle terms cancel out! You only need to square each term.',
+              `(${mono(a,1)})² − (${B})² = ?`],
+      steps: [`${paren(lin(a,B))}${paren(lin(a,-B))}`, `= (${mono(a,1)})² − (${B})²  (middle terms cancel)`, `= ${poly(res)}`] };
+  }},
+  e_simplify: { mode: 'expand', name: 'Expand & Simplify', gen() {
+    const k = rndNZ(-4, 4), a = rndNZ(-6, 6), b = rndNZ(-6, 6), c = rndNZ(-6, 6), d = rndNZ(-6, 6), s = pick([1,-1]);
+    const p1 = mulP([a,1],[b,1]).map(v => v*k), p2 = mulP([c,1],[d,1]).map(v => v*s);
+    const res = p1.map((v,i)=> v + p2[i]);
+    const kS = k===1?'':k===-1?'−':k;
+    return { expr: `${kS}${paren(lin(1,a))}${paren(lin(1,b))} ${s<0?'−':'+'} ${paren(lin(1,c))}${paren(lin(1,d))}`, co: res,
+      hints: ['Expand each product separately first. Keep the second product in brackets so you remember the sign in front!',
+              `${paren(lin(1,a))}${paren(lin(1,b))} = ${poly(mulP([a,1],[b,1]))}, and ${paren(lin(1,c))}${paren(lin(1,d))} = ${poly(mulP([c,1],[d,1]))}.`,
+              `Now multiply the first by ${k} and the second by ${s}, then collect like terms.`],
+      steps: [`= ${k}(${poly(mulP([a,1],[b,1]))}) ${s<0?'−':'+'} (${poly(mulP([c,1],[d,1]))})`, `= ${poly(p1)} ${s<0?'−':'+'} (${poly(mulP([c,1],[d,1]))})`, `= ${poly(res)}`] };
+  }},
+  // ---------- FACTORING ----------
+  f_gcf: { mode: 'factor', name: 'Common Factor (GCF)', gen() {
+    const g = pick([2,3,4,5,6]), d = rnd(0,1), a = rndNZ(-5,5), b = rndNZ(-7,7), c = rndNZ(-5,5);
+    let inner = [b, a]; // ensure inner content gcd 1
+    const ig = inner.reduce((s,v)=>gcd(s,v),0); inner = inner.map(v => v/ig);
+    const outer = Array.from({length: d+1}, (_, i) => i===d ? g : 0);
+    const res = mulP(outer, inner);
+    return { expr: poly(res), co: res, factor: true,
+      hints: ['Find the <b>greatest common factor</b> (GCF) of all the terms — both the number part and the variable part.',
+              `The GCF of the coefficients ${res.filter(v=>v).map(Math.abs).join(', ')} is ${g}. ${d ? 'Every term also contains at least one x.' : ''}`,
+              `GCF = ${mono(g,d)}. Divide each term by ${mono(g,d)} and write it in brackets.`],
+      steps: [`GCF = ${mono(g,d)}`, `${poly(res)} = ${mono(g,d)}(${poly(inner)})`] };
+  }},
+  f_simple: { mode: 'factor', name: 'Simple Trinomial x²+bx+c', gen() {
+    const r = rndNZ(-9,9), s = rndNZ(-9,9), res = mulP([r,1],[s,1]);
+    return { expr: poly(res), co: res, factor: true,
+      hints: [`Find two numbers that <b>multiply</b> to ${res[0]} and <b>add</b> to ${res[1]}.`,
+              `${res[0] > 0 ? 'The product is positive, so both numbers have the same sign' : 'The product is negative, so the numbers have opposite signs'}. List factor pairs of ${Math.abs(res[0])}.`,
+              `The numbers are ${r} and ${s}. Write (x + __)(x + __).`],
+      steps: [`Need m·n = ${res[0]}, m + n = ${res[1]}`, `m = ${r}, n = ${s}`, `${poly(res)} = ${paren(lin(1,r))}${paren(lin(1,s))}`] };
+  }},
+  f_complex: { mode: 'factor', name: 'Complex Trinomial ax²+bx+c', gen() {
+    let a, b, c, d;
+    do { a = pick([2,3,5,2,3]); c = pick([1,1,2,3]); b = rndNZ(-7,7); d = rndNZ(-7,7); } while (gcd(a,b)!==1 || gcd(c,d)!==1 || a*c===1);
+    const res = mulP([b,a],[d,c]), m = a*d, n = b*c;
+    return { expr: poly(res), co: res, factor: true,
+      hints: [`Use <b>decomposition</b>: multiply a·c = ${res[2]}·${res[0]} = ${res[2]*res[0]}. Find two numbers that multiply to ${res[2]*res[0]} and add to ${res[1]}.`,
+              `The two numbers are ${m} and ${n}. Split the middle term: ${mono(res[2],2)} ${m<0?'−':'+'} ${mono(Math.abs(m),1)} ${n<0?'−':'+'} ${mono(Math.abs(n),1)} ${res[0]<0?'−':'+'} ${Math.abs(res[0])}.`,
+              `Group in pairs and common-factor each pair. You should get a common bracket.`],
+      steps: [`a·c = ${res[2]*res[0]}; numbers ${m} and ${n}`, `= (${poly([0,m,res[2]])}) + (${poly([res[0], n])})`, `= ${mono(a,1)}${paren(lin(c,d))} + (${b})${paren(lin(c,d))}`, `= ${paren(lin(a,b))}${paren(lin(c,d))}`] };
+  }},
+  f_special: { mode: 'factor', name: 'Difference of Squares / Perfect Squares', gen() {
+    let a, b; do { a = pick([1,1,2,3,4,5]); b = rnd(1,9); } while (gcd(a,b) !== 1);
+    if (Math.random() < .5) { const res = [-b*b, 0, a*a];
+      return { expr: poly(res), co: res, factor: true,
+        hints: ['Two terms with a <b>minus</b> sign and both perfect squares? That is a <b>difference of squares</b>: a² − b² = (a − b)(a + b).',
+                `${mono(a*a,2)} = (${mono(a,1)})² and ${b*b} = (${b})².`,
+                `So a = ${mono(a,1)} and b = ${b}.`],
+        steps: [`${poly(res)} = (${mono(a,1)})² − (${b})²`, `= ${paren(lin(a,-b))}${paren(lin(a,b))}`] };
+    }
+    const s = pick([1,-1]), res = mulP([s*b,a],[s*b,a]);
+    return { expr: poly(res), co: res, factor: true,
+      hints: ['Check if the first and last terms are perfect squares — this may be a <b>perfect square trinomial</b>: a² ± 2ab + b² = (a ± b)².',
+              `${mono(a*a,2)} = (${mono(a,1)})², ${b*b} = (${b})². Is the middle term 2·${mono(a,1)}·${b} = ${mono(2*a*b,1)}?`,
+              `Yes! The middle sign is ${s>0?'+':'−'}, so the answer is (${mono(a,1)} ${s>0?'+':'−'} ${b})².`],
+      steps: [`√(${mono(a*a,2)}) = ${mono(a,1)}, √${b*b} = ${b}, middle = 2·${mono(a,1)}·${b} ✓`, `${poly(res)} = ${paren(lin(a,s*b))}²`] };
+  }},
+  f_full: { mode: 'factor', name: 'Factor Fully (GCF first)', gen() {
+    const g = pick([2,3,4,5,-2,-3]), r = rndNZ(-7,7), s = rndNZ(-7,7), inner = mulP([r,1],[s,1]), res = inner.map(v => v*g);
+    return { expr: poly(res), co: res, factor: true,
+      hints: ['<b>Always look for a common factor first!</b> Then try to factor what is left.',
+              `Take out ${g}: ${poly(res)} = ${g}(${poly(inner)}).`,
+              `Now factor the trinomial ${poly(inner)}: two numbers that multiply to ${inner[0]} and add to ${inner[1]}.`],
+      steps: [`= ${g}(${poly(inner)})`, `= ${g}${paren(lin(1,r))}${paren(lin(1,s))}`] };
+  }},
+};
+
+/* ================= Answer checking ================= */
+function check(input, q) {
+  let ast;
+  try { ast = parse(input); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
+  const target = x => q.co.reduce((s, c, d) => s + c * Math.pow(x, d), 0);
+  const isEq = equiv(ast, target);
+
+  if (!q.factor) { // expansion
+    if (!isEq) {
+      const co = coefsOf(ast); let msg = '❌ Not quite. ';
+      if (co) {
+        const lead = degree(q.co);
+        if (Math.abs(co[lead] - q.co[lead]) > 1e-9) msg += `Check your x${lead>1?'^'+lead:''} term. `;
+        else if (Math.abs(co[0] - q.co[0]) > 1e-9) msg += 'Your constant term is off — check the "Last" product and signs. ';
+        else msg += 'Your first and last terms are right — check the middle (x) term. Did you combine like terms correctly? ';
+        if (Math.abs(co[0]+q.co[0])<1e-9 && q.co[0] !== 0) msg += 'Hint: a sign error? ';
+      }
+      return { ok: false, msg: msg + 'Try again or use a hint.' };
+    }
+    if (hasGroup(ast)) return { ok: false, partial: true, msg: '🟡 That is equivalent, but it still has brackets. Fully expand it!' };
+    if (ast.op === '+') {
+      const degs = ast.terms.map(t => degree(coefsOf(t.node) || [0]));
+      if (new Set(degs).size < degs.length) return { ok: false, partial: true, msg: '🟡 Equivalent — but you still have like terms. Collect them together.' };
+    }
+    return { ok: true, msg: '🎉 Correct! Nicely expanded.' };
+  }
+  // factoring
+  if (!isEq) {
+    let msg = '❌ That doesn\'t equal the original expression. ';
+    msg += 'Tip: expand your answer to check — it should give back ' + pretty(poly(q.co)) + '.';
+    // sign check
+    if (equiv(ast, x => -target(x))) msg = '❌ Very close — your answer is the <b>negative</b> of the expression. Check the signs in your brackets.';
+    return { ok: false, msg };
+  }
+  if (ast.op === '+' && ast.terms.length === 1) ast = ast.terms[0].node;
+  if (ast.op === '+') return { ok: false, partial: true, msg: '🟡 Equivalent, but that\'s not factored. A factored answer is a <b>product</b> like a(x + m)(x + n).' };
+  // check each factor is irreducible and primitive
+  const facs = topFactors(ast);
+  for (const f of facs) {
+    const co = coefsOf(f); if (!co) continue;
+    const deg = degree(co);
+    if (deg >= 1) {
+      const ints = co.slice(0, deg + 1).map(Math.round);
+      const g = ints.reduce((s, v) => gcd(s, v), 0);
+      if (g > 1) return { ok: false, partial: true, msg: `🟡 Equivalent, but not fully factored: ${pretty(poly(ints))} still has a common factor of ${g}.` };
+      if (ints[0] === 0 && deg >= 2) return { ok: false, partial: true, msg: `🟡 Not fully factored: ${pretty(poly(ints))} has a common factor of x.` };
+    }
+    if (deg === 2) {
+      const [c, b, a] = co; const D = b*b - 4*a*c;
+      if (D >= 0 && Number.isInteger(Math.sqrt(D))) return { ok: false, partial: true, msg: `🟡 Good progress! But ${pretty(poly(co.slice(0,3)))} can still be factored.` };
+    }
+    if (deg > 2) return { ok: false, partial: true, msg: '🟡 Equivalent, but some part can be factored further.' };
+  }
+  return { ok: true, msg: '🎉 Correct! Fully factored.' };
+}
+
+/* ================= Local storage progress ================= */
+const KEY = 'mpm2d_drill_v1';
+const today = () => new Date().toISOString().slice(0, 10);
+let store = JSON.parse(localStorage.getItem(KEY) || 'null') || { skills: {}, history: [], streak: 0, best: 0, days: {}, breakAfter: 25, totalSec: 0 };
+const save = () => localStorage.setItem(KEY, JSON.stringify(store));
+const sk = id => store.skills[id] ||= { attempts: 0, correct: 0, hints: 0, recent: [] };
+
+function record(id, correct, hintsUsed, input) {
+  const s = sk(id); s.attempts++; if (correct) s.correct++; s.hints += hintsUsed;
+  s.recent.push(correct ? (hintsUsed ? 0.5 : 1) : 0); if (s.recent.length > 10) s.recent.shift();
+  store.streak = correct ? store.streak + 1 : 0; store.best = Math.max(store.best, store.streak);
+  const d = store.days[today()] ||= { attempts: 0, correct: 0 }; d.attempts++; if (correct) d.correct++;
+  store.history.unshift({ t: Date.now(), id, expr: q.expr, input, correct, hints: hintsUsed });
+  store.history = store.history.slice(0, 100);
+  save(); renderProgress();
+}
+function masteryOf(id) { const s = store.skills[id]; if (!s || !s.recent.length) return 0; return Math.round(100 * s.recent.reduce((a, b) => a + b, 0) / 10); }
+
+function renderProgress() {
+  document.getElementById('streak').textContent = store.streak;
+  document.getElementById('todayCorrect').textContent = (store.days[today()] || {}).correct || 0;
+  document.getElementById('mastery').innerHTML = Object.entries(SKILLS).map(([id, S]) => {
+    const s = store.skills[id] || { attempts: 0, correct: 0 }, m = masteryOf(id);
+    const col = m >= 80 ? 'bg-green-500' : m >= 50 ? 'bg-yellow-400' : 'bg-red-400';
+    return `<div><div class="flex justify-between"><span class="font-bold">${S.name}</span><span class="text-xs">${s.correct}/${s.attempts} ${m>=80?'⭐':''}</span></div>
+      <div class="h-3 bg-slate-200 rounded-full border-2 border-slate-800 overflow-hidden"><div class="${col} h-full" style="width:${m}%"></div></div></div>`;
+  }).join('') + `<div class="text-xs text-slate-500 pt-1">Mastery = last 10 tries (a correct answer after using hints counts half). Best streak: ${store.best} · Total time: ${Math.round(store.totalSec/60)} min</div>`;
+  document.getElementById('history').innerHTML = store.history.slice(0, 20).map(h =>
+    `<li class="flex justify-between gap-2"><span class="math truncate">${h.correct ? '✅' : '❌'} ${pretty(h.expr)}</span><span class="text-xs text-slate-400 whitespace-nowrap">${h.hints ? '💡'+h.hints : ''} ${new Date(h.t).toLocaleDateString()}</span></li>`).join('') || '<li class="text-slate-400">No attempts yet.</li>';
+}
+
+/* ================= UI state ================= */
+let mode = 'expand', selected = new Set(Object.keys(SKILLS)), q = null, qId = null, hintsShown = 0, attemptedWrong = false, done = false;
+const $ = id => document.getElementById(id);
+
+function renderChips() {
+  $('skillChips').innerHTML = Object.entries(SKILLS).filter(([, S]) => mode === 'mixed' || S.mode === mode)
+    .map(([id, S]) => `<button class="btn chip px-2 py-1 text-sm ${selected.has(id) ? 'active' : ''}" data-skill="${id}">${S.name}</button>`).join('');
+  $('skillChips').querySelectorAll('[data-skill]').forEach(b => b.onclick = () => {
+    const id = b.dataset.skill; if (selected.has(id)) selected.delete(id); else selected.add(id);
+    renderChips(); newQuestion();
+  });
+}
+function available() {
+  const ids = Object.keys(SKILLS).filter(id => (mode === 'mixed' || SKILLS[id].mode === mode) && selected.has(id));
+  return ids.length ? ids : Object.keys(SKILLS).filter(id => mode === 'mixed' || SKILLS[id].mode === mode);
+}
+function newQuestion() {
+  // Adaptive: weight weaker skills more
+  const ids = available(), w = ids.map(id => 110 - masteryOf(id)), tot = w.reduce((a, b) => a + b, 0);
+  let r = Math.random() * tot; qId = ids[ids.length - 1];
+  for (let i = 0; i < ids.length; i++) { r -= w[i]; if (r <= 0) { qId = ids[i]; break; } }
+  q = SKILLS[qId].gen(); q.factor = SKILLS[qId].mode === 'factor';
+  hintsShown = 0; attemptedWrong = false; done = false;
+  $('qSkill').textContent = SKILLS[qId].name;
+  $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
+  $('qPrompt').textContent = q.factor ? 'Factor fully:' : 'Expand and simplify:';
+  $('qExpr').textContent = pretty(q.expr);
+  $('answer').value = ''; $('preview').textContent = ''; $('answer').disabled = false;
+  $('feedback').className = 'mt-4 hidden p-3 rounded-lg border-2 font-bold';
+  $('hints').innerHTML = ''; $('hintCount').textContent = `(0/${q.hints.length})`;
+  $('nextBtn').classList.add('hidden'); $('checkBtn').classList.remove('hidden');
+  $('answer').focus();
+}
+function showFeedback(res) {
+  const fb = $('feedback');
+  fb.innerHTML = res.msg;
+  fb.className = 'mt-4 p-3 rounded-lg border-2 font-bold ' + (res.ok ? 'bg-green-100 border-green-600 text-green-800' : res.partial || res.syntax ? 'bg-yellow-100 border-yellow-600 text-yellow-800' : 'bg-red-100 border-red-600 text-red-800');
+}
+function showSolution(title) {
+  $('hints').insertAdjacentHTML('beforeend', `<div class="p-3 bg-blue-50 border-2 border-blue-600 rounded-lg"><div class="font-black mb-1">${title}</div>${q.steps.map(s => `<div class="math text-lg">${pretty(s)}</div>`).join('')}</div>`);
+}
+function finish() {
+  done = true; $('answer').disabled = true;
+  $('checkBtn').classList.add('hidden'); $('nextBtn').classList.remove('hidden'); $('nextBtn').focus();
+}
+
+$('checkBtn').onclick = () => {
+  if (done) return;
+  const input = $('answer').value.trim();
+  const res = check(input, q); showFeedback(res);
+  if (res.syntax) return;
+  if (res.ok) {
+    if (!attemptedWrong) record(qId, true, hintsShown, input);
+    showSolution('✔ Worked solution'); finish();
+  } else {
+    $('card').classList.remove('shake'); void $('card').offsetWidth; $('card').classList.add('shake');
+    if (!attemptedWrong) { attemptedWrong = true; record(qId, false, hintsShown, input); }
+    if (!res.partial && hintsShown === 0) $('feedback').innerHTML += '<div class="text-sm font-normal mt-1">Stuck? Press <b>Hint 💡</b> for a nudge.</div>';
+  }
+};
+$('hintBtn').onclick = () => {
+  if (done) return;
+  if (hintsShown >= q.hints.length) { $('feedback').className='mt-4 p-3 rounded-lg border-2 font-bold bg-yellow-100 border-yellow-600'; $('feedback').innerHTML='No more hints — try it, or press "Show solution".'; return; }
+  $('hints').insertAdjacentHTML('beforeend', `<div class="p-3 bg-yellow-50 border-2 border-yellow-500 rounded-lg"><b>Hint ${hintsShown + 1}:</b> <span class="math">${pretty(q.hints[hintsShown])}</span></div>`);
+  hintsShown++; $('hintCount').textContent = `(${hintsShown}/${q.hints.length})`;
+};
+$('skipBtn').onclick = () => {
+  if (done) return;
+  if (!attemptedWrong) record(qId, false, hintsShown, '(solution shown)');
+  showFeedback({ ok: false, partial: true, msg: '📘 Study the steps below, then try the next one on your own.' });
+  showSolution('📘 Solution'); finish();
+};
+$('nextBtn').onclick = newQuestion;
+$('answer').addEventListener('keydown', e => { if (e.key === 'Enter') (done ? newQuestion : $('checkBtn').onclick)(); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && done && document.activeElement !== $('answer') && document.activeElement !== $('nextBtn')) newQuestion(); });
+$('answer').addEventListener('input', () => { $('preview').textContent = $('answer').value ? 'Preview: ' + pretty($('answer').value.replace(/\*/g,'·')) : ''; markActive(); });
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
+  renderChips(); newQuestion();
+});
+$('exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(store, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mpm2d-progress-${today()}.json`; a.click();
+};
+$('resetBtn').onclick = () => { if (confirm('Erase all progress saved on this device?')) { localStorage.removeItem(KEY); location.reload(); } };
+
+/* ================= Active-time tracker & break reminder ================= */
+let activeSec = 0, lastActivity = Date.now(), onBreak = false;
+const IDLE_LIMIT = 120 * 1000; // stop counting after 2 min of no activity
+function markActive() { lastActivity = Date.now(); }
+['click', 'keydown', 'mousemove', 'touchstart'].forEach(ev => document.addEventListener(ev, markActive, { passive: true }));
+$('breakAfter').value = store.breakAfter; $('breakAfter').onchange = e => { store.breakAfter = +e.target.value; save(); };
+const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+let nextBreakAt = store.breakAfter * 60;
+
+setInterval(() => {
+  if (onBreak || document.hidden || Date.now() - lastActivity > IDLE_LIMIT) return;
+  activeSec++; store.totalSec++; if (activeSec % 15 === 0) save();
+  $('sessTime').textContent = fmt(activeSec);
+  if (activeSec >= nextBreakAt) startBreak();
+}, 1000);
+
+function startBreak() {
+  onBreak = true; save();
+  $('breakWorked').textContent = Math.round(activeSec / 60);
+  $('breakModal').classList.replace('hidden', 'flex');
+  let left = 5 * 60; const done = $('breakDone'); done.disabled = true; done.style.opacity = .5;
+  $('breakCountdown').textContent = fmt(left);
+  const t = setInterval(() => {
+    left--; $('breakCountdown').textContent = fmt(Math.max(left, 0));
+    if (left <= 0) { clearInterval(t); done.disabled = false; done.style.opacity = 1; $('breakCountdown').textContent = 'Welcome back! 👋'; }
+  }, 1000);
+  done.onclick = () => { clearInterval(t); endBreak(store.breakAfter * 60); };
+  $('breakSnooze').onclick = () => { clearInterval(t); endBreak(5 * 60); };
+}
+function endBreak(addSec) {
+  onBreak = false; nextBreakAt = activeSec + addSec; markActive();
+  $('breakModal').classList.replace('flex', 'hidden');
+}
+
+/* ================= Init ================= */
+renderChips(); renderProgress(); newQuestion();
+</script>
+</body>
+</html>
