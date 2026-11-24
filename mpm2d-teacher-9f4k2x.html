@@ -163,6 +163,7 @@
       <div>Late: <span id="statLate" class="text-amber-600 font-black font-mono">0</span></div>
       <div>Absent: <span id="statAbsent" class="text-red-600 font-black font-mono">0</span></div>
       <div>HW Done: <span id="statHWDone" class="text-emerald-700 font-black font-mono">0</span></div>
+      <div>📵 Phone/Device Flags: <span id="statPhones" class="text-red-600 font-black font-mono">0</span></div>
       <div>Today's Math Tallies: <span id="statTallies" class="text-blue-700 font-black font-mono">0</span></div>
       <div>Observations: <span id="statLogs" class="text-purple-700 font-black font-mono">0</span></div>
     </div>
@@ -204,7 +205,7 @@
           <thead>
             <tr class="border-b-2 border-slate-800 text-xs font-black bg-slate-100 text-slate-700">
               <th class="py-3 px-3">Student</th>
-              <th class="py-3 px-3">Attendance &amp; Homework Check</th>
+              <th class="py-3 px-3">Attendance, Homework &amp; Mobile Device</th>
               <th class="py-3 px-3">Building Thinking Classrooms &amp; Algebra Problem String Checkboxes</th>
               <th class="py-3 px-3">Participation Tallies &amp; All 6 Growing Success Skills</th>
             </tr>
@@ -221,7 +222,7 @@
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b-2 border-slate-200 pb-3">
         <div>
           <h2 class="text-base font-black text-slate-900">📅 Review Class Input by Date — <span id="historyPeriodTitle" class="text-blue-600">Period 1</span></h2>
-          <p class="text-xs font-bold text-slate-600">Click any recorded date chip below (or use the date picker) to review or edit that day's attendance, homework, tallies, and Growing Success observations.</p>
+          <p class="text-xs font-bold text-slate-600">Click any recorded date chip below (or use the date picker) to review or edit that day's attendance, homework, phone/device flags, tallies, and Growing Success observations.</p>
         </div>
         <button onclick="switchView('daily')" class="px-3.5 py-2 text-xs font-black rounded-lg bg-blue-600 text-white comic-btn self-start md:self-auto">
           ✏️ Edit Selected Date (<span id="historyEditDateBtnLabel"></span>)
@@ -235,7 +236,7 @@
       </div>
 
       <!-- Selected Date Snapshot Summary Cards -->
-      <div id="historyDaySummaryCards" class="grid grid-cols-2 md:grid-cols-5 gap-3"></div>
+      <div id="historyDaySummaryCards" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
 
       <!-- Selected Date Student-by-Student Review Table -->
       <div class="overflow-x-auto">
@@ -245,6 +246,7 @@
               <th class="py-2.5 px-3">Student</th>
               <th class="py-2.5 px-3 text-center">Attendance</th>
               <th class="py-2.5 px-3 text-center">Homework</th>
+              <th class="py-2.5 px-3 text-center">Mobile Device</th>
               <th class="py-2.5 px-3">Tallies Logged on This Date</th>
               <th class="py-2.5 px-3">Growing Success Observations Logged on This Date</th>
             </tr>
@@ -260,8 +262,8 @@
     <div class="bg-white rounded-xl comic-border p-4 space-y-4">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b-2 border-slate-200 pb-3">
         <div>
-          <h2 class="text-base font-black text-slate-900">📈 Student Participation & Homework Overview — <span id="partPeriodTitle" class="text-blue-600">Period 1</span></h2>
-          <p class="text-xs font-bold text-slate-600">Cumulative breakdown of every student's active math participation, homework completion rate, and recent engagement dates.</p>
+          <h2 class="text-base font-black text-slate-900">📈 Student Participation, Homework &amp; Mobile Device Overview — <span id="partPeriodTitle" class="text-blue-600">Period 1</span></h2>
+          <p class="text-xs font-bold text-slate-600">Cumulative breakdown of every student's active math participation, homework completion rate, mobile device infractions, and recent engagement dates.</p>
         </div>
         <div class="flex items-center gap-2 text-xs font-bold">
           <span>Sort by:</span>
@@ -270,6 +272,7 @@
             <option value="tallies_desc">Highest Participation First</option>
             <option value="tallies_asc">Lowest Participation First (Needs Call-On)</option>
             <option value="hw_asc">Lowest Homework Completion First</option>
+            <option value="phone_desc">Most Mobile Device Infractions First</option>
           </select>
         </div>
       </div>
@@ -285,7 +288,8 @@
               <th class="py-3 px-2 text-center">🔍 Self-Check</th>
               <th class="py-3 px-3">Total Participation Level</th>
               <th class="py-3 px-3 text-center">Homework (✓ / ~ / ✗)</th>
-              <th class="py-3 px-3 text-center">HW Completion %</th>
+              <th class="py-3 px-3 text-center">HW %</th>
+              <th class="py-3 px-2 text-center">📵 Phone Uses</th>
               <th class="py-3 px-3">Dates Active</th>
             </tr>
           </thead>
@@ -301,7 +305,7 @@
       <div class="mb-3">
         <h2 class="text-base font-black text-slate-900">Ontario Growing Success — 6 Learning Skills & Work Habits Matrix</h2>
         <p class="text-xs font-bold text-slate-600 mt-1">
-          Calculated objectively from accumulated positive vs. coaching look-fors, homework completion, attendance punctuality, and participation tallies:
+          Calculated objectively from accumulated positive vs. coaching look-fors, homework completion, mobile device self-regulation, attendance punctuality, and participation tallies:
           <span class="badge-E px-2 py-0.5 rounded font-mono font-black ml-1">E</span> Excellent (≥85%)
           <span class="badge-G px-2 py-0.5 rounded font-mono font-black ml-1">G</span> Good (70–84%)
           <span class="badge-S px-2 py-0.5 rounded font-mono font-black ml-1">S</span> Satisfactory (50–69%)
@@ -316,6 +320,7 @@
               <th class="py-3 px-3">Student</th>
               <th class="py-3 px-2 text-center">Att. (P/L/A)</th>
               <th class="py-3 px-2 text-center">HW (✓/~/✗)</th>
+              <th class="py-3 px-2 text-center" title="Total Mobile Device Infractions in Class">📵 Phone</th>
               <th class="py-3 px-2 text-center">Total Tallies</th>
               <th class="py-3 px-2 text-center">Responsibility</th>
               <th class="py-3 px-2 text-center">Organization</th>
@@ -656,12 +661,16 @@
         state.records[date][studentId] = {
           attendance: 'P',
           homework: '', // 'Done' | 'Part' | 'Miss' | ''
+          phoneCount: 0,
           tallies: { ans: 0, brd: 0, hlp: 0, chk: 0 },
           observations: []
         };
       }
       if (state.records[date][studentId].homework === undefined) {
         state.records[date][studentId].homework = '';
+      }
+      if (state.records[date][studentId].phoneCount === undefined) {
+        state.records[date][studentId].phoneCount = 0;
       }
       return state.records[date][studentId];
     }
@@ -733,6 +742,13 @@
     function setHomework(studentId, status) {
       const rec = getStudentDayRecord(state.activeDate, studentId);
       rec.homework = rec.homework === status ? '' : status;
+      saveState();
+      renderCurrentView();
+    }
+
+    function adjustPhoneCount(studentId, delta) {
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      rec.phoneCount = Math.max(0, (rec.phoneCount || 0) + delta);
       saveState();
       renderCurrentView();
     }
@@ -824,6 +840,7 @@
     function computeStudentSummary(studentId) {
       let present = 0, late = 0, absent = 0, excused = 0;
       let hwDone = 0, hwPart = 0, hwMiss = 0;
+      let phoneUses = 0;
       let totalTallies = 0;
       const talliesByType = { ans: 0, brd: 0, hlp: 0, chk: 0 };
       const skillPos = { RE: 0, OR: 0, IW: 0, CO: 0, IN: 0, SR: 0 };
@@ -853,6 +870,15 @@
           skillNeg.IW += 0.5;
         }
 
+        // Mobile device in class (Ontario Policy / Growing Success negative evidence for Self-Regulation & Responsibility)
+        const pCount = rec.phoneCount || 0;
+        if (pCount > 0) {
+          phoneUses += pCount;
+          skillNeg.SR += pCount * 1.0;
+          skillNeg.RE += pCount * 0.75;
+          skillNeg.IW += pCount * 0.5;
+        }
+
         let dayTally = 0;
         Object.keys(talliesByType).forEach(k => {
           const count = rec.tallies?.[k] || 0;
@@ -861,7 +887,7 @@
           dayTally += count;
         });
 
-        if (dayTally > 0 || (rec.observations && rec.observations.length > 0) || rec.homework) {
+        if (dayTally > 0 || (rec.observations && rec.observations.length > 0) || rec.homework || pCount > 0) {
           activeDates.push(date);
         }
 
@@ -898,7 +924,7 @@
       const hwTotal = hwDone + hwPart + hwMiss;
       const hwRate = hwTotal > 0 ? Math.round(((hwDone + hwPart * 0.5) / hwTotal) * 100) : null;
 
-      return { present, late, absent, excused, hwDone, hwPart, hwMiss, hwRate, totalTallies, talliesByType, ratings, activeDates };
+      return { present, late, absent, excused, hwDone, hwPart, hwMiss, hwRate, phoneUses, totalTallies, talliesByType, ratings, activeDates };
     }
 
     function generateReportComment(studentName, summary) {
@@ -916,12 +942,14 @@
       if (excels.length > 0) {
         comment += `${firstName} demonstrates strong ${excels.slice(0, 2).join(' and ')} during problem-solving. `;
       }
-      if (grows.length > 0) {
+      if (summary.phoneUses >= 2) {
+        comment += `Putting away personal mobile devices during instruction and whiteboard tasks will help improve self-regulation and focus. `;
+      } else if (grows.length > 0) {
         comment += `Next steps include strengthening ${grows.slice(0, 2).join(' and ')} during daily quadratic and analytic geometry practice.`;
       } else {
         comment += `${firstName} consistently meets expectations across all Growing Success learning skills.`;
       }
-      return comment;
+      return comment.trim();
     }
 
     function buildLookForDropdownHTML(studentId) {
@@ -952,13 +980,14 @@
       const allStudents = state.periods[state.currentPeriod].students;
       const students = allStudents.filter(s => s.name.toLowerCase().includes(filter));
 
-      let pCount = 0, lCount = 0, aCount = 0, hwDoneCount = 0, tallySum = 0, obsSum = 0;
+      let pCount = 0, lCount = 0, aCount = 0, hwDoneCount = 0, phoneSum = 0, tallySum = 0, obsSum = 0;
       allStudents.forEach(s => {
         const rec = getStudentDayRecord(state.activeDate, s.id);
         if (rec.attendance === 'P') pCount++;
         else if (rec.attendance === 'L') lCount++;
         else if (rec.attendance === 'A') aCount++;
         if (rec.homework === 'Done') hwDoneCount++;
+        phoneSum += (rec.phoneCount || 0);
         tallySum += Object.values(rec.tallies).reduce((a, b) => a + b, 0);
         obsSum += (rec.observations || []).length;
       });
@@ -967,6 +996,8 @@
       document.getElementById('statAbsent').textContent = aCount;
       const hwEl = document.getElementById('statHWDone');
       if (hwEl) hwEl.textContent = `${hwDoneCount}/${allStudents.length}`;
+      const phEl = document.getElementById('statPhones');
+      if (phEl) phEl.textContent = phoneSum;
       document.getElementById('statTallies').textContent = tallySum;
       document.getElementById('statLogs').textContent = obsSum;
 
@@ -1025,6 +1056,18 @@
           return `<button onclick="setHomework('${s.id}', '${btn.code}')" title="${btn.title}" class="px-2.5 py-1.5 rounded-md border-2 text-xs whitespace-nowrap transition ${activeClass}">${btn.label}</button>`;
         }).join('');
 
+        const pVal = rec.phoneCount || 0;
+        const phoneActiveStyle = pVal > 0
+          ? 'bg-red-100 border-red-700 text-red-900 font-black'
+          : 'bg-slate-50 border-slate-300 text-slate-700 font-bold';
+        const phoneControl = `
+          <div class="inline-flex items-center rounded-lg border-2 ${phoneActiveStyle}" title="Negative Behaviour: Unauthorized Mobile Device / Phone Use in Class (-Self-Regulation, -Responsibility, -Independent Work)">
+            <button onclick="adjustPhoneCount('${s.id}', -1)" class="px-2 py-1 font-black hover:opacity-75">−</button>
+            <span class="px-2 py-1 text-xs whitespace-nowrap">📵 Mobile Device in Class: <strong class="font-mono ${pVal > 0 ? 'text-red-700' : 'text-slate-600'}">${pVal}</strong></span>
+            <button onclick="adjustPhoneCount('${s.id}', 1)" class="px-2 py-1 text-red-700 font-black hover:bg-red-200 rounded-r">+1</button>
+          </div>
+        `;
+
         const checkedIds = new Set((rec.observations || []).map(o => o.lookForId));
         const btcCheckboxes = `
           <div class="grid grid-cols-1 xl:grid-cols-2 gap-1.5 min-w-[330px]">
@@ -1075,7 +1118,7 @@
               </div>
             </td>
             <td class="py-3.5 px-3">
-              <div class="space-y-2 min-w-[235px]">
+              <div class="space-y-2 min-w-[245px]">
                 <div>
                   <div class="text-[10px] font-black uppercase text-slate-500 mb-1">Attendance</div>
                   <div class="flex flex-wrap items-center gap-1">${attButtons}</div>
@@ -1083,6 +1126,10 @@
                 <div>
                   <div class="text-[10px] font-black uppercase text-slate-500 mb-1">Homework</div>
                   <div class="flex flex-wrap items-center gap-1">${hwButtons}</div>
+                </div>
+                <div>
+                  <div class="text-[10px] font-black uppercase text-red-600 mb-1">Negative Behaviour</div>
+                  ${phoneControl}
                 </div>
               </div>
             </td>
@@ -1114,12 +1161,13 @@
       const bar = document.getElementById('recordedDatesBar');
       bar.innerHTML = recordedDates.map(d => {
         const isCurrent = d === state.activeDate;
-        let dayTallies = 0, dayHW = 0, dayObs = 0;
+        let dayTallies = 0, dayHW = 0, dayPhone = 0, dayObs = 0;
         state.periods[state.currentPeriod].students.forEach(s => {
           const r = state.records[d]?.[s.id];
           if (!r) return;
           dayTallies += Object.values(r.tallies || {}).reduce((a, b) => a + b, 0);
           if (r.homework === 'Done') dayHW++;
+          dayPhone += (r.phoneCount || 0);
           dayObs += (r.observations || []).length;
         });
         const btnStyle = isCurrent
@@ -1127,12 +1175,12 @@
           : 'bg-slate-100 text-slate-800 border-slate-800 hover:bg-blue-50';
         return `
           <button onclick="changeDate('${d}')" class="px-3 py-1.5 rounded-lg border-2 text-xs font-black transition ${btnStyle}">
-            📅 ${d} <span class="font-mono opacity-85 ml-1">(T:${dayTallies} • HW:${dayHW} • Obs:${dayObs})</span>
+            📅 ${d} <span class="font-mono opacity-85 ml-1">(T:${dayTallies} • HW:${dayHW} • 📵:${dayPhone})</span>
           </button>
         `;
       }).join('');
 
-      let p = 0, l = 0, a = 0, hwDone = 0, hwMiss = 0, tSum = 0, oSum = 0;
+      let p = 0, l = 0, a = 0, hwDone = 0, hwMiss = 0, phoneDay = 0, tSum = 0, oSum = 0;
       students.forEach(s => {
         const r = getStudentDayRecord(state.activeDate, s.id);
         if (r.attendance === 'P') p++;
@@ -1140,6 +1188,7 @@
         else if (r.attendance === 'A') a++;
         if (r.homework === 'Done') hwDone++;
         else if (r.homework === 'Miss') hwMiss++;
+        phoneDay += (r.phoneCount || 0);
         tSum += Object.values(r.tallies || {}).reduce((acc, v) => acc + v, 0);
         oSum += (r.observations || []).length;
       });
@@ -1156,6 +1205,10 @@
         <div class="p-3 rounded-lg bg-blue-50 border-2 border-slate-800">
           <div class="text-xs font-bold text-slate-600">Homework Check</div>
           <div class="text-sm font-black font-mono mt-0.5 text-blue-800">${hwDone} Done / ${hwMiss} Miss</div>
+        </div>
+        <div class="p-3 rounded-lg bg-red-50 border-2 border-slate-800">
+          <div class="text-xs font-bold text-slate-600">📵 Mobile Device Flags</div>
+          <div class="text-sm font-black font-mono mt-0.5 text-red-700">${phoneDay} infraction(s)</div>
         </div>
         <div class="p-3 rounded-lg bg-amber-50 border-2 border-slate-800">
           <div class="text-xs font-bold text-slate-600">Participation Tallies</div>
@@ -1178,6 +1231,11 @@
           ? '<span class="px-2 py-0.5 rounded font-black text-xs hw-Miss">✗ Incomplete</span>'
           : '<span class="text-slate-400 italic">Not checked</span>';
 
+        const phCount = r.phoneCount || 0;
+        const phoneBadge = phCount > 0
+          ? `<span class="px-2 py-0.5 rounded font-black text-xs badge-N">📵 ${phCount}x Phone</span>`
+          : `<span class="text-slate-400 italic">0</span>`;
+
         const tallyBadges = TALLY_TYPES.map(t => {
           const c = r.tallies?.[t.key] || 0;
           return c > 0 ? `<span class="px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-slate-800 font-bold mr-1">${t.label}: ${c}</span>` : '';
@@ -1193,6 +1251,7 @@
             <td class="py-2.5 px-3 font-black whitespace-nowrap">${s.name}</td>
             <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded font-black att-${r.attendance}">${r.attendance}</span></td>
             <td class="py-2.5 px-3 text-center">${hwBadge}</td>
+            <td class="py-2.5 px-3 text-center">${phoneBadge}</td>
             <td class="py-2.5 px-3">${tallyBadges}</td>
             <td class="py-2.5 px-3">${obsBadges}</td>
           </tr>
@@ -1218,6 +1277,7 @@
         if (sortMode === 'tallies_desc') return b.sum.totalTallies - a.sum.totalTallies;
         if (sortMode === 'tallies_asc') return a.sum.totalTallies - b.sum.totalTallies;
         if (sortMode === 'hw_asc') return (a.sum.hwRate ?? 101) - (b.sum.hwRate ?? 101);
+        if (sortMode === 'phone_desc') return b.sum.phoneUses - a.sum.phoneUses;
         return a.student.name.localeCompare(b.student.name);
       });
 
@@ -1227,6 +1287,10 @@
         const hwDisplay = sum.hwRate !== null
           ? `<span class="px-2 py-0.5 rounded font-mono font-black ${sum.hwRate >= 80 ? 'badge-E' : sum.hwRate >= 60 ? 'badge-S' : 'badge-N'}">${sum.hwRate}%</span>`
           : `<span class="text-slate-400 italic">N/A</span>`;
+
+        const phoneCell = sum.phoneUses > 0
+          ? `<span class="px-2 py-0.5 rounded font-mono font-black badge-N">📵 ${sum.phoneUses}</span>`
+          : `<span class="font-mono text-emerald-700 font-bold">0</span>`;
 
         return `
           <tr class="hover:bg-yellow-50/60">
@@ -1249,6 +1313,7 @@
               <span class="text-red-600">${sum.hwMiss}</span>
             </td>
             <td class="py-3 px-3 text-center">${hwDisplay}</td>
+            <td class="py-3 px-2 text-center">${phoneCell}</td>
             <td class="py-3 px-3 text-xs font-mono text-slate-600">${sum.activeDates.slice(-3).join(', ') || '—'}</td>
           </tr>
         `;
@@ -1270,6 +1335,9 @@
         }).join('');
 
         const comment = generateReportComment(s.name, sum);
+        const phoneBadge = sum.phoneUses > 0
+          ? `<span class="px-2 py-0.5 rounded font-mono font-black badge-N">${sum.phoneUses}</span>`
+          : `<span class="font-mono text-slate-400">0</span>`;
 
         return `
           <tr class="hover:bg-yellow-50/60">
@@ -1284,6 +1352,7 @@
               <span class="text-amber-600">${sum.hwPart}</span> /
               <span class="text-red-600">${sum.hwMiss}</span>
             </td>
+            <td class="py-3 px-2 text-center">${phoneBadge}</td>
             <td class="py-3 px-2 text-center font-mono font-black text-blue-700">${sum.totalTallies}</td>
             ${skillCells}
             <td class="py-3 px-3 text-xs font-medium text-slate-700 max-w-xs">${comment}</td>
@@ -1603,7 +1672,7 @@
 
     function exportReportCSV() {
       const rows = [
-        ['Period', 'Student Name', 'Present', 'Late', 'Absent', 'HW Done', 'HW Partial', 'HW Incomplete', 'Total Tallies', 'Responsibility', 'Organization', 'Independent Work', 'Collaboration', 'Initiative', 'Self-Regulation', 'Report Card Comment Stem']
+        ['Period', 'Student Name', 'Present', 'Late', 'Absent', 'HW Done', 'HW Partial', 'HW Incomplete', 'Mobile Device Infractions', 'Total Tallies', 'Responsibility', 'Organization', 'Independent Work', 'Collaboration', 'Initiative', 'Self-Regulation', 'Report Card Comment Stem']
       ];
       ['P1', 'P2', 'P3'].forEach(pKey => {
         const pName = state.periods[pKey].name;
@@ -1618,6 +1687,7 @@
             sum.hwDone,
             sum.hwPart,
             sum.hwMiss,
+            sum.phoneUses,
             sum.totalTallies,
             sum.ratings.RE.letter,
             sum.ratings.OR.letter,
