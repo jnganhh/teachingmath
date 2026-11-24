@@ -634,8 +634,25 @@ document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
   renderChips(); newQuestion();
 });
 $('exportBtn').onclick = () => {
-  const blob = new Blob([JSON.stringify(store, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mpm2d-progress-${today()}.json`; a.click();
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const row = cols => cols.map(esc).join(',');
+  const lines = [
+    row(['Student', store.student?.name || '', 'Class', store.student?.cls || '']),
+    row(['Exported', new Date().toLocaleString(), 'Total Correct', totalCorrect(), 'Best Streak', store.best, 'Active Minutes', Math.round(store.totalSec / 60)]),
+    '',
+    row(['Skill', 'Correct', 'Attempts', 'Mastery %', 'Hints Used']),
+    ...Object.entries(SKILLS).map(([id, S]) => {
+      const s = store.skills[id] || { attempts: 0, correct: 0, hints: 0 };
+      return row([S.name, s.correct, s.attempts, masteryOf(id), s.hints]);
+    }),
+    '',
+    row(['Date/Time', 'Skill', 'Question', 'Student Answer', 'Result', 'Hints Used']),
+    ...store.history.map(h => row([
+      new Date(h.t).toLocaleString(), SKILLS[h.id]?.name || h.id, h.expr, h.input, h.correct ? 'Correct' : 'Incorrect', h.hints
+    ]))
+  ];
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mpm2d-progress-${today()}.csv`; a.click();
 };
 $('resetBtn').onclick = () => { if (confirm('Erase all progress saved on this device?')) { localStorage.removeItem(KEY); location.reload(); } };
 
