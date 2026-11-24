@@ -204,12 +204,9 @@
           <thead>
             <tr class="border-b-2 border-slate-800 text-xs font-black bg-slate-100 text-slate-700">
               <th class="py-3 px-3">Student</th>
-              <th class="py-3 px-3">Attendance</th>
-              <th class="py-3 px-3" title="Homework Check: Done (✓), Partial (~), Incomplete (✗) — feeds into Responsibility & Independent Work">HW</th>
-              <th class="py-3 px-3">Building Thinking Classrooms & Algebra Problem String Checkboxes</th>
-              <th class="py-3 px-3">Quick Tallies (+/-)</th>
-              <th class="py-3 px-3">All 6 Growing Success Skills Dropdown</th>
-              <th class="py-3 px-3">Today's Logged Observations</th>
+              <th class="py-3 px-3">Attendance &amp; Homework Check</th>
+              <th class="py-3 px-3">Building Thinking Classrooms &amp; Algebra Problem String Checkboxes</th>
+              <th class="py-3 px-3">Participation Tallies &amp; All 6 Growing Success Skills</th>
             </tr>
           </thead>
           <tbody id="dailyTableBody" class="divide-y-2 divide-slate-200 text-xs"></tbody>
@@ -511,42 +508,42 @@
         id: 'CHK_ASK_Q',
         skill: 'IN',
         weight: 1,
-        shortLabel: '💡 Asked Good Question',
+        shortLabel: '💡 Asked a Good / Connection Question',
         fullText: '+ Asked a "keep-thinking" or connection question during Algebra Problem String / lesson'
       },
       {
         id: 'CHK_WB_COLLAB',
         skill: 'CO',
         weight: 1,
-        shortLabel: '🧑‍🤝‍🧑 Whiteboard (VNPS) Collab',
+        shortLabel: '🧑‍🤝‍🧑 Collaborated on Whiteboard Task (VNPS)',
         fullText: '+ Active Building Thinking Classrooms whiteboard collaboration (shared marker, discussed strategy, explained steps)'
       },
       {
         id: 'CHK_ALG_STRING',
         skill: 'IN',
         weight: 1,
-        shortLabel: '🔗 Algebra String Pattern',
+        shortLabel: '🔗 Spotted Algebra Problem String Pattern',
         fullText: '+ Identified & generalized algebraic pattern/strategy across the Algebra Problem String'
       },
       {
         id: 'CHK_PEER_MOB',
         skill: 'CO',
         weight: 1,
-        shortLabel: '🔄 Knowledge Mobility',
+        shortLabel: '🔄 Explained Strategy to Peers at Board',
         fullText: '+ Explained group whiteboard reasoning to peers or connected two different board strategies'
       },
       {
         id: 'CHK_NOTES_CONSOL',
         skill: 'OR',
         weight: 1,
-        shortLabel: '📓 Meaningful Notes / Check',
+        shortLabel: '📓 Wrote Organized Consolidation Notes',
         fullText: '+ Transferred whiteboard consolidation into organized math notes & completed Check-Your-Understanding'
       },
       {
         id: 'CHK_SELF_VERIFY',
         skill: 'SR',
         weight: 1,
-        shortLabel: '🔍 Self-Verified Algebra',
+        shortLabel: '🔍 Self-Checked & Verified Algebra Steps',
         fullText: '+ Self-checked algebraic steps (expanded/substituted/graphed) & caught own sign or factoring error'
       }
     ];
@@ -928,12 +925,12 @@
     }
 
     function buildLookForDropdownHTML(studentId) {
-      let html = `<select onchange="logLookForFromSelect('${studentId}', this)" class="w-full max-w-xs px-2 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none">`;
-      html += `<option value="">+ Select Objective Growing Success Look-For...</option>`;
+      let html = `<select onchange="logLookForFromSelect('${studentId}', this)" class="w-full px-2.5 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none">`;
+      html += `<option value="">+ Add Other Growing Success Skill Observation...</option>`;
       Object.values(GROWING_SUCCESS_SKILLS).forEach(skill => {
         html += `<optgroup label="${skill.code} — ${skill.name}">`;
         skill.lookFors.forEach(lf => {
-          html += `<option value="${skill.code}::${lf.id}">[${skill.code}] ${lf.text}</option>`;
+          html += `<option value="${skill.code}::${lf.id}">[${skill.name}] ${lf.text}</option>`;
         });
         html += `</optgroup>`;
       });
@@ -1003,44 +1000,44 @@
     function renderDailyTable(students) {
       const tbody = document.getElementById('dailyTableBody');
       if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center font-bold text-slate-500">No students in this period yet. Switch to the 👥 Roster tab to import a CSV or add students.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center font-bold text-slate-500">No students in this period yet. Switch to the 👥 Roster tab to import a CSV or add students.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = students.map(s => {
         const rec = getStudentDayRecord(state.activeDate, s.id);
         const attButtons = [
-          { code: 'P', label: 'P', title: 'Present' },
-          { code: 'L', label: 'L', title: 'Late' },
-          { code: 'A', label: 'A', title: 'Absent' },
-          { code: 'E', label: 'E', title: 'Excused' }
+          { code: 'P', label: 'Present', title: 'Present' },
+          { code: 'L', label: 'Late', title: 'Late' },
+          { code: 'A', label: 'Absent', title: 'Absent' },
+          { code: 'E', label: 'Excused', title: 'Excused' }
         ].map(btn => {
-          const activeClass = rec.attendance === btn.code ? `att-${btn.code} font-black` : 'bg-slate-100 text-slate-600 border-slate-300';
-          return `<button onclick="setAttendance('${s.id}', '${btn.code}')" title="${btn.title}" class="w-7 h-7 rounded-md border-2 text-xs transition ${activeClass}">${btn.label}</button>`;
+          const activeClass = rec.attendance === btn.code ? `att-${btn.code} font-black` : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200 font-bold';
+          return `<button onclick="setAttendance('${s.id}', '${btn.code}')" title="${btn.title}" class="px-2.5 py-1.5 rounded-md border-2 text-xs whitespace-nowrap transition ${activeClass}">${btn.label}</button>`;
         }).join('');
 
         const hwButtons = [
-          { code: 'Done', label: '✓', title: 'Homework Complete (+Responsibility / +Independent Work)' },
-          { code: 'Part', label: '~', title: 'Partial Homework Attempted' },
-          { code: 'Miss', label: '✗', title: 'Homework Incomplete / Not Done' }
+          { code: 'Done', label: '✓ HW Done', title: 'Homework Complete (+Responsibility / +Independent Work)' },
+          { code: 'Part', label: '~ Partial HW', title: 'Partial Homework Attempted' },
+          { code: 'Miss', label: '✗ No HW', title: 'Homework Incomplete / Not Done' }
         ].map(btn => {
-          const activeClass = rec.homework === btn.code ? `hw-${btn.code} font-black` : 'bg-slate-100 text-slate-600 border-slate-300';
-          return `<button onclick="setHomework('${s.id}', '${btn.code}')" title="${btn.title}" class="w-7 h-7 rounded-md border-2 text-xs transition ${activeClass}">${btn.label}</button>`;
+          const activeClass = rec.homework === btn.code ? `hw-${btn.code} font-black` : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200 font-bold';
+          return `<button onclick="setHomework('${s.id}', '${btn.code}')" title="${btn.title}" class="px-2.5 py-1.5 rounded-md border-2 text-xs whitespace-nowrap transition ${activeClass}">${btn.label}</button>`;
         }).join('');
 
         const checkedIds = new Set((rec.observations || []).map(o => o.lookForId));
         const btcCheckboxes = `
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 min-w-[270px]">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-1.5 min-w-[330px]">
             ${BTC_PROBLEM_STRING_CHECKS.map(chk => {
               const isChecked = checkedIds.has(chk.id);
+              const skillName = GROWING_SUCCESS_SKILLS[chk.skill]?.name || chk.skill;
               const activeBox = isChecked
-                ? 'bg-emerald-100 border-emerald-700 text-emerald-950 font-black'
-                : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100 font-bold';
+                ? 'bg-emerald-100 border-emerald-700 text-emerald-950 font-black shadow-sm'
+                : 'bg-slate-50 border-slate-300 text-slate-800 hover:bg-slate-100 font-semibold';
               return `
-                <label class="flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] cursor-pointer select-none transition ${activeBox}" title="[${chk.skill}] ${chk.fullText}">
-                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleLessonCheck('${s.id}', '${chk.id}')" class="w-3.5 h-3.5 accent-emerald-600 rounded cursor-pointer" />
-                  <span class="truncate">${chk.shortLabel}</span>
-                  <span class="ml-auto text-[10px] font-mono opacity-75">[${chk.skill}]</span>
+                <label class="flex items-start gap-2 px-2.5 py-1.5 rounded-lg border-2 text-xs cursor-pointer select-none transition ${activeBox}" title="${chk.fullText}">
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleLessonCheck('${s.id}', '${chk.id}')" class="mt-0.5 w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0" />
+                  <span class="leading-snug">${chk.shortLabel} <span class="text-[10px] font-mono opacity-75">(${skillName})</span></span>
                 </label>
               `;
             }).join('')}
@@ -1050,38 +1047,51 @@
         const tallyControls = TALLY_TYPES.map(t => {
           const val = rec.tallies[t.key] || 0;
           return `
-            <div class="inline-flex items-center rounded-lg border-2 border-slate-800 bg-slate-50 mr-1 mb-1" title="${t.desc}">
-              <button onclick="adjustTally('${s.id}', '${t.key}', -1)" class="px-1.5 py-0.5 font-black text-slate-500 hover:text-slate-900">−</button>
-              <span class="px-1 py-0.5 font-bold text-[11px]">${t.label} <strong class="font-mono text-blue-700">${val}</strong></span>
-              <button onclick="adjustTally('${s.id}', '${t.key}', 1)" class="px-1.5 py-0.5 text-blue-700 font-black hover:bg-blue-100 rounded-r">+</button>
+            <div class="inline-flex items-center rounded-lg border-2 border-slate-800 bg-slate-50 mr-1.5 mb-1.5" title="${t.desc}">
+              <button onclick="adjustTally('${s.id}', '${t.key}', -1)" class="px-2 py-1 font-black text-slate-500 hover:text-slate-900">−</button>
+              <span class="px-1.5 py-1 font-bold text-xs whitespace-nowrap">${t.label} <strong class="font-mono text-blue-700 ml-0.5">${val}</strong></span>
+              <button onclick="adjustTally('${s.id}', '${t.key}', 1)" class="px-2 py-1 text-blue-700 font-black hover:bg-blue-100 rounded-r">+</button>
             </div>
           `;
         }).join('');
 
         const chips = (rec.observations || []).map((obs, idx) => {
           const chipColor = obs.weight > 0 ? 'badge-E' : 'badge-N';
+          const skillFull = GROWING_SUCCESS_SKILLS[obs.skill]?.name || obs.skill;
           return `
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold mr-1 mb-1 ${chipColor}">
-              <strong>[${obs.skill}]</strong> ${obs.text}
-              <button onclick="removeObservation('${s.id}', ${idx})" class="ml-1 font-black hover:opacity-75">×</button>
-            </span>
+            <div class="inline-flex items-start gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold mr-1 mb-1 leading-snug ${chipColor}">
+              <span><strong>[${skillFull}]</strong> ${obs.text}</span>
+              <button onclick="removeObservation('${s.id}', ${idx})" class="ml-1 font-black hover:opacity-75 shrink-0">✕</button>
+            </div>
           `;
-        }).join('') || `<span class="text-slate-400 italic font-medium">No observations logged today</span>`;
+        }).join('');
 
         return `
-          <tr class="hover:bg-yellow-50/60 transition">
-            <td class="py-3 px-3 font-black text-slate-900 whitespace-nowrap">
+          <tr class="hover:bg-yellow-50/60 transition align-top">
+            <td class="py-3.5 px-3 font-black text-slate-900 whitespace-nowrap">
               <div class="flex items-center justify-between gap-2">
-                <span>${s.name}</span>
-                <button onclick="removeStudent('${s.id}')" title="Remove student from this period" class="px-1.5 py-0.5 text-[10px] font-black rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition">✕</button>
+                <span class="text-sm">${s.name}</span>
+                <button onclick="removeStudent('${s.id}')" title="Remove student from this period" class="px-2 py-0.5 text-[11px] font-black rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition">Remove</button>
               </div>
             </td>
-            <td class="py-3 px-3 whitespace-nowrap"><div class="flex items-center gap-1">${attButtons}</div></td>
-            <td class="py-3 px-3 whitespace-nowrap"><div class="flex items-center gap-1">${hwButtons}</div></td>
-            <td class="py-3 px-3">${btcCheckboxes}</td>
-            <td class="py-3 px-3">${tallyControls}</td>
-            <td class="py-3 px-3">${buildLookForDropdownHTML(s.id)}</td>
-            <td class="py-3 px-3">${chips}</td>
+            <td class="py-3.5 px-3">
+              <div class="space-y-2 min-w-[235px]">
+                <div>
+                  <div class="text-[10px] font-black uppercase text-slate-500 mb-1">Attendance</div>
+                  <div class="flex flex-wrap items-center gap-1">${attButtons}</div>
+                </div>
+                <div>
+                  <div class="text-[10px] font-black uppercase text-slate-500 mb-1">Homework</div>
+                  <div class="flex flex-wrap items-center gap-1">${hwButtons}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3.5 px-3">${btcCheckboxes}</td>
+            <td class="py-3.5 px-3 min-w-[320px]">
+              <div class="mb-2">${tallyControls}</div>
+              <div class="mb-2">${buildLookForDropdownHTML(s.id)}</div>
+              ${chips ? `<div class="pt-1">${chips}</div>` : ''}
+            </td>
           </tr>
         `;
       }).join('');
