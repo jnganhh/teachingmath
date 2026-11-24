@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Algebra Skills | MPM2D</title>
+  <link rel="stylesheet" href="practice.css">
+  <script src="questions.js" defer></script>
+  <script src="practice.js" defer></script>
+</head>
+<body>
+<header><div class="wrap"><p class="course">MPM2D · Grade 10 Mathematics</p><h1>Algebra Skills</h1><p>Build fluency with identities, factoring, and linear systems.</p></div></header>
+<main class="wrap">
+  <nav aria-label="Algebra topics" id="topics"></nav>
+  <div class="layout">
+    <section class="practice" aria-labelledby="topic-title">
+      <div class="practice-head">
+        <h2 id="topic-title"></h2>
+        <label>Level <select id="level"><option>Warm-up</option><option>Core</option><option>Stretch</option></select></label>
+      </div>
+      <p id="progress"></p>
+      <div id="question-area">
+        <p id="prompt"></p>
+        <p id="math"></p>
+        <form id="answer-form">
+          <fieldset><legend>Choose an answer</legend><div id="choices"></div></fieldset>
+          <div class="actions">
+            <button class="primary" id="check">Check answer</button>
+            <button type="button" id="hint-button" aria-expanded="false" aria-controls="hint">Hint</button>
+            <button type="button" id="solution-button" aria-expanded="false" aria-controls="solution">Worked solution</button>
+          </div>
+        </form>
+        <p id="feedback" role="status"></p>
+        <p class="reveal" id="hint" hidden></p>
+        <p class="reveal" id="solution" hidden></p>
+        <div class="actions"><button type="button" id="next" hidden>Next question</button></div>
+      </div>
+      <div id="complete" hidden>
+        <h3 id="complete-title" tabindex="-1">Set complete</h3>
+        <p id="result"></p>
+        <div class="actions"><button class="primary" id="restart">Retry this level</button><button id="advance">Next level</button></div>
+      </div>
+    </section>
+    <aside aria-labelledby="example-title">
+      <h2 id="example-title">Worked example</h2>
+      <p class="example-math" id="example-math"></p>
+      <ol id="example-steps"></ol>
+      <p class="tip" id="tip"></p>
+    </aside>
+  </div>
+</main>
+</body>
+</html>
