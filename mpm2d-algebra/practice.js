@@ -13,6 +13,8 @@ let revealed = false;
 let currentOptions = [];
 let recorded = false;
 let reviewQuestions = [];
+let setVariant = null;
+let activeQuestions;
 
 function element(tag, text) {
   const node = document.createElement(tag);
@@ -30,7 +32,7 @@ function shuffle(items) {
 }
 
 function questionSet() {
-  return algebraTopics[topicIndex].levels[levelSelect.selectedIndex];
+  return activeQuestions;
 }
 
 function setReveal(name, visible) {
@@ -61,7 +63,7 @@ function saveCurrentSet() {
   }
   activeAlgebraSet = {topic:name, level};
   algebraDrafts[algebraSetKey(name, level)] = {
-    total, questionIndex, firstTry, attempted, finishedQuestion, revealed, recorded, reviewed, reviewQuestions
+    total, questionIndex, firstTry, attempted, finishedQuestion, revealed, recorded, reviewed, reviewQuestions, setVariant
   };
   saveAlgebraProgress();
   renderAlgebraProgress();
@@ -154,7 +156,16 @@ function renderQuestion() {
   }));
 }
 
+function selectQuestionSet(variant) {
+  setVariant = variant;
+  activeQuestions = buildPracticeSet(algebraTopics[topicIndex], levelSelect.selectedIndex, variant);
+}
+
 function restart() {
+  const topic = algebraTopics[topicIndex].name;
+  const level = levels[levelSelect.selectedIndex];
+  const previous = algebraDrafts[algebraSetKey(topic, level)]?.setVariant;
+  selectQuestionSet(nextPracticeVariant(isPracticeVariant(previous) ? previous : null));
   questionIndex = 0;
   firstTry = 0;
   recorded = false;
@@ -167,6 +178,7 @@ function restart() {
 function resume() {
   const {name} = algebraTopics[topicIndex];
   const draft = algebraDrafts[algebraSetKey(name, levels[levelSelect.selectedIndex])];
+  selectQuestionSet(isPracticeVariant(draft?.setVariant) ? draft.setVariant : null);
   if (draft?.total !== questionSet().length || !Number.isInteger(draft.questionIndex) ||
       draft.questionIndex < 0 || draft.questionIndex > draft.total) {
     restart();

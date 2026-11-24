@@ -416,3 +416,187 @@ algebraTopics.push({
     ]
   ]
 });
+
+function commonDivisor(a, b) {
+  while (b) [a,b] = [b,a % b];
+  return a;
+}
+
+const rightTriangles = [];
+for (let m = 2; m <= 13; m++) {
+  for (let n = 1; n < m; n++) {
+    if ((m-n) % 2 && commonDivisor(m,n) === 1) {
+      rightTriangles.push([4*m*n, 2*(m*m-n*n), 2*(m*m+n*n)]);
+    }
+  }
+}
+
+function freshTrigPractice(level, i) {
+  if (level === 0) {
+    const [opposite, adjacent, hypotenuse] = rightTriangles[i-8];
+    const ratios = ["sin", "cos", "tan"];
+    const sides = ["opposite over hypotenuse", "adjacent over hypotenuse", "opposite over adjacent"];
+    const values = [`${opposite}/${hypotenuse}`, `${adjacent}/${hypotenuse}`, `${opposite}/${adjacent}`];
+    const chosen = i % ratios.length;
+    return item(`Find ${ratios[chosen]} θ.`, `Opposite = ${opposite}, adjacent = ${adjacent}, hypotenuse = ${hypotenuse}`, values[chosen],
+      values.flatMap((value, index) => index === chosen ? [] : [[value, `That uses ${sides[index]}.`]]),
+      `Use ${sides[chosen]}.`, `The ratio is ${sides[chosen]}, giving ${values[chosen]}.`,
+      {opposite:String(opposite), adjacent:String(adjacent), hypotenuse:String(hypotenuse)});
+  }
+  if (level === 1) {
+    const theta = 21 + i % 40;
+    const angleDegrees = theta === 45 ? 46 : theta;
+    const h = 12 + i;
+    const radians = angleDegrees * Math.PI / 180;
+    const adjacent = tenth(h*Math.cos(radians));
+    return item("Find the adjacent side to the nearest tenth.", `θ = ${angleDegrees}°, hypotenuse = ${h} cm`, `${adjacent} cm`,
+      [[`${tenth(h*Math.sin(radians))} cm`,"Sine gives the opposite side."],[`${tenth(h/Math.cos(radians))} cm`,"A leg cannot be longer than the hypotenuse."]],
+      "Use cosine to relate the adjacent side to the hypotenuse.", `Adjacent = ${h} cos ${angleDegrees}° ≈ ${adjacent} cm.`,
+      {adjacent:"?", hypotenuse:`${h} cm`, angle:`${angleDegrees}°`});
+  }
+  const rise = 2 + i % 12;
+  const run = rise + 12 + i;
+  const angle = degrees(Math.atan(rise/run));
+  return item("Find the incline’s angle with the horizontal. Round to the nearest degree.", `Rise = ${rise} m and horizontal run = ${run} m`, `${angle}°`,
+    [[`${90-angle}°`,"That is the complementary angle."],[`${angle+6}°`,"Check your inverse tangent calculation in degree mode."]],
+    "Use the rise divided by the horizontal run.", `θ = tan⁻¹(${rise}/${run}) ≈ ${angle}°.`,
+    {opposite:`${rise} m`, adjacent:`${run} m`});
+}
+
+function quadraticVariant(level, i) {
+  const family = i % 5;
+  const d = 2 + Math.floor(i/5);
+  const base = 3 + i % 13;
+  const n = base >= d ? base + 1 : base;
+  const other = n + d;
+  const roots = (a,b) => `x = ${signed(a)} or x = ${signed(b)}`;
+
+  if (level === 0) {
+    if (family === 0) {
+      return item("Find both roots from the graph.", "Read the x-intercepts.", roots(-d,n),
+        [[roots(d,-n),"Check the signs of the x-coordinates."],[roots(-d,0),"The origin is not an x-intercept of this parabola."]],
+        "Find the two points where the parabola crosses the x-axis.", `The crossings have x-coordinates ${signed(-d)} and ${n}.`,
+        {a:1,b:d-n,c:-d*n,xMin:-d-2,xMax:n+2,yMin:-Math.max(12,Math.ceil((n+d)**2/4)+2),yMax:10});
+    }
+    if (family === 1 || family === 2) {
+      return item("Set each factor to zero.", `${bracket(-n)}${bracket(d)} = 0`, roots(n,-d),
+        [[roots(-n,d),"These values give the opposite signs. Substitute one into a factor."],[`x = ${n} only`,"The second factor also has a zero."]],
+        "Either factor can be zero.", `Solving x − ${n} = 0 gives x = ${n}. Solving x + ${d} = 0 gives x = ${signed(-d)}.`);
+    }
+    if (family === 3) {
+      return item("Solve by factoring out a common factor.", `${d}x² − ${d*n}x = 0`, roots(0,n),
+        [[`x = ${n} only`,"Factoring keeps the root x = 0."],[roots(0,-n),"Check which value makes the second factor zero."]],
+        `Take out ${d}x.`, `${d}x(x − ${n}) = 0, so x = 0 or x = ${n}.`);
+    }
+    return item("A square garden has the area shown. Find the side length.", `Area = ${n*n} m²`, `${n} m`,
+      [[`${signed(-n)} m`,"A length is positive."],[`${n*n} m`,"The area equals the square of the side length."]],
+      "Solve for the positive square root.", `If s is the side length, s² = ${n*n}. The positive root is ${n} m.`);
+  }
+
+  if (level === 1) {
+    if (family === 0) {
+      const b = n-2*d;
+      return item("Rearrange, then solve by factoring.", `2x²${term(b,"x")} = ${n*d}`, roots(d,-n/2),
+        [[roots(-d,n/2),"Check the signs by substituting into the original equation."],[`x = ${d} only`,"There are two distinct factors."]],
+        "Move everything to the left, then factor.", `The factored equation is (2x + ${n})(x − ${d}) = 0.`);
+    }
+    if (family === 1) {
+      const r = n*n + 2, root = Math.sqrt(r);
+      return item("Use the quadratic formula. Round to the nearest hundredth.", `x² − ${2*d}x${term(d*d-r)} = 0`,
+        `x ≈ ${signed((d-root).toFixed(2))} or x ≈ ${(d+root).toFixed(2)}`,
+        [[`x ≈ ${root.toFixed(2)} or x ≈ ${signed((-root).toFixed(2))}`,"Include the −b term in the numerator."],[`x ≈ ${(d+root).toFixed(2)} only`,"The plus-or-minus sign produces both roots."]],
+        "The discriminant is positive, so calculate both roots.", `The quadratic formula simplifies to x = ${d} ± √${r}.`);
+    }
+    if (family === 2) {
+      const area = n*other;
+      return item(`A rectangle is ${d} m longer than it is wide and has area ${area} m². Find its width.`, "Let w be the width.",
+        `${n} m`, [[`${other} m`,"That is the length."],[`${signed(-other)} m`,"The negative root is not a possible width."]],
+        `Use w(w + ${d}) = ${area}.`, `The factored equation is (w − ${n})(w + ${other}) = 0. Only ${n} m is positive.`);
+    }
+    if (family === 3) {
+      const landing = 3 + i % 6;
+      return item("A ball’s height h is in metres, t seconds after launch. When does it land?", `h(t) = −5t² + ${5*(landing-1)}t + ${5*landing}`,
+        `${landing} s`, [["−1 s","This time is before the launch."],[`${(landing-1)/2} s`,"This is the time of the maximum height."]],
+        "Set the height equal to zero and factor.", `Divide by −5 and factor to get (t + 1)(t − ${landing}) = 0. Keep the positive time.`);
+    }
+    return item("Which equation could describe the graph shown?", "Use the intercepts and opening direction.",
+      `y = −${bracket(d)}${bracket(-n)}`,
+      [[`y = ${bracket(d)}${bracket(-n)}`,"This opens upward."],[`y = −${bracket(-d)}${bracket(n)}`,"This has different intercepts."]],
+      "The graph opens downward, so its leading coefficient is negative.",
+      `The zeros are ${signed(-d)} and ${n}. A model that opens down is y = −${bracket(d)}${bracket(-n)}.`,
+      {a:-1,b:n-d,c:d*n,xMin:-d-2,xMax:n+2,yMin:-10,yMax:Math.max(12,Math.ceil((n+d)**2/4)+2)});
+  }
+
+  if (family === 0) {
+    const r = n*n + 2;
+    const width = (-d+Math.sqrt(d*d+4*r))/2;
+    return item(`A display is ${d} m longer than it is wide. Its area is ${r} m². Find its width to the nearest hundredth.`,
+      "Let w be the width.", `${width.toFixed(2)} m`,
+      [[`${(width+d).toFixed(2)} m`,"That is the length."],[`${Math.sqrt(r).toFixed(2)} m`,"The display is a rectangle with unequal sides."]],
+      "Write an area equation, then keep the positive solution.", `Solve w² + ${d}w − ${r} = 0. The positive root is approximately ${width.toFixed(2)} m.`);
+  }
+  if (family === 1) {
+    const fence = 2*(n+other);
+    const area = 2*n*other;
+    return item(`A pen uses ${fence} m of fencing on three sides. A wall forms the fourth side. For an area of ${area} m², how long can each side perpendicular to the wall be?`,
+      "Let x be one perpendicular side.", `${n} m or ${other} m`,
+      [[`${2*n} m or ${2*other} m`,"These are lengths for the side parallel to the wall."],[`${(n+other)/2} m only`,"That is the dimension for maximum area."]],
+      `Use x(${fence} − 2x) = ${area}.`, `Rearrange and factor to obtain ${bracket(-n)}${bracket(-other)} = 0. Both roots give valid pen dimensions.`);
+  }
+  if (family === 2) {
+    const r = 2 + i % 5;
+    const s = r + 3 + d;
+    const peak = (r+s)/2;
+    return item("A ball’s height h is in metres, t seconds after launch. When is it at its starting height again?",
+      `h(t) = −5t² + ${10*peak}t + ${n}`, `${2*peak} s`,
+      [[`${peak} s`,"That is when the ball is highest."],["0 s","This is the launch. The question asks when it returns."]],
+      `Set h(t) = ${n} and factor out t.`, `The equation becomes −5t(t − ${2*peak}) = 0. After launch, the ball returns to that height at ${2*peak} s.`);
+  }
+  if (family === 3) {
+    return item("A store models daily profit in dollars, where x is the number of items sold. What quantities break even?",
+      `P(x) = −2x² + ${2*(n+other)}x − ${2*n*other}`, `${n} or ${other} items`,
+      [[`${2*n} or ${2*other} items`,"Divide the entire equation by −2 before factoring."],[`${(n+other)/2} items only`,"That value gives maximum profit."]],
+      "Set profit equal to zero, then factor.", `After dividing by −2, the equation becomes ${bracket(-n)}${bracket(-other)} = 0.`);
+  }
+  const x = 1 + i % 5;
+  const length = n + 4, width = n + 1;
+  const area = (length+2*x)*(width+2*x)-length*width;
+  return item(`A path of uniform width goes around a ${length} m by ${width} m garden. The path alone has area ${area} m². How wide is it?`,
+    "Let x be the path width.", `${x} m`, [[`${2*x} m`,"There is a path on both sides of each dimension."],[`${x/2} m`,"Check how much the dimensions increase when the path is added."]],
+    "Add 2x to each dimension, then subtract the area of the original garden.",
+    `Set (${length} + 2x)(${width} + 2x) − ${length*width} = ${area}. The positive root is x = ${x}.`);
+}
+
+const variationCount = 30;
+
+function nextPracticeVariant(previous) {
+  return {
+    bankStart: previous ? (previous.bankStart + 3) % 8 : Math.floor(Math.random()*8),
+    variationStart: previous ? (previous.variationStart + 5) % variationCount : Math.floor(Math.random()*variationCount),
+    order: Math.floor(Math.random()*4294967296)
+  };
+}
+
+function isPracticeVariant(variant) {
+  return Number.isInteger(variant?.bankStart) && variant.bankStart >= 0 && variant.bankStart < 8 &&
+    Number.isInteger(variant.variationStart) && variant.variationStart >= 0 && variant.variationStart < variationCount &&
+    Number.isInteger(variant.order) && variant.order >= 0 && variant.order < 4294967296;
+}
+
+function buildPracticeSet(topic, level, variant) {
+  const bank = topic.levels[level];
+  if (!isPracticeVariant(variant)) return bank;
+  const build = topic.name === "Trigonometry" ? freshTrigPractice
+    : topic.name === "Quadratic equations" ? quadraticVariant : practiceBuilders.get(topic.name);
+  const questions = [
+    ...Array.from({length:3}, (_, i) => bank[(variant.bankStart+i) % bank.length]),
+    ...Array.from({length:5}, (_, i) => build(level, 8 + (variant.variationStart+i) % variationCount))
+  ];
+  let state = variant.order;
+  for (let i = questions.length - 1; i > 0; i--) {
+    state = (Math.imul(state,1664525) + 1013904223) >>> 0;
+    const j = Math.floor(state/4294967296*(i+1));
+    [questions[i],questions[j]] = [questions[j],questions[i]];
+  }
+  return questions;
+}

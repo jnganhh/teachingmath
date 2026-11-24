@@ -85,10 +85,11 @@ function quadraticFigure({a, b, c, xMin, xMax, yMin, yMax, target}) {
     graph.append(svgElement("line", {x1:px,x2:px,y1:0,y2:height,class:x ? "plot-grid" : "plot-axis"}));
     if (x) svg.append(svgElement("text", {x:left+px,y:top+yPos(0)+15,"text-anchor":"middle",class:"plot-tick"}, String(x)));
   }
-  for (let y = yMin; y <= yMax; y++) {
+  const yStep = Math.max(1, Math.ceil((yMax-yMin)/16));
+  for (let y = Math.ceil(yMin/yStep)*yStep; y <= yMax; y += yStep) {
     const py = yPos(y);
     graph.append(svgElement("line", {x1:0,x2:width,y1:py,y2:py,class:y ? "plot-grid" : "plot-axis"}));
-    if (y && y % 2 === 0) svg.append(svgElement("text", {x:left+xPos(0)-5,y:top+py+4,"text-anchor":"end",class:"plot-tick"}, String(y)));
+    if (y && y % (2*yStep) === 0) svg.append(svgElement("text", {x:left+xPos(0)-5,y:top+py+4,"text-anchor":"end",class:"plot-tick"}, String(y)));
   }
 
   const curve = [];
