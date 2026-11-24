@@ -45,7 +45,7 @@
     .hw-Miss { background: #ef4444; color: #ffffff; border-color: #1e293b; }
   </style>
 </head>
-<body class="bg-yellow-50 text-slate-800 font-sans min-h-screen p-4 md:p-6">
+<body class="bg-yellow-50 text-slate-800 font-sans min-h-screen p-2.5 sm:p-4 md:p-6 overflow-x-hidden">
 
   <!-- TEACHER-ONLY PRIVACY LOCK OVERLAY -->
   <div id="teacherLockOverlay" class="fixed inset-0 z-50 bg-slate-900/95 flex items-center justify-center p-4">
@@ -78,87 +78,87 @@
   </div>
 
   <!-- Top Navigation & Data Persistence Bar -->
-  <header class="max-w-7xl mx-auto mb-6 bg-white p-5 rounded-xl comic-border flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+  <header class="max-w-7xl mx-auto mb-3 sm:mb-6 bg-white p-3 sm:p-5 rounded-xl comic-border flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
     <div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-slate-900 text-white border-2 border-slate-800">🔒 Private Teacher URL</span>
-        <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
-        <span class="px-2.5 py-1 text-xs font-black rounded bg-amber-100 text-amber-900 border-2 border-slate-800">iPad + MacBook Sync</span>
-        <span id="saveIndicator" class="px-2.5 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800 flex items-center gap-1.5">
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-black uppercase rounded bg-slate-900 text-white border-2 border-slate-800">🔒 Private URL</span>
+        <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
+        <span class="hidden sm:inline-block px-2.5 py-1 text-xs font-black rounded bg-amber-100 text-amber-900 border-2 border-slate-800">Phone + iPad + MacBook Sync</span>
+        <span id="saveIndicator" class="px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800 flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span> Saved Locally
         </span>
       </div>
-      <h1 class="text-2xl md:text-3xl font-black mt-2 text-blue-700">MPM2D Attendance, Homework, Tally & Learning Skills</h1>
-      <p class="text-xs font-bold text-slate-600 mt-0.5">Unlisted teacher tool — not visible on the student learning hub</p>
+      <h1 class="text-lg sm:text-2xl md:text-3xl font-black mt-1.5 sm:mt-2 text-blue-700 leading-tight">MPM2D Attendance, Homework, Tally & Learning Skills</h1>
+      <p class="hidden sm:block text-xs font-bold text-slate-600 mt-0.5">Unlisted teacher tool — not visible on the student learning hub</p>
     </div>
 
     <!-- Data Persistence Controls (iPad Share + Google Cloud Sync + Desktop Disk Save) -->
-    <div class="flex flex-wrap items-center gap-2">
-      <button onclick="pullFromGoogleCloud(false)" id="cloudPullQuickBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-emerald-600 text-white comic-btn flex items-center gap-1.5" title="Download latest updates from your other device (iPad / MacBook)">
+    <div class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
+      <button onclick="pullFromGoogleCloud(false)" id="cloudPullQuickBtn" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-emerald-600 text-white comic-btn flex items-center justify-center gap-1 sm:gap-1.5" title="Download latest updates from your other device (Phone / iPad / MacBook)">
         <span>⬇️</span> Pull Cloud
       </button>
-      <button onclick="pushToGoogleCloud(true)" id="cloudQuickBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-600 text-white comic-btn flex items-center gap-1.5" title="Upload this device's changes to Google Cloud">
+      <button onclick="pushToGoogleCloud(true)" id="cloudQuickBtn" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-purple-600 text-white comic-btn flex items-center justify-center gap-1 sm:gap-1.5" title="Upload this device's changes to Google Cloud">
         <span>⬆️</span> <span id="cloudBtnLabel">Push Cloud</span>
       </button>
-      <button onclick="shareOrBackupiPad()" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-300 text-slate-900 comic-btn flex items-center gap-1.5" title="Save directly to iPad Files / iCloud Drive / AirDrop or Download JSON">
+      <button onclick="shareOrBackupiPad()" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-amber-300 text-slate-900 comic-btn flex items-center justify-center gap-1 sm:gap-1.5" title="Save directly to Files / iCloud Drive / AirDrop or Download JSON">
         <span>📱</span> Backup
       </button>
-      <label class="px-3 py-2 text-xs font-black rounded-lg bg-white text-slate-800 comic-btn flex items-center gap-1.5 cursor-pointer">
+      <label class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-white text-slate-800 comic-btn flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer">
         <span>⬆️</span> Restore
         <input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="importBackupJSON(event)" />
       </label>
-      <button onclick="exportReportCSV()" class="px-3 py-2 text-xs font-black rounded-lg bg-blue-600 text-white comic-btn flex items-center gap-1.5">
+      <button onclick="exportReportCSV()" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-blue-600 text-white comic-btn flex items-center justify-center gap-1 sm:gap-1.5">
         <span>📊</span> CSV
       </button>
-      <button onclick="lockTeacherTracker()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn flex items-center gap-1" title="Lock screen if leaving iPad on desk">
+      <button onclick="lockTeacherTracker()" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-slate-800 text-white comic-btn flex items-center justify-center gap-1" title="Lock screen if leaving device on desk">
         <span>🔒</span> Lock
       </button>
     </div>
   </header>
 
   <!-- 3 Periods Bar + Date Selector + View Switcher -->
-  <section class="max-w-7xl mx-auto mb-5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-    <div class="lg:col-span-4 flex items-center gap-2 bg-white p-2 rounded-xl comic-border">
-      <button onclick="switchPeriod('P1')" id="periodBtn-P1" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-black border-2 border-slate-800 transition tab-active">
-        Period 1 <span id="count-P1" class="ml-1 font-mono">(0)</span>
+  <section class="max-w-7xl mx-auto mb-3 sm:mb-5 grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-4 items-center">
+    <div class="lg:col-span-4 flex items-center gap-1.5 sm:gap-2 bg-white p-1.5 sm:p-2 rounded-xl comic-border">
+      <button onclick="switchPeriod('P1')" id="periodBtn-P1" class="flex-1 py-2 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition tab-active">
+        Period 1 <span id="count-P1" class="ml-0.5 sm:ml-1 font-mono">(0)</span>
       </button>
-      <button onclick="switchPeriod('P2')" id="periodBtn-P2" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-black border-2 border-slate-800 transition bg-slate-50 hover:bg-slate-100">
-        Period 2 <span id="count-P2" class="ml-1 font-mono">(0)</span>
+      <button onclick="switchPeriod('P2')" id="periodBtn-P2" class="flex-1 py-2 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50 hover:bg-slate-100">
+        Period 2 <span id="count-P2" class="ml-0.5 sm:ml-1 font-mono">(0)</span>
       </button>
-      <button onclick="switchPeriod('P3')" id="periodBtn-P3" class="flex-1 py-2 px-2.5 rounded-lg text-xs font-black border-2 border-slate-800 transition bg-slate-50 hover:bg-slate-100">
-        Period 3 <span id="count-P3" class="ml-1 font-mono">(0)</span>
+      <button onclick="switchPeriod('P3')" id="periodBtn-P3" class="flex-1 py-2 px-1.5 sm:px-2.5 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50 hover:bg-slate-100">
+        Period 3 <span id="count-P3" class="ml-0.5 sm:ml-1 font-mono">(0)</span>
       </button>
     </div>
 
-    <div class="lg:col-span-3 flex items-center gap-1.5 bg-white px-3 py-2.5 rounded-xl comic-border">
-      <button onclick="stepDate(-1)" title="Previous Day" class="px-2 py-1 text-xs font-black rounded bg-slate-100 border-2 border-slate-800 hover:bg-slate-200">◀</button>
-      <input type="date" id="activeDate" onchange="changeDate(this.value)" class="bg-slate-50 px-2 py-1 rounded border-2 border-slate-800 text-xs font-mono font-bold focus:outline-none w-full" />
-      <button onclick="stepDate(1)" title="Next Day" class="px-2 py-1 text-xs font-black rounded bg-slate-100 border-2 border-slate-800 hover:bg-slate-200">▶</button>
-      <button onclick="setToday()" class="text-xs font-black px-2 py-1 rounded bg-amber-300 border-2 border-slate-800 hover:bg-amber-400">Today</button>
+    <div class="lg:col-span-3 flex items-center gap-1.5 bg-white px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl comic-border">
+      <button onclick="stepDate(-1)" title="Previous Day" class="px-2 py-1 text-xs font-black rounded bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 shrink-0">◀</button>
+      <input type="date" id="activeDate" onchange="changeDate(this.value)" class="bg-slate-50 px-2 py-1 rounded border-2 border-slate-800 text-xs font-mono font-bold focus:outline-none w-full min-w-0" />
+      <button onclick="stepDate(1)" title="Next Day" class="px-2 py-1 text-xs font-black rounded bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 shrink-0">▶</button>
+      <button onclick="setToday()" class="text-xs font-black px-2 py-1 rounded bg-amber-300 border-2 border-slate-800 hover:bg-amber-400 shrink-0">Today</button>
     </div>
 
-    <div class="lg:col-span-5 flex flex-wrap items-center gap-1.5 bg-white p-2 rounded-xl comic-border">
-      <button onclick="switchView('daily')" id="viewBtn-daily" class="flex-1 py-2 px-2 rounded-lg text-xs font-black border-2 border-slate-800 transition tab-active whitespace-nowrap">
+    <div class="lg:col-span-5 grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 bg-white p-1.5 sm:p-2 rounded-xl comic-border">
+      <button onclick="switchView('daily')" id="viewBtn-daily" class="sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition tab-active">
         📋 Daily Input
       </button>
-      <button onclick="switchView('history')" id="viewBtn-history" class="flex-1 py-2 px-2 rounded-lg text-xs font-black border-2 border-slate-800 transition bg-slate-50 whitespace-nowrap">
+      <button onclick="switchView('history')" id="viewBtn-history" class="sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50">
         📅 Review by Date
       </button>
-      <button onclick="switchView('participation')" id="viewBtn-participation" class="flex-1 py-2 px-2 rounded-lg text-xs font-black border-2 border-slate-800 transition bg-slate-50 whitespace-nowrap">
+      <button onclick="switchView('participation')" id="viewBtn-participation" class="sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50">
         📈 Participation
       </button>
-      <button onclick="switchView('summary')" id="viewBtn-summary" class="flex-1 py-2 px-2 rounded-lg text-xs font-black border-2 border-slate-800 transition bg-slate-50 whitespace-nowrap">
+      <button onclick="switchView('summary')" id="viewBtn-summary" class="sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50">
         🎓 6 Skills
       </button>
-      <button onclick="switchView('roster')" id="viewBtn-roster" class="flex-1 py-2 px-2 rounded-lg text-xs font-black border-2 border-slate-800 transition bg-slate-50 whitespace-nowrap">
+      <button onclick="switchView('roster')" id="viewBtn-roster" class="col-span-2 sm:col-span-1 sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50">
         👥 Roster
       </button>
     </div>
   </section>
 
   <!-- Quick Stats & Action Bar -->
-  <section class="max-w-7xl mx-auto mb-5 bg-white rounded-xl comic-border p-3.5 flex flex-wrap items-center justify-between gap-3">
-    <div class="flex flex-wrap items-center gap-4 text-xs font-bold">
+  <section class="max-w-7xl mx-auto mb-3 sm:mb-5 bg-white rounded-xl comic-border p-2.5 sm:p-3.5 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-4 text-[11px] sm:text-xs font-bold">
       <div>Present: <span id="statPresent" class="text-emerald-700 font-black font-mono">0</span></div>
       <div>Late: <span id="statLate" class="text-amber-600 font-black font-mono">0</span></div>
       <div>Absent: <span id="statAbsent" class="text-red-600 font-black font-mono">0</span></div>
@@ -168,33 +168,33 @@
       <div>Observations: <span id="statLogs" class="text-purple-700 font-black font-mono">0</span></div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
       <div class="inline-flex rounded-lg border-2 border-slate-800 bg-slate-100 p-0.5">
-        <button onclick="setDailyLayout('grid')" id="layoutBtn-grid" class="px-2.5 py-1 text-xs font-black rounded-md transition tab-active" title="Compact 4x8 Seating/Name Grid — click any student to log">
-          ⊞ 4×8 Grid
+        <button onclick="setDailyLayout('grid')" id="layoutBtn-grid" class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-black rounded-md transition tab-active" title="Compact Grid — click any student to log">
+          ⊞ Grid
         </button>
-        <button onclick="setDailyLayout('table')" id="layoutBtn-table" class="px-2.5 py-1 text-xs font-black rounded-md transition text-slate-700" title="Full Detailed Table">
+        <button onclick="setDailyLayout('table')" id="layoutBtn-table" class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-black rounded-md transition text-slate-700" title="Full Detailed Table">
           ☰ Table
         </button>
       </div>
-      <button onclick="markAllPresent()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-emerald-100 text-emerald-900 comic-btn">
+      <button onclick="markAllPresent()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-emerald-100 text-emerald-900 comic-btn">
         ✓ All Present
       </button>
-      <button onclick="markAllHomeworkDone()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-blue-100 text-blue-900 comic-btn">
+      <button onclick="markAllHomeworkDone()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-blue-100 text-blue-900 comic-btn">
         📚 All HW Done
       </button>
-      <button onclick="clearCurrentDayInputs()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-red-100 text-red-900 comic-btn" title="Reset all attendance, homework, phone flags, tallies, and observations for this period on the selected date">
+      <button onclick="clearCurrentDayInputs()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-red-100 text-red-900 comic-btn" title="Reset all attendance, homework, phone flags, tallies, and observations for this period on the selected date">
         🧹 Clear Day
       </button>
-      <button onclick="pickRandomStudent()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
+      <button onclick="pickRandomStudent()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
         🎲 Equitable Random Call
       </button>
-      <input type="text" id="studentSearch" oninput="renderCurrentView()" placeholder="Search student..." class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none" />
+      <input type="text" id="studentSearch" oninput="renderCurrentView()" placeholder="Search student..." class="w-full sm:w-auto px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none" />
     </div>
   </section>
 
   <!-- Equitable Random Student Picker Callout -->
-  <div id="randomBanner" class="hidden max-w-7xl mx-auto mb-5 p-4 rounded-xl bg-amber-100 comic-border flex items-center justify-between">
+  <div id="randomBanner" class="hidden max-w-7xl mx-auto mb-3 sm:mb-5 p-3 sm:p-4 rounded-xl bg-amber-100 comic-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
     <div class="flex items-center gap-3">
       <span class="text-2xl">🎯</span>
       <div>
@@ -210,8 +210,8 @@
 
   <!-- VIEW 1: DAILY ATTENDANCE, HOMEWORK, TALLY & OBJECTIVE GROWING SUCCESS DROPDOWNS -->
   <main id="view-daily" class="max-w-7xl mx-auto">
-    <!-- 4x8 Compact Grid Layout -->
-    <div id="dailyGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5"></div>
+    <!-- Compact Grid Layout (2 cols on Phone, 3 on small tablet, 4x8 on iPad/Desktop) -->
+    <div id="dailyGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5"></div>
 
     <!-- Full Table Layout -->
     <div id="dailyTableContainer" class="hidden bg-white rounded-xl comic-border overflow-hidden">
@@ -231,15 +231,15 @@
     </div>
   </main>
 
-  <!-- QUICK STUDENT ACTION MODAL (for 4x8 Grid clicks) -->
-  <div id="studentQuickModal" onclick="if(event.target===this) closeStudentModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-3 md:p-6 overflow-y-auto">
-    <div class="bg-white max-w-3xl w-full rounded-2xl comic-border p-5 space-y-4 my-auto max-h-[92vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-3">
-        <div>
+  <!-- QUICK STUDENT ACTION MODAL (for Grid clicks) -->
+  <div id="studentQuickModal" onclick="if(event.target===this) closeStudentModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
+    <div class="bg-white max-w-3xl w-full rounded-2xl comic-border p-3.5 sm:p-5 space-y-3 sm:space-y-4 my-auto max-h-[92vh] overflow-y-auto overflow-x-hidden">
+      <div class="flex items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
+        <div class="min-w-0">
           <span class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800" id="modalPeriodBadge">Period 1</span>
-          <h2 id="modalStudentName" class="text-xl font-black text-slate-900 mt-1">Student Name</h2>
+          <h2 id="modalStudentName" class="text-lg sm:text-xl font-black text-slate-900 mt-1 break-words">Student Name</h2>
         </div>
-        <button onclick="closeStudentModal()" class="px-3.5 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">✓ Done / Close</button>
+        <button onclick="closeStudentModal()" class="px-3 sm:px-3.5 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn shrink-0">✓ Done / Close</button>
       </div>
       <div id="modalStudentBody" class="space-y-4 text-xs"></div>
     </div>
@@ -1269,12 +1269,12 @@
           : '';
 
         return `
-          <button onclick="openStudentModal('${s.id}')" class="text-left bg-white hover:bg-yellow-50 p-3 rounded-xl comic-btn flex flex-col justify-between gap-2 transition">
-            <div class="flex items-start justify-between gap-1.5 w-full">
-              <span class="font-black text-sm text-slate-900 leading-tight">${s.name}</span>
-              <span class="px-1.5 py-0.5 text-[10px] font-black rounded border shrink-0 ${attColor}">${attText}</span>
+          <button onclick="openStudentModal('${s.id}')" class="text-left bg-white hover:bg-yellow-50 p-2 sm:p-3 rounded-xl comic-btn flex flex-col justify-between gap-1.5 sm:gap-2 transition min-w-0">
+            <div class="flex items-start justify-between gap-1 sm:gap-1.5 w-full min-w-0">
+              <span class="font-black text-xs sm:text-sm text-slate-900 leading-tight break-words min-w-0">${s.name}</span>
+              <span class="px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-black rounded border shrink-0 ${attColor}">${attText}</span>
             </div>
-            <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+            <div class="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px] font-mono">
               <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 font-black">Tally: ${totalTallies}</span>
               ${obsCount > 0 ? `<span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 font-black">✓ ${obsCount}</span>` : ''}
               ${hwBadge}
