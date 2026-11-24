@@ -172,6 +172,7 @@
       <div>📵 Phone/Device Flags: <span id="statPhones" class="text-red-600 font-black font-mono">0</span></div>
       <div>Today's Math Tallies: <span id="statTallies" class="text-blue-700 font-black font-mono">0</span></div>
       <div>Observations: <span id="statLogs" class="text-purple-700 font-black font-mono">0</span></div>
+      <div>🚪 Out Now: <span id="statOutNow" class="text-orange-700 font-black font-mono">0</span></div>
     </div>
 
     <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -930,7 +931,8 @@
           homework: '', // 'Done' | 'Part' | 'Miss' | ''
           phoneCount: 0,
           tallies: { ans: 0, brd: 0, hlp: 0, chk: 0 },
-          observations: []
+          observations: [],
+          hallPasses: []
         };
       }
       if (state.records[date][studentId].homework === undefined) {
@@ -939,8 +941,51 @@
       if (state.records[date][studentId].phoneCount === undefined) {
         state.records[date][studentId].phoneCount = 0;
       }
+      if (!Array.isArray(state.records[date][studentId].hallPasses)) {
+        state.records[date][studentId].hallPasses = [];
+      }
       return state.records[date][studentId];
     }
+
+    function formatPassDuration(ms) {
+      const totalSec = Math.max(0, Math.floor(ms / 1000));
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function formatPassTime(ts) {
+      return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function toggleRoomPass(studentId) {
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      const passes = rec.hallPasses || [];
+      const active = passes.length > 0 && passes[passes.length - 1].inTs === null ? passes[passes.length - 1] : null;
+      if (active) {
+        active.inTs = Date.now();
+      } else {
+        passes.push({ outTs: Date.now(), inTs: null });
+      }
+      rec.hallPasses = passes;
+      saveState();
+      renderCurrentView();
+    }
+
+    function removeHallPass(studentId, idx) {
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      if (!Array.isArray(rec.hallPasses)) return;
+      rec.hallPasses.splice(idx, 1);
+      saveState();
+      renderCurrentView();
+    }
+
+    setInterval(() => {
+      document.querySelectorAll('.live-out-timer').forEach(el => {
+        const outTs = Number(el.getAttribute('data-out-ts'));
+        if (outTs) el.textContent = formatPassDuration(Date.now() - outTs);
+      });
+    }, 1000);
 
     function switchPeriod(pKey) {
       state.currentPeriod = pKey;
@@ -1262,7 +1307,7 @@
       const allStudents = state.periods[state.currentPeriod].students;
       const students = allStudents.filter(s => s.name.toLowerCase().includes(filter));
 
-      let pCount = 0, lCount = 0, aCount = 0, hwDoneCount = 0, phoneSum = 0, tallySum = 0, obsSum = 0;
+      let pCount = 0, lCount = 0, aCount = 0, hwDoneCount = 0, phoneSum = 0, tallySum = 0, obsSum = 0, outNowCount = 0;
       allStudents.forEach(s => {
         const rec = getStudentDayRecord(state.activeDate, s.id);
         if (rec.attendance === 'P') pCount++;
@@ -1272,6 +1317,8 @@
         phoneSum += (rec.phoneCount || 0);
         tallySum += Object.values(rec.tallies).reduce((a, b) => a + b, 0);
         obsSum += (rec.observations || []).length;
+        const passes = rec.hallPasses || [];
+        if (passes.length > 0 && passes[passes.length - 1].inTs === null) outNowCount++;
       });
       document.getElementById('statPresent').textContent = pCount;
       document.getElementById('statLate').textContent = lCount;
@@ -1282,6 +1329,8 @@
       if (phEl) phEl.textContent = phoneSum;
       document.getElementById('statTallies').textContent = tallySum;
       document.getElementById('statLogs').textContent = obsSum;
+      const outEl = document.getElementById('statOutNow');
+      if (outEl) outEl.textContent = outNowCount;
 
       // Ensure active view section & button always match state.currentView
       const validViews = ['daily', 'history', 'participation', 'summary', 'weekly', 'roster'];
@@ -1499,6 +1548,36 @@
           <div class="mb-2">${buildLookForDropdownHTML(studentId)}</div>
           ${chips ? `<div>${chips}</div>` : ''}
         </div>
+        <div class="bg-orange-50/70 p-3 rounded-xl border-2 border-slate-200 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-[10px] font-black uppercase text-orange-800">🚪 Out of Room / Hall Pass Log Today</div>
+            ${(() => {
+              const passes = rec.hallPasses || [];
+              const active = passes.length > 0 && passes[passes.length - 1].inTs === null ? passes[passes.length - 1] : null;
+              return active
+                ? `<button onclick="toggleRoomPass('${studentId}')" class="px-2.5 py-1 text-xs font-black rounded-lg bg-orange-600 text-white comic-btn">↩️ Mark Returned (<span class="live-out-timer font-mono" data-out-ts="${active.outTs}">${formatPassDuration(Date.now() - active.outTs)}</span>)</button>`
+                : `<button onclick="toggleRoomPass('${studentId}')" class="px-2.5 py-1 text-xs font-black rounded-lg bg-white text-slate-900 comic-btn">🚪 Mark Left Room</button>`;
+            })()}
+          </div>
+          ${(rec.hallPasses || []).length === 0
+            ? `<div class="text-[11px] font-bold text-slate-500">No out-of-room trips recorded today.</div>`
+            : `<div class="space-y-1">${(rec.hallPasses || []).map((hp, idx) => {
+                const isOut = hp.inTs === null;
+                const dur = isOut
+                  ? `<span class="live-out-timer font-mono font-black text-orange-700" data-out-ts="${hp.outTs}">${formatPassDuration(Date.now() - hp.outTs)}</span>`
+                  : `<span class="font-mono font-black text-slate-800">${formatPassDuration(hp.inTs - hp.outTs)}</span>`;
+                return `
+                  <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs">
+                    <span class="font-bold">
+                      Left <strong>${formatPassTime(hp.outTs)}</strong> → ${isOut ? '<span class="text-orange-700 font-black">Still Out</span>' : `Returned <strong>${formatPassTime(hp.inTs)}</strong>`}
+                      <span class="ml-1.5 text-slate-600">(${dur})</span>
+                    </span>
+                    <button onclick="removeHallPass('${studentId}', ${idx})" class="text-red-600 font-black px-1.5 hover:opacity-75" title="Delete entry">✕</button>
+                  </div>
+                `;
+              }).join('')}</div>`
+          }
+        </div>
       `;
     }
 
@@ -1528,9 +1607,19 @@
           : '';
 
         const brdVal = (rec.tallies && rec.tallies.brd) || 0;
+        const passes = rec.hallPasses || [];
+        const activePass = passes.length > 0 && passes[passes.length - 1].inTs === null ? passes[passes.length - 1] : null;
+        const completedPasses = passes.filter(hp => hp.inTs !== null);
+        const totalOutMs = completedPasses.reduce((acc, hp) => acc + (hp.inTs - hp.outTs), 0);
+
+        const outBadge = activePass
+          ? `<span class="px-1.5 py-0.5 rounded bg-orange-600 text-white font-black">🚪 OUT <span class="live-out-timer" data-out-ts="${activePass.outTs}">${formatPassDuration(Date.now() - activePass.outTs)}</span></span>`
+          : (completedPasses.length > 0
+            ? `<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-900 font-black">🚪 ${completedPasses.length}× (${formatPassDuration(totalOutMs)})</span>`
+            : '');
 
         return `
-          <div onclick="openStudentModal('${s.id}')" class="cursor-pointer text-left bg-white hover:bg-yellow-50 p-2 sm:p-3 rounded-xl comic-btn flex flex-col justify-between gap-1.5 sm:gap-2 transition min-w-0">
+          <div onclick="openStudentModal('${s.id}')" class="cursor-pointer text-left ${activePass ? 'bg-orange-50 ring-2 ring-orange-500' : 'bg-white hover:bg-yellow-50'} p-2 sm:p-3 rounded-xl comic-btn flex flex-col justify-between gap-1.5 sm:gap-2 transition min-w-0">
             <div class="flex items-start justify-between gap-1 sm:gap-1.5 w-full min-w-0">
               <span class="font-black text-xs sm:text-sm text-slate-900 leading-tight break-words min-w-0">${s.name}</span>
               <span class="px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-black rounded border shrink-0 ${attColor}">${attText}</span>
@@ -1540,6 +1629,7 @@
               ${obsCount > 0 ? `<span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 font-black">✓ ${obsCount}</span>` : ''}
               ${hwBadge}
               ${pVal > 0 ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-black">📵 ${pVal}</span>` : ''}
+              ${outBadge}
             </div>
             <div class="space-y-1 pt-1 border-t border-slate-200" onclick="event.stopPropagation()">
               <div class="flex items-center justify-between rounded border border-slate-800 ${brdVal > 0 ? 'bg-emerald-100 text-emerald-950' : 'bg-slate-50 text-slate-700'}">
@@ -1551,6 +1641,7 @@
                 <button onclick="cycleAttendance('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-slate-50 hover:bg-slate-200" title="Cycle Present / Late / Absent">${rec.attendance}</button>
                 <button onclick="adjustTally('${s.id}', 'ans', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-blue-50 text-blue-900 hover:bg-blue-100" title="+1 Answered Question">+1</button>
                 <button onclick="adjustPhoneCount('${s.id}', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-red-50 text-red-900 hover:bg-red-100" title="+1 Mobile Device Flag">📵</button>
+                <button onclick="toggleRoomPass('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 ${activePass ? 'bg-orange-600 text-white' : 'bg-orange-50 text-orange-900 hover:bg-orange-100'}" title="${activePass ? 'Mark Returned to Room' : 'Mark Left Room'}">${activePass ? '↩️ In' : '🚪 Out'}</button>
               </div>
             </div>
           </div>
