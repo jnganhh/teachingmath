@@ -55,6 +55,9 @@
         <button onclick="toggleProjectorMode()" id="projectorBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
           ⛶ Large Font
         </button>
+        <button onclick="hardRefreshApp()" class="px-3 py-2 text-xs font-black rounded-lg bg-cyan-100 text-cyan-950 comic-btn" title="Reload latest version of this page">
+          🔄 Refresh
+        </button>
       </div>
     </header>
 
@@ -1151,6 +1154,12 @@
         revealNextStep();
       }
     });
+
+    function hardRefreshApp() {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_r', Date.now());
+      window.location.replace(url.toString());
+    }
 
     renderUnitFilters();
     renderStringSelector();
