@@ -183,6 +183,9 @@
       <button onclick="markAllHomeworkDone()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-blue-100 text-blue-900 comic-btn">
         📚 All HW Done
       </button>
+      <button onclick="clearCurrentDayInputs()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-red-100 text-red-900 comic-btn" title="Reset all attendance, homework, phone flags, tallies, and observations for this period on the selected date">
+        🧹 Clear Day
+      </button>
       <button onclick="pickRandomStudent()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
         🎲 Equitable Random Call
       </button>
@@ -795,6 +798,21 @@
         const rec = getStudentDayRecord(state.activeDate, s.id);
         rec.homework = 'Done';
       });
+      saveState();
+      renderCurrentView();
+    }
+
+    function clearCurrentDayInputs() {
+      const pName = state.periods[state.currentPeriod].shortLabel || state.periods[state.currentPeriod].name;
+      const ok = confirm(`Clear ALL inputs (attendance, homework, phone flags, tallies, and observations) for ${pName} on ${state.activeDate}?\n\n(Your student roster and all other dates will NOT be affected.)`);
+      if (!ok) return;
+
+      const students = state.periods[state.currentPeriod].students;
+      if (state.records[state.activeDate]) {
+        students.forEach(s => {
+          delete state.records[state.activeDate][s.id];
+        });
+      }
       saveState();
       renderCurrentView();
     }
