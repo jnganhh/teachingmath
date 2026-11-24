@@ -45,6 +45,7 @@
           <button class="btn chip px-3 py-1 active" data-mode="expand">Expand</button>
           <button class="btn chip px-3 py-1" data-mode="factor">Factor</button>
           <button class="btn chip px-3 py-1" data-mode="solve">Solve</button>
+          <button class="btn chip px-3 py-1" data-mode="transform">Transform</button>
           <button class="btn chip px-3 py-1" data-mode="mixed">Mixed</button>
         </div>
         <div class="font-black mb-2">2. Choose skills</div>
@@ -446,9 +447,78 @@ const SKILLS = {
               `x = (${-b} ± √${D}) / ${2 * a}. You can enter exact form with √ or decimals rounded to 2 decimal places.`],
       steps: [`a = ${a}, b = ${b}, c = ${c}`, `D = (${b})² − 4(${a})(${c}) = ${D}`, `x = (${-b} ± √${D}) / ${2 * a} ≈ ${r1.toFixed(2)}, ${r2.toFixed(2)}`] };
   }},
+  // ---------- QUADRATIC TRANSFORMATIONS ----------
+  t_write: { mode: 'transform', name: 'Write Vertex Form', gen() {
+    const a = pick([-3,-2,-1,-0.5,0.5,1,2,3]), h = rndNZ(-6,6), k = rndNZ(-6,6);
+    const aStr = a === 1 ? '' : a === -1 ? '−' : a === 0.5 ? '1/2' : a === -0.5 ? '−1/2' : String(a);
+    const eq = `y = ${aStr}${paren(lin(1, -h))}^2 ${k < 0 ? '−' : '+'} ${Math.abs(k)}`;
+    const desc = [];
+    if (a < 0) desc.push('reflected in the x-axis');
+    if (Math.abs(a) > 1) desc.push(`vertically stretched by a factor of ${Math.abs(a)}`);
+    if (Math.abs(a) < 1) desc.push(`vertically compressed by a factor of 1/2`);
+    desc.push(`translated ${Math.abs(h)} units ${h > 0 ? 'right' : 'left'}`);
+    desc.push(`translated ${Math.abs(k)} units ${k > 0 ? 'up' : 'down'}`);
+    const co = mulP([a], mulP([-h, 1], [-h, 1])); co[0] += k;
+    return { expr: desc.join(', '), co, vertexForm: true, h, k, a,
+      prompt: 'Write the vertex form y = a(x − h)² + k for y = x² after:',
+      hints: ['Vertex form is <b>y = a(x − h)² + k</b>. Reflection/stretch goes in <b>a</b>, horizontal shift in <b>h</b>, vertical shift in <b>k</b>.',
+              `a = ${a === 0.5 ? '1/2' : a === -0.5 ? '−1/2' : a}, h = ${h} (remember: inside the bracket is x − h, so ${h > 0 ? 'right ' + h + ' is (x − ' + h + ')' : 'left ' + Math.abs(h) + ' is (x + ' + Math.abs(h) + ')'}), k = ${k}.`,
+              `Put it together: ${eq}`],
+      steps: [`a = ${aStr || '1'}, h = ${h}, k = ${k}`, eq] };
+  }},
+  t_vertex: { mode: 'transform', name: 'Find Vertex from Equation', gen() {
+    const a = pick([-3,-2,-1,1,2,3]), h = rndNZ(-8,8), k = rndNZ(-8,8);
+    const aStr = a === 1 ? '' : a === -1 ? '−' : String(a);
+    const eq = `y = ${aStr}${paren(lin(1, -h))}^2 ${k < 0 ? '−' : '+'} ${Math.abs(k)}`;
+    return { expr: eq, point: [h, k], isVertex: true,
+      prompt: 'State the vertex (h, k) of this parabola:',
+      hints: ['Compare with <b>y = a(x − h)² + k</b>. The vertex is <b>(h, k)</b>.',
+              `Watch the sign inside the bracket! ${paren(lin(1, -h))} means h = ${h}.`,
+              `k = ${k}, so the vertex is (${h}, ${k}).`],
+      steps: [`Compare ${eq} with y = a(x − h)² + k`, `h = ${h}, k = ${k}  →  Vertex = (${h}, ${k})`] };
+  }},
+  t_point: { mode: 'transform', name: 'Transform a Point', gen() {
+    const a = pick([-2,-1,2,3]), h = rndNZ(-5,5), k = rndNZ(-5,5);
+    const [x0, y0] = pick([[1,1],[-1,1],[2,4],[-2,4],[0,0]]);
+    const X = x0 + h, Y = a * y0 + k;
+    const aStr = a === 1 ? '' : a === -1 ? '−' : String(a);
+    const eq = `y = ${aStr}${paren(lin(1, -h))}^2 ${k < 0 ? '−' : '+'} ${Math.abs(k)}`;
+    return { expr: `${eq}   |   (${x0}, ${y0}) → ?`, point: [X, Y],
+      prompt: 'Apply the transformation to the given point on y = x² (answer as (x, y)):',
+      hints: ['Use the mapping rule: <b>(x, y) → (x + h, a·y + k)</b>.',
+              `Here a = ${a}, h = ${h}, k = ${k}. So x_new = ${x0} + (${h}), y_new = (${a})(${y0}) + (${k}).`,
+              `x_new = ${X}, y_new = ${Y}. Write (${X}, ${Y}).`],
+      steps: [`Mapping rule: (x, y) → (x ${h<0?'−':'+'} ${Math.abs(h)}, ${a}y ${k<0?'−':'+'} ${Math.abs(k)})`, `(${x0}, ${y0}) → (${x0} + (${h}), ${a}(${y0}) + (${k})) = (${X}, ${Y})`] };
+  }},
 };
 
 /* ================= Answer checking ================= */
+function checkPoint(input, q) {
+  let raw = normalizeLatex(input).trim();
+  if (!raw) return { ok: false, syntax: true, msg: '✏️ Type a point like (2, -3).' };
+  if (raw.startsWith('(') && raw.endsWith(')')) raw = raw.slice(1, -1);
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length !== 2) return { ok: false, syntax: true, msg: '✏️ Enter a coordinate pair with two numbers separated by a comma, e.g. (2, -3).' };
+  let x, y;
+  try { x = evalAst(parse(parts[0]), 0); y = evalAst(parse(parts[1]), 0); }
+  catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, syntax: true, msg: '✏️ Both coordinates must be numbers.' };
+  const [tx, ty] = q.point;
+  if (Math.abs(x - tx) < 1e-6 && Math.abs(y - ty) < 1e-6) return { ok: true, msg: '🎉 Correct!' };
+  if (q.isVertex && Math.abs(x + tx) < 1e-6 && Math.abs(y - ty) < 1e-6) {
+    return { ok: false, msg: '❌ Check the sign of h! In y = a(x − h)² + k, the horizontal shift has the <b>opposite</b> sign of the number inside the bracket.' };
+  }
+  return { ok: false, msg: '❌ Not quite. Double-check your x and y coordinates, or press <b>Hint 💡</b>.' };
+}
+function checkVertexForm(input, q) {
+  let raw = String(input || '').trim().replace(/^(?:y|f\s*\(\s*x\s*\))\s*=\s*/i, '').trim();
+  let ast;
+  try { ast = parse(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
+  const target = x => q.co.reduce((s, c, d) => s + c * Math.pow(x, d), 0);
+  if (!equiv(ast, target)) return { ok: false, msg: '❌ That equation does not match the transformations. Check a, h (opposite sign inside the bracket!), and k.' };
+  if (!hasGroup(ast)) return { ok: false, partial: true, msg: '🟡 Equivalent, but write it in <b>vertex form</b> y = a(x − h)² + k (with brackets).' };
+  return { ok: true, msg: '🎉 Correct! Nicely written in vertex form.' };
+}
 function checkSolve(input, q) {
   const raw = String(input || '').trim();
   if (!raw) return { ok: false, syntax: true, msg: '✏️ Type an answer first.' };
@@ -498,6 +568,8 @@ function checkSolve(input, q) {
 
 function check(input, q) {
   if (q.solve) return checkSolve(input, q);
+  if (q.point) return checkPoint(input, q);
+  if (q.vertexForm) return checkVertexForm(input, q);
   let ast;
   try { ast = parse(input); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
   const target = x => q.co.reduce((s, c, d) => s + c * Math.pow(x, d), 0);
@@ -693,8 +765,9 @@ function newQuestion() {
   hintsShown = 0; attemptedWrong = false; done = false;
   $('qSkill').textContent = SKILLS[qId].name;
   $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
-  $('qPrompt').textContent = q.solve ? 'Solve for x (separate multiple roots with a comma, e.g. -3, 2):' : q.factor ? 'Factor fully:' : 'Expand and simplify:';
-  $('qExpr').textContent = pretty(q.expr);
+  $('qPrompt').textContent = q.prompt || (q.solve ? 'Solve for x (separate multiple roots with a comma, e.g. -3, 2):' : q.factor ? 'Factor fully:' : 'Expand and simplify:');
+  $('qExpr').className = q.vertexForm ? 'text-xl md:text-2xl font-bold my-4 text-center text-slate-800' : 'math text-3xl md:text-4xl font-bold my-4 text-center';
+  $('qExpr').textContent = q.vertexForm ? q.expr : pretty(q.expr);
   setAnswer(''); setAnswerDisabled(false);
   $('feedback').className = 'mt-4 hidden p-3 rounded-lg border-2 font-bold';
   $('hints').innerHTML = ''; $('hintCount').textContent = `(0/${q.hints.length})`;
