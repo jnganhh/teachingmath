@@ -82,16 +82,23 @@ function renderSetReview(questions) {
     if (!question) continue;
     const card = element("article");
     card.className = "review-question";
-    const math = element("p", question.math);
+    const math = element("p");
+    setPracticeMath(math, question.math);
     math.className = "review-math";
     const details = element("details");
-    const solution = element("p", question.solution);
+    const solution = element("p");
+    setPracticeMath(solution, question.solution);
     details.append(element("summary", "Show solution"), solution);
     const figure = element("figure");
     figure.className = "math-figure";
     renderPracticeFigure(figure, algebraTopics[topicIndex].name, question.diagram,
       `${question.math} ${question.prompt}`);
-    card.append(element("h5", `Question ${index + 1} · ${question.prompt}`), math, figure, details);
+    const heading = element("h5");
+    heading.append(`Question ${index + 1} · `);
+    const prompt = element("span");
+    setPracticeMath(prompt, question.prompt);
+    heading.append(prompt);
+    card.append(heading, math, figure, details);
     target.append(card);
   }
 }
@@ -115,14 +122,14 @@ function renderQuestion() {
   }
 
   const question = questions[questionIndex];
-  get("prompt").textContent = question.prompt;
-  get("math").textContent = question.math;
+  setPracticeMath(get("prompt"), question.prompt);
+  setPracticeMath(get("math"), question.math);
   renderPracticeFigure(get("question-figure"), algebraTopics[topicIndex].name, question.diagram,
     `${question.math} ${question.prompt}`);
-  get("hint").textContent = question.hint;
-  get("solution").textContent = question.solution;
+  setPracticeMath(get("hint"), question.hint);
+  setPracticeMath(get("solution"), question.solution);
   get("feedback").dataset.kind = "success";
-  get("feedback").textContent = finishedQuestion ? "Correct. " + question.solution : "";
+  setPracticeMath(get("feedback"), finishedQuestion ? "Correct. " + question.solution : "");
   setReveal("hint", false);
   setReveal("solution", revealed && !finishedQuestion);
   get("next").hidden = !(finishedQuestion || revealed);
@@ -139,7 +146,10 @@ function renderQuestion() {
     radio.required = true;
     radio.disabled = finishedQuestion;
     radio.checked = finishedQuestion && answer === question.correct;
-    label.append(radio, element("span", answer));
+    radio.setAttribute("aria-label", answer);
+    const display = element("span");
+    setPracticeMath(display, answer);
+    label.append(radio, display);
     return label;
   }));
 }
@@ -174,10 +184,14 @@ function selectTopic(index, levelIndex = 0) {
   const {name, example, exampleDiagram} = algebraTopics[index];
   const [math, steps, tip] = example;
   get("topic-title").textContent = name;
-  get("example-math").textContent = math;
+  setPracticeMath(get("example-math"), math);
   renderPracticeFigure(get("example-figure"), name, exampleDiagram, math);
-  get("example-steps").replaceChildren(...steps.map((step) => element("li", step)));
-  get("tip").textContent = tip;
+  get("example-steps").replaceChildren(...steps.map((step) => {
+    const line = element("li");
+    setPracticeMath(line, step);
+    return line;
+  }));
+  setPracticeMath(get("tip"), tip);
   for (const [i, button] of Array.from(get("topics").children).entries()) {
     if (i === index) button.setAttribute("aria-current", "true");
     else button.removeAttribute("aria-current");
@@ -223,7 +237,7 @@ answerForm.addEventListener("submit", (event) => {
   const feedback = get("feedback");
   if (reasoning) {
     feedback.dataset.kind = "retry";
-    feedback.textContent = reasoning + " Try again.";
+    setPracticeMath(feedback, reasoning + " Try again.");
     attempted = true;
     flagForReview();
     saveCurrentSet();
@@ -232,7 +246,7 @@ answerForm.addEventListener("submit", (event) => {
   if (!attempted && !revealed) firstTry++;
   finishedQuestion = true;
   feedback.dataset.kind = "success";
-  feedback.textContent = "Correct. " + questionSet()[questionIndex].solution;
+  setPracticeMath(feedback, "Correct. " + questionSet()[questionIndex].solution);
   get("check").disabled = true;
   for (const radio of get("choices").querySelectorAll("input")) radio.disabled = true;
   get("next").hidden = false;

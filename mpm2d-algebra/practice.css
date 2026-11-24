@@ -97,3 +97,8 @@ th { background: var(--wash); }
 .review-question summary { color: #176444; cursor: pointer; font-weight: 700; }
 .review-math { white-space: pre-line; margin: .35rem 0; }
 @media (max-width: 670px) { .topic-completion { grid-column: 1 / -1; } }
+
+math { font-size: 1.09em; }
+#math math, .example-math math { font-size: 1.15em; }
+.choice:has(math) { align-items: center; }
+#math, .example-math, .review-math { overflow-x: auto; }
