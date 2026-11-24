@@ -4,10 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Math Skills Practice | MPM2D</title>
-  <link rel="stylesheet" href="practice.css?v=sets8">
-  <script src="questions.js?v=sets8" defer></script>
-  <script src="progress.js?v=sets8" defer></script>
-  <script src="practice.js?v=sets8" defer></script>
+  <link rel="stylesheet" href="practice.css?v=figures-progress">
+  <script src="questions.js?v=figures-progress" defer></script>
+  <script src="progress.js?v=figures-progress" defer></script>
+  <script src="figures.js?v=figures-progress" defer></script>
+  <script src="practice.js?v=figures-progress" defer></script>
 </head>
 <body>
 <header><div class="wrap hero"><div><p class="course">MPM2D · Grade 10 Mathematics</p><h1>Math Skills Practice</h1><p>Choose a skill. Work through eight questions at your level.</p></div><a class="progress-link" href="#progress-title">My progress</a></div></header>
@@ -29,6 +30,7 @@
       <div id="question-area">
         <p id="prompt"></p>
         <p id="math"></p>
+        <figure class="math-figure" id="question-figure" hidden></figure>
         <form id="answer-form">
           <fieldset><legend>Choose an answer</legend><div id="choices"></div></fieldset>
           <div class="actions">
@@ -51,14 +53,15 @@
     <aside aria-labelledby="example-title">
       <h2 id="example-title">Worked example</h2>
       <p class="example-math" id="example-math"></p>
+      <figure class="math-figure" id="example-figure" hidden></figure>
       <ol id="example-steps"></ol>
       <p class="tip" id="tip"></p>
     </aside>
   </div>
   <section class="practice" aria-labelledby="progress-title">
     <h2 id="progress-title">My progress</h2>
-    <p>Completed sets are saved in this browser. Download a report when your teacher asks for one.</p>
-    <div class="table-wrap"><table><thead><tr><th scope="col">Topic</th><th scope="col">Level</th><th scope="col">Attempts</th><th scope="col">Latest</th><th scope="col">Best</th></tr></thead><tbody id="progress-rows"></tbody></table></div>
+    <p>Your current and completed sets are saved in this browser. Download a report when your teacher asks for one.</p>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Topic</th><th scope="col">Level</th><th scope="col">Attempts</th><th scope="col">Latest</th><th scope="col">Best</th><th scope="col">In progress</th></tr></thead><tbody id="progress-rows"></tbody></table></div>
     <p>Scores show questions answered correctly on the first attempt before viewing the solution.</p>
     <form id="report-form" class="actions"><label>Teacher-assigned student ID <input id="student-id" required maxlength="60" autocomplete="off"></label><button id="download-report">Download progress report</button></form>
     <p id="progress-status" role="status"></p>

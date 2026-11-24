@@ -11,6 +11,7 @@ let attempted = false;
 let finishedQuestion = false;
 let revealed = false;
 let currentOptions = [];
+let recorded = false;
 
 function element(tag, text) {
   const node = document.createElement(tag);
@@ -36,16 +37,45 @@ function setReveal(name, visible) {
   get(name + "-button").setAttribute("aria-expanded", String(visible));
 }
 
+function updateSetProgress() {
+  const total = questionSet().length;
+  const reviewed = Math.min(total, questionIndex + Number(finishedQuestion || revealed));
+  get("progress").textContent = questionIndex === total
+    ? `${total} questions reviewed`
+    : `Question ${questionIndex + 1} of ${total} · ${reviewed} reviewed`;
+  const meter = get("progress-meter");
+  meter.max = total;
+  meter.value = reviewed;
+  return reviewed;
+}
+
+function saveCurrentSet() {
+  const {name} = algebraTopics[topicIndex];
+  const level = levels[levelSelect.selectedIndex];
+  const total = questionSet().length;
+  const reviewed = updateSetProgress();
+  if (reviewed === total && !recorded) {
+    recordAlgebraAttempt(name, level, firstTry, total);
+    recorded = true;
+  }
+  activeAlgebraSet = {topic:name, level};
+  algebraDrafts[algebraSetKey(name, level)] = {total, questionIndex, firstTry, attempted, finishedQuestion, revealed, recorded, reviewed};
+  saveAlgebraProgress();
+  renderAlgebraProgress();
+}
+
+function clearQuestionState() {
+  attempted = false;
+  revealed = false;
+  finishedQuestion = false;
+}
+
 function renderQuestion() {
   const questions = questionSet();
   const complete = questionIndex === questions.length;
   get("question-area").hidden = complete;
   get("complete").hidden = !complete;
-  get("progress").textContent = complete
-    ? `${questions.length} questions reviewed`
-    : `Question ${questionIndex + 1} of ${questions.length}`;
-  get("progress-meter").max = questions.length;
-  get("progress-meter").value = questionIndex;
+  updateSetProgress();
   if (complete) {
     get("result").textContent = `${firstTry} of ${questions.length} correct on the first attempt before viewing the solution.`;
     get("advance").hidden = levelSelect.selectedIndex === levels.length - 1;
@@ -54,19 +84,19 @@ function renderQuestion() {
   }
 
   const question = questions[questionIndex];
-  attempted = false;
-  revealed = false;
-  finishedQuestion = false;
   get("prompt").textContent = question.prompt;
   get("math").textContent = question.math;
+  renderPracticeFigure(get("question-figure"), algebraTopics[topicIndex].name, question.diagram,
+    `${question.math} ${question.prompt}`);
   get("hint").textContent = question.hint;
   get("solution").textContent = question.solution;
-  get("feedback").textContent = "";
+  get("feedback").dataset.kind = "success";
+  get("feedback").textContent = finishedQuestion ? "Correct. " + question.solution : "";
   setReveal("hint", false);
-  setReveal("solution", false);
-  get("next").hidden = true;
+  setReveal("solution", revealed && !finishedQuestion);
+  get("next").hidden = !(finishedQuestion || revealed);
   get("next").textContent = questionIndex + 1 === questions.length ? "See results" : "Next question";
-  get("check").disabled = false;
+  get("check").disabled = finishedQuestion;
   currentOptions = shuffle([[question.correct, ""], ...question.distractors]);
   get("choices").replaceChildren(...currentOptions.map(([answer], index) => {
     const label = element("label");
@@ -76,6 +106,8 @@ function renderQuestion() {
     radio.name = "answer";
     radio.value = String(index);
     radio.required = true;
+    radio.disabled = finishedQuestion;
+    radio.checked = finishedQuestion && answer === question.correct;
     label.append(radio, element("span", answer));
     return label;
   }));
@@ -84,23 +116,40 @@ function renderQuestion() {
 function restart() {
   questionIndex = 0;
   firstTry = 0;
+  recorded = false;
+  clearQuestionState();
   renderQuestion();
+  saveCurrentSet();
 }
 
-function selectTopic(index) {
+function resume() {
+  const {name} = algebraTopics[topicIndex];
+  const draft = algebraDrafts[algebraSetKey(name, levels[levelSelect.selectedIndex])];
+  if (draft?.total !== questionSet().length || !Number.isInteger(draft.questionIndex) ||
+      draft.questionIndex < 0 || draft.questionIndex > draft.total) {
+    restart();
+    return;
+  }
+  ({questionIndex, firstTry, attempted, finishedQuestion, revealed, recorded} = draft);
+  renderQuestion();
+  saveCurrentSet();
+}
+
+function selectTopic(index, levelIndex = 0) {
   topicIndex = index;
-  levelSelect.selectedIndex = 0;
-  const {name, example} = algebraTopics[index];
+  levelSelect.selectedIndex = levelIndex;
+  const {name, example, exampleDiagram} = algebraTopics[index];
   const [math, steps, tip] = example;
   get("topic-title").textContent = name;
   get("example-math").textContent = math;
+  renderPracticeFigure(get("example-figure"), name, exampleDiagram, math);
   get("example-steps").replaceChildren(...steps.map((step) => element("li", step)));
   get("tip").textContent = tip;
   for (const [i, button] of Array.from(get("topics").children).entries()) {
     if (i === index) button.setAttribute("aria-current", "true");
     else button.removeAttribute("aria-current");
   }
-  restart();
+  resume();
 }
 
 const topicDetails = {
@@ -140,6 +189,7 @@ answerForm.addEventListener("submit", (event) => {
     feedback.dataset.kind = "retry";
     feedback.textContent = reasoning + " Try again.";
     attempted = true;
+    saveCurrentSet();
     return;
   }
   if (!attempted && !revealed) firstTry++;
@@ -149,6 +199,7 @@ answerForm.addEventListener("submit", (event) => {
   get("check").disabled = true;
   for (const radio of get("choices").querySelectorAll("input")) radio.disabled = true;
   get("next").hidden = false;
+  saveCurrentSet();
 });
 
 get("hint-button").addEventListener("click", () => setReveal("hint", get("hint").hidden));
@@ -156,22 +207,24 @@ get("solution-button").addEventListener("click", () => {
   if (get("solution").hidden && !finishedQuestion) {
     revealed = true;
     get("next").hidden = false;
+    saveCurrentSet();
   }
   setReveal("solution", get("solution").hidden);
 });
 get("next").addEventListener("click", () => {
   questionIndex++;
-  if (questionIndex === questionSet().length) {
-    recordAlgebraAttempt(algebraTopics[topicIndex].name, levels[levelSelect.selectedIndex], firstTry, questionSet().length);
-  }
+  clearQuestionState();
   renderQuestion();
+  saveCurrentSet();
   if (questionIndex < questionSet().length) get("choices").querySelector("input").focus();
 });
-levelSelect.addEventListener("change", restart);
+levelSelect.addEventListener("change", resume);
 get("restart").addEventListener("click", restart);
 get("advance").addEventListener("click", () => {
   levelSelect.selectedIndex++;
-  restart();
+  resume();
   levelSelect.focus();
 });
-selectTopic(0);
+const savedTopic = algebraTopics.findIndex(({name}) => name === activeAlgebraSet?.topic);
+const savedLevel = levels.indexOf(activeAlgebraSet?.level);
+selectTopic(Math.max(savedTopic, 0), Math.max(savedLevel, 0));

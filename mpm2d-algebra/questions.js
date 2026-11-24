@@ -1,7 +1,7 @@
 "use strict";
 
-function item(prompt, math, correct, distractors, hint, solution) {
-  return {prompt, math, correct, distractors, hint, solution};
+function item(prompt, math, correct, distractors, hint, solution, diagram) {
+  return {prompt, math, correct, distractors, hint, solution, diagram};
 }
 
 const algebraTopics = [
@@ -223,7 +223,8 @@ function trigPractice(level, i) {
     const chosen = i % ratios.length;
     const wrong = values.flatMap((value, index) => index === chosen ? [] : [[value, `That ratio uses ${sides[index]}.`]]);
     return item(`Find ${ratios[chosen]} θ.`, `Opposite = ${3*n}, adjacent = ${4*n}, hypotenuse = ${5*n}`, values[chosen],
-      wrong, `Use ${sides[chosen]}.`, `${ratios[chosen]} θ is ${sides[chosen]}, which reduces to ${values[chosen]}.`);
+      wrong, `Use ${sides[chosen]}.`, `${ratios[chosen]} θ is ${sides[chosen]}, which reduces to ${values[chosen]}.`,
+      {opposite:String(3*n), adjacent:String(4*n), hypotenuse:String(5*n)});
   }
   if (level === 1) {
     const theta = 24 + 4*i;
@@ -231,14 +232,16 @@ function trigPractice(level, i) {
     const angle = theta * Math.PI / 180;
     return item("Find the adjacent leg to the nearest tenth.", `θ = ${theta}°, hypotenuse = ${h} cm`, `${tenth(h*Math.cos(angle))} cm`,
       [[`${tenth(h*Math.sin(angle))} cm`,"Sine gives the opposite leg."],[`${tenth(h/Math.cos(angle))} cm`,"The hypotenuse must be longer than either leg."]],
-      "Cosine relates the adjacent side and hypotenuse.", `Adjacent = ${h} cos ${theta}° ≈ ${tenth(h*Math.cos(angle))} cm.`);
+      "Cosine relates the adjacent side and hypotenuse.", `Adjacent = ${h} cos ${theta}° ≈ ${tenth(h*Math.cos(angle))} cm.`,
+      {adjacent:"?", hypotenuse:`${h} cm`, angle:`${theta}°`});
   }
   const rise = n;
   const run = n + 7;
   const angle = degrees(Math.atan(rise/run));
   return item("Find the angle of elevation to the nearest degree.", `Vertical rise = ${rise} m, horizontal run = ${run} m`, `${angle}°`,
     [[`${90-angle}°`,"That comes from reversing opposite and adjacent."],[`${angle + 5}°`,"Use the inverse tangent on the calculator in degree mode."]],
-    "Use inverse tangent of rise divided by run.", `θ = tan⁻¹(${rise}/${run}) ≈ ${angle}°.`);
+    "Use inverse tangent of rise divided by run.", `θ = tan⁻¹(${rise}/${run}) ≈ ${angle}°.`,
+    {opposite:`${rise} m`, adjacent:`${run} m`});
 }
 
 function geometryPractice(level, i) {
@@ -290,6 +293,17 @@ function equationPractice(level, i) {
     "Distribute 5 on the left, then collect the x-terms.", `Expanding gives 5x − 10 = 2x${term(3*x-10)}. Rearrange to get 3x = ${3*x}.`);
   return item("Solve for x.", `(x + 1)/2 + (x − 1)/3 = ${5*x+1}/6`, answer(x), distractors,
     "Multiply every term by 6 to clear denominators.", `The equation becomes 3(x + 1) + 2(x − 1) = ${5*x+1}. Simplify to 5x + 1 = ${5*x+1}, so x = ${x}.`);
+}
+
+const trigTopic = algebraTopics.find(({name}) => name === "Trigonometry");
+trigTopic.exampleDiagram = {opposite:"6", hypotenuse:"10"};
+const initialTriangles = [
+  [{opposite:"8", adjacent:"15", hypotenuse:"17"}, {opposite:"5", hypotenuse:"13"}],
+  [{opposite:"?", hypotenuse:"12 m", angle:"38°"}, {opposite:"9 cm", adjacent:"14 cm"}],
+  [{opposite:"0.8 m", adjacent:"5 m"}, {adjacent:"?", hypotenuse:"6 m", angle:"62°"}]
+];
+for (const [level, questions] of trigTopic.levels.entries()) {
+  for (const [index, question] of questions.entries()) question.diagram = initialTriangles[level][index];
 }
 
 const practiceBuilders = new Map([

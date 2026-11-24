@@ -74,3 +74,16 @@ th { background: var(--wash); }
   .topic-card { min-height: 3.6rem; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: .35rem; }
   .topic-detail { grid-column: 1 / -1; }
 }
+
+.math-figure { margin: .65rem 0 .9rem; padding: .4rem; border: 1px solid var(--line); border-radius: .5rem; background: #fbfcff; }
+.math-figure svg { display: block; width: min(100%, 330px); height: auto; margin: auto; }
+.math-figure text { fill: #242347; font-size: 15px; font-weight: 650; }
+.math-figure figcaption { text-align: center; font-size: .82rem; color: #505976; }
+.triangle-outline { fill: #eae6ff; stroke: #5345a4; stroke-width: 2.5; stroke-linejoin: round; }
+.diagram-mark { fill: none; stroke: #5345a4; stroke-width: 1.8; }
+.math-figure .diagram-angle { fill: #42358a; }
+.plot-grid { stroke: #dce0f1; }
+.plot-axis { stroke: #656a8d; stroke-width: 1.5; }
+.plot-point { fill: #493ba0; stroke: white; stroke-width: 1.5; }
+.math-figure .plot-label { paint-order: stroke; stroke: #fbfcff; stroke-width: 4; stroke-linejoin: round; }
+.math-figure .plot-scale { fill: #505976; font-size: 12px; font-weight: 500; }
