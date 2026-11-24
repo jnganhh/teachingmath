@@ -128,8 +128,8 @@
 
     /* Category Tabs */
     .cat-tabs {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      display: flex;
+      flex-wrap: wrap;
       gap: 4px;
       padding: 8px;
       background: var(--surface-2);
@@ -138,17 +138,19 @@
     }
 
     .cat-tab {
+      flex: 1 1 auto;
       border: 1px solid transparent;
       background: transparent;
-      padding: 8px 6px;
+      padding: 7px 8px;
       border-radius: 7px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       color: var(--text-muted);
       cursor: pointer;
       text-align: center;
       transition: all 0.15s;
       font-family: inherit;
+      white-space: nowrap;
     }
     .cat-tab:hover {
       background: #e2e8f0;
@@ -463,8 +465,8 @@
     <div class="topbar-left">
       <a href="index.html" class="back-link">← Hub</a>
       <div class="title-group">
-        <h1>MPM2D Test Paper SVG Diagram Generator <span class="badge">Vector SVG</span></h1>
-        <p>Print-ready triangles, parallel/perpendicular lines, parabolas, and coordinate grids</p>
+        <h1>MPM2D &amp; MCR3U Test Paper SVG Generator <span class="badge">Vector SVG</span></h1>
+        <p>Print-ready diagrams for Grade 10 (MPM2D) &amp; Grade 11 (MCR3U) math tests</p>
       </div>
     </div>
     <div class="action-buttons">
@@ -479,6 +481,9 @@
         <button type="button" class="cat-tab active" data-cat="triangle" onclick="setCategory('triangle')">Triangles</button>
         <button type="button" class="cat-tab" data-cat="lines" onclick="setCategory('lines')">Lines</button>
         <button type="button" class="cat-tab" data-cat="parabola" onclick="setCategory('parabola')">Parabola</button>
+        <button type="button" class="cat-tab" data-cat="functions" onclick="setCategory('functions')">Functions (3U)</button>
+        <button type="button" class="cat-tab" data-cat="sinusoid" onclick="setCategory('sinusoid')">Sinusoidal (3U)</button>
+        <button type="button" class="cat-tab" data-cat="unitcircle" onclick="setCategory('unitcircle')">Unit Circle (3U)</button>
         <button type="button" class="cat-tab" data-cat="grid" onclick="setCategory('grid')">Blank Grid</button>
       </div>
 
@@ -651,6 +656,39 @@
         showGridNumbers: true,
         curveLabel: '',
       },
+      // MCR3U Parent & Transformed Functions
+      functions: {
+        type: 'exponential', // 'exponential' | 'sqrt' | 'reciprocal' | 'abs'
+        a: 1, b: 2, k: 1, d: 0, c: 0,
+        xMin: -6, xMax: 6, yMin: -6, yMax: 6,
+        showCurve: true,
+        showParent: false,
+        showAsymptotes: true,
+        showKeyPoints: true,
+        showGridNumbers: true,
+      },
+      // MCR3U Sinusoidal
+      sinusoid: {
+        fn: 'sin', // 'sin' | 'cos'
+        a: 2, k: 1, d: 0, c: 1,
+        unit: 'deg', // 'deg' | 'rad'
+        xMinDeg: 0, xMaxDeg: 360,
+        yMin: -4, yMax: 4,
+        showCurve: true,
+        showMidline: true,
+        showKeyPoints: true,
+        showGridNumbers: true,
+      },
+      // MCR3U Unit Circle / CAST
+      unitcircle: {
+        angleDeg: 135,
+        showCast: true,
+        showRefAngle: true,
+        showDropTriangle: true,
+        showArc: true,
+        angleLabel: '135°',
+        refLabel: '45°',
+      },
       // Blank Grid state
       grid: {
         xMin: -6, xMax: 6, yMin: -6, yMax: 6,
@@ -674,6 +712,13 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function extractNum(str) {
+      const m = String(str || '').trim().match(/^(-?\d+(?:\.\d+)?)/);
+      if (!m) return null;
+      const v = parseFloat(m[1]);
+      return isFinite(v) && v > 0 ? v : null;
     }
 
     function parseFrac(val, fallback = 0) {
@@ -747,6 +792,12 @@
         container.innerHTML = buildLinesControls();
       } else if (state.category === 'parabola') {
         container.innerHTML = buildParabolaControls();
+      } else if (state.category === 'functions') {
+        container.innerHTML = buildFunctionsControls();
+      } else if (state.category === 'sinusoid') {
+        container.innerHTML = buildSinusoidControls();
+      } else if (state.category === 'unitcircle') {
+        container.innerHTML = buildUnitCircleControls();
       } else {
         container.innerHTML = buildGridControls();
       }
@@ -756,7 +807,7 @@
       const t = state.tri;
       let html = `
         <div>
-          <p class="section-title">Triangle Type</p>
+          <p class="section-title">Triangle Type (Auto-Scaled to Labels)</p>
           <div class="submode-pills">
             <button type="button" class="pill-btn ${t.mode==='right'?'active':''}" onclick="state.tri.mode='right'; buildControls(); render();">Right Triangle</button>
             <button type="button" class="pill-btn ${t.mode==='oblique'?'active':''}" onclick="state.tri.mode='oblique'; buildControls(); render();">Oblique (Sine/Cosine)</button>
@@ -769,27 +820,23 @@
         html += `
           <div class="preset-row">
             <button type="button" class="preset-chip" onclick="applyTriPreset('sohcahtoa')">SOH CAH TOA</button>
-            <button type="button" class="preset-chip" onclick="applyTriPreset('pythag')">Pythagorean</button>
+            <button type="button" class="preset-chip" onclick="applyTriPreset('pythag')">Pythagorean (6-8-c)</button>
             <button type="button" class="preset-chip" onclick="applyTriPreset('elevation')">Angle of Elevation</button>
           </div>
-          <div class="form-grid">
-            <div class="field"><label>Base Width (ratio)</label><input type="number" min="1" max="20" step="0.5" value="${t.base}" oninput="state.tri.base=+this.value||4; render()"></div>
-            <div class="field"><label>Height (ratio)</label><input type="number" min="1" max="20" step="0.5" value="${t.height}" oninput="state.tri.height=+this.value||4; render()"></div>
-            <div class="field full"><label>Rotation (${t.rotation}°)</label><input type="range" min="0" max="345" step="15" value="${t.rotation}" oninput="state.tri.rotation=+this.value; this.previousElementSibling.textContent='Rotation ('+this.value+'°)'; render()"></div>
-          </div>
           <div class="form-grid-3">
-            <div class="field"><label>Vertex 1 (Top)</label><input type="text" value="${esc(t.vB)}" oninput="state.tri.vB=this.value; render()"></div>
-            <div class="field"><label>Vertex 2 (Right ∠)</label><input type="text" value="${esc(t.vC)}" oninput="state.tri.vC=this.value; render()"></div>
-            <div class="field"><label>Vertex 3 (Acute)</label><input type="text" value="${esc(t.vA)}" oninput="state.tri.vA=this.value; render()"></div>
-          </div>
-          <div class="form-grid-3">
-            <div class="field"><label>Base Label</label><input type="text" value="${esc(t.labelBase)}" oninput="state.tri.labelBase=this.value; render()"></div>
-            <div class="field"><label>Height Label</label><input type="text" value="${esc(t.labelHeight)}" oninput="state.tri.labelHeight=this.value; render()"></div>
-            <div class="field"><label>Hypotenuse Label</label><input type="text" value="${esc(t.labelHyp)}" oninput="state.tri.labelHyp=this.value; render()"></div>
+            <div class="field"><label>Base Label</label><input type="text" value="${esc(t.labelBase)}" placeholder="e.g. 12 m" oninput="state.tri.labelBase=this.value; render()"></div>
+            <div class="field"><label>Height Label</label><input type="text" value="${esc(t.labelHeight)}" placeholder="e.g. 5 cm or x" oninput="state.tri.labelHeight=this.value; render()"></div>
+            <div class="field"><label>Hypotenuse Label</label><input type="text" value="${esc(t.labelHyp)}" placeholder="e.g. 13 cm or c" oninput="state.tri.labelHyp=this.value; render()"></div>
           </div>
           <div class="form-grid">
             <div class="field"><label>Angle at ${esc(t.vA || 'A')}</label><input type="text" value="${esc(t.angleA)}" placeholder="e.g. 35° or θ" oninput="state.tri.angleA=this.value; render()"></div>
             <div class="field"><label>Angle at ${esc(t.vB || 'B')}</label><input type="text" value="${esc(t.angleB)}" placeholder="blank to hide" oninput="state.tri.angleB=this.value; render()"></div>
+            <div class="field full"><label>Rotation (${t.rotation}°)</label><input type="range" min="0" max="345" step="15" value="${t.rotation}" oninput="state.tri.rotation=+this.value; this.previousElementSibling.textContent='Rotation ('+this.value+'°)'; render()"></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>Vertex Top</label><input type="text" value="${esc(t.vB)}" oninput="state.tri.vB=this.value; render()"></div>
+            <div class="field"><label>Vertex Right ∠</label><input type="text" value="${esc(t.vC)}" oninput="state.tri.vC=this.value; render()"></div>
+            <div class="field"><label>Vertex Acute</label><input type="text" value="${esc(t.vA)}" oninput="state.tri.vA=this.value; render()"></div>
           </div>
           <div class="check-row">
             <label class="check-label"><input type="checkbox" ${t.showRightAngle?'checked':''} onchange="state.tri.showRightAngle=this.checked; render()"> Right-angle box</label>
@@ -799,24 +846,19 @@
       } else if (t.mode === 'oblique') {
         html += `
           <div class="form-grid-3">
-            <div class="field"><label>Side a (bottom)</label><input type="number" min="1" max="25" step="0.5" value="${t.obSideA}" oninput="state.tri.obSideA=+this.value||5; render()"></div>
-            <div class="field"><label>Side b (left)</label><input type="number" min="1" max="25" step="0.5" value="${t.obSideB}" oninput="state.tri.obSideB=+this.value||5; render()"></div>
-            <div class="field"><label>Angle C (°)</label><input type="number" min="15" max="155" step="1" value="${t.obAngleC}" oninput="state.tri.obAngleC=+this.value||60; render()"></div>
+            <div class="field"><label>Bottom Label (a)</label><input type="text" value="${esc(t.obLabelA)}" placeholder="e.g. 7 cm" oninput="state.tri.obLabelA=this.value; render()"></div>
+            <div class="field"><label>Left Label (b)</label><input type="text" value="${esc(t.obLabelB)}" placeholder="e.g. 6 cm" oninput="state.tri.obLabelB=this.value; render()"></div>
+            <div class="field"><label>Right Label (c)</label><input type="text" value="${esc(t.obLabelC)}" placeholder="e.g. 8 cm or c" oninput="state.tri.obLabelC=this.value; render()"></div>
           </div>
           <div class="form-grid-3">
-            <div class="field"><label>Bottom Label</label><input type="text" value="${esc(t.obLabelA)}" oninput="state.tri.obLabelA=this.value; render()"></div>
-            <div class="field"><label>Left Label</label><input type="text" value="${esc(t.obLabelB)}" oninput="state.tri.obLabelB=this.value; render()"></div>
-            <div class="field"><label>Right Label</label><input type="text" value="${esc(t.obLabelC)}" oninput="state.tri.obLabelC=this.value; render()"></div>
+            <div class="field"><label>Angle Top (${esc(t.vA || 'A')})</label><input type="text" value="${esc(t.obAngLabelA)}" placeholder="e.g. 50°" oninput="state.tri.obAngLabelA=this.value; render()"></div>
+            <div class="field"><label>Angle Left (${esc(t.vC || 'C')})</label><input type="text" value="${esc(t.obAngLabelC)}" placeholder="e.g. 65°" oninput="state.tri.obAngLabelC=this.value; render()"></div>
+            <div class="field"><label>Angle Right (${esc(t.vB || 'B')})</label><input type="text" value="${esc(t.obAngLabelB)}" placeholder="e.g. 65°" oninput="state.tri.obAngLabelB=this.value; render()"></div>
           </div>
           <div class="form-grid-3">
             <div class="field"><label>Vertex Top</label><input type="text" value="${esc(t.vA)}" oninput="state.tri.vA=this.value; render()"></div>
             <div class="field"><label>Vertex Left</label><input type="text" value="${esc(t.vC)}" oninput="state.tri.vC=this.value; render()"></div>
             <div class="field"><label>Vertex Right</label><input type="text" value="${esc(t.vB)}" oninput="state.tri.vB=this.value; render()"></div>
-          </div>
-          <div class="form-grid-3">
-            <div class="field"><label>Angle Top</label><input type="text" value="${esc(t.obAngLabelA)}" oninput="state.tri.obAngLabelA=this.value; render()"></div>
-            <div class="field"><label>Angle Left</label><input type="text" value="${esc(t.obAngLabelC)}" oninput="state.tri.obAngLabelC=this.value; render()"></div>
-            <div class="field"><label>Angle Right</label><input type="text" value="${esc(t.obAngLabelB)}" oninput="state.tri.obAngLabelB=this.value; render()"></div>
           </div>
           <div class="check-row">
             <label class="check-label"><input type="checkbox" ${t.tickA?'checked':''} onchange="state.tri.tickA=this.checked; render()"> Tick bottom</label>
@@ -1032,6 +1074,92 @@
       `;
     }
 
+    function buildFunctionsControls() {
+      const f = state.functions;
+      return `
+        <div>
+          <p class="section-title">MCR3U Function Family</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${f.type==='exponential'?'active':''}" onclick="state.functions.type='exponential'; buildControls(); render();">Exponential (bˣ)</button>
+            <button type="button" class="pill-btn ${f.type==='sqrt'?'active':''}" onclick="state.functions.type='sqrt'; buildControls(); render();">Square Root (√x)</button>
+            <button type="button" class="pill-btn ${f.type==='reciprocal'?'active':''}" onclick="state.functions.type='reciprocal'; buildControls(); render();">Reciprocal (1/x)</button>
+            <button type="button" class="pill-btn ${f.type==='abs'?'active':''}" onclick="state.functions.type='abs'; buildControls(); render();">Absolute Value (|x|)</button>
+          </div>
+        </div>
+        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="field"><label>a</label><input type="text" value="${f.a}" oninput="state.functions.a=parseFrac(this.value,1); render()"></div>
+          <div class="field"><label>k</label><input type="text" value="${f.k}" oninput="state.functions.k=parseFrac(this.value,1); render()"></div>
+          <div class="field"><label>d</label><input type="number" step="0.5" value="${f.d}" oninput="state.functions.d=parseFloat(this.value)||0; render()"></div>
+          <div class="field"><label>c</label><input type="number" step="0.5" value="${f.c}" oninput="state.functions.c=parseFloat(this.value)||0; render()"></div>
+        </div>
+        ${f.type === 'exponential' ? `<div class="form-grid"><div class="field"><label>Base b (b &gt; 0)</label><input type="text" value="${f.b}" oninput="state.functions.b=Math.max(0.05, parseFrac(this.value,2)); render()"></div></div>` : ''}
+        <div id="fnEqReadout" class="info-box"></div>
+        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="field"><label>x min</label><input type="number" value="${f.xMin}" oninput="state.functions.xMin=+this.value||-6; render()"></div>
+          <div class="field"><label>x max</label><input type="number" value="${f.xMax}" oninput="state.functions.xMax=+this.value||6; render()"></div>
+          <div class="field"><label>y min</label><input type="number" value="${f.yMin}" oninput="state.functions.yMin=+this.value||-6; render()"></div>
+          <div class="field"><label>y max</label><input type="number" value="${f.yMax}" oninput="state.functions.yMax=+this.value||6; render()"></div>
+        </div>
+        <div class="check-row">
+          <label class="check-label"><input type="checkbox" ${f.showCurve?'checked':''} onchange="state.functions.showCurve=this.checked; render()"> Show transformed curve</label>
+          <label class="check-label"><input type="checkbox" ${f.showParent?'checked':''} onchange="state.functions.showParent=this.checked; render()"> Show parent (dashed)</label>
+          <label class="check-label"><input type="checkbox" ${f.showAsymptotes?'checked':''} onchange="state.functions.showAsymptotes=this.checked; render()"> Asymptotes</label>
+          <label class="check-label"><input type="checkbox" ${f.showKeyPoints?'checked':''} onchange="state.functions.showKeyPoints=this.checked; render()"> Key points</label>
+          <label class="check-label"><input type="checkbox" ${f.showGridNumbers?'checked':''} onchange="state.functions.showGridNumbers=this.checked; render()"> Axis numbers</label>
+        </div>
+      `;
+    }
+
+    function buildSinusoidControls() {
+      const s = state.sinusoid;
+      return `
+        <div>
+          <p class="section-title">MCR3U Sinusoidal Function</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${s.fn==='sin'?'active':''}" onclick="state.sinusoid.fn='sin'; buildControls(); render();">y = a sin(k(x - d)) + c</button>
+            <button type="button" class="pill-btn ${s.fn==='cos'?'active':''}" onclick="state.sinusoid.fn='cos'; buildControls(); render();">y = a cos(k(x - d)) + c</button>
+          </div>
+        </div>
+        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="field"><label>a (Amp)</label><input type="text" value="${s.a}" oninput="state.sinusoid.a=parseFrac(this.value,1); render()"></div>
+          <div class="field"><label>k</label><input type="text" value="${s.k}" oninput="state.sinusoid.k=parseFrac(this.value,1); render()"></div>
+          <div class="field"><label>d (°)</label><input type="number" step="15" value="${s.d}" oninput="state.sinusoid.d=parseFloat(this.value)||0; render()"></div>
+          <div class="field"><label>c (Axis)</label><input type="number" step="0.5" value="${s.c}" oninput="state.sinusoid.c=parseFloat(this.value)||0; render()"></div>
+        </div>
+        <div id="sinEqReadout" class="info-box"></div>
+        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="field"><label>x min (°)</label><input type="number" step="90" value="${s.xMinDeg}" oninput="state.sinusoid.xMinDeg=+this.value||0; render()"></div>
+          <div class="field"><label>x max (°)</label><input type="number" step="90" value="${s.xMaxDeg}" oninput="state.sinusoid.xMaxDeg=+this.value||360; render()"></div>
+          <div class="field"><label>y min</label><input type="number" value="${s.yMin}" oninput="state.sinusoid.yMin=+this.value||-4; render()"></div>
+          <div class="field"><label>y max</label><input type="number" value="${s.yMax}" oninput="state.sinusoid.yMax=+this.value||4; render()"></div>
+        </div>
+        <div class="check-row">
+          <label class="check-label"><input type="checkbox" ${s.showCurve?'checked':''} onchange="state.sinusoid.showCurve=this.checked; render()"> Show curve (uncheck for sketch)</label>
+          <label class="check-label"><input type="checkbox" ${s.showMidline?'checked':''} onchange="state.sinusoid.showMidline=this.checked; render()"> Midline y = c</label>
+          <label class="check-label"><input type="checkbox" ${s.showKeyPoints?'checked':''} onchange="state.sinusoid.showKeyPoints=this.checked; render()"> Key points</label>
+          <label class="check-label"><input type="checkbox" ${s.showGridNumbers?'checked':''} onchange="state.sinusoid.showGridNumbers=this.checked; render()"> Axis labels</label>
+        </div>
+      `;
+    }
+
+    function buildUnitCircleControls() {
+      const u = state.unitcircle;
+      return `
+        <div><p class="section-title">MCR3U Standard Position &amp; CAST Rule</p></div>
+        <div class="form-grid">
+          <div class="field full"><label>Principal Angle θ (${u.angleDeg}°)</label><input type="range" min="-360" max="360" step="15" value="${u.angleDeg}" oninput="state.unitcircle.angleDeg=+this.value; state.unitcircle.angleLabel=this.value+'°'; const ref=Math.abs(this.value)%180; state.unitcircle.refLabel=(ref>90?180-ref:ref)+'°'; buildControls(); render()"></div>
+          <div class="field"><label>Angle Label</label><input type="text" value="${esc(u.angleLabel)}" oninput="state.unitcircle.angleLabel=this.value; render()"></div>
+          <div class="field"><label>Reference ∠ Label</label><input type="text" value="${esc(u.refLabel)}" oninput="state.unitcircle.refLabel=this.value; render()"></div>
+        </div>
+        <div class="check-row">
+          <label class="check-label"><input type="checkbox" ${u.showCast?'checked':''} onchange="state.unitcircle.showCast=this.checked; render()"> Show CAST letters</label>
+          <label class="check-label"><input type="checkbox" ${u.showArc?'checked':''} onchange="state.unitcircle.showArc=this.checked; render()"> Rotation arc</label>
+          <label class="check-label"><input type="checkbox" ${u.showRefAngle?'checked':''} onchange="state.unitcircle.showRefAngle=this.checked; render()"> Reference angle</label>
+          <label class="check-label"><input type="checkbox" ${u.showDropTriangle?'checked':''} onchange="state.unitcircle.showDropTriangle=this.checked; render()"> Drop right triangle</label>
+        </div>
+      `;
+    }
+
     // ===========================
     // Shared SVG Grid Helper
     // ===========================
@@ -1101,11 +1229,55 @@
       let inner = '';
 
       if (t.mode === 'right') {
+        // Automatically derive base and height from labels!
+        let bVal = extractNum(t.labelBase);
+        let hVal = extractNum(t.labelHeight);
+        let cVal = extractNum(t.labelHyp);
+        let angA = extractNum(t.angleA);
+        let angB = extractNum(t.angleB);
+
+        let base = 7, height = 5;
+        if (bVal && hVal) {
+          base = bVal; height = hVal;
+        } else if (cVal && bVal) {
+          if (cVal <= bVal) {
+            setAlert('Hypotenuse must be longer than the base leg.');
+            base = bVal; height = bVal * 0.75;
+          } else {
+            base = bVal; height = Math.sqrt(cVal * cVal - bVal * bVal);
+          }
+        } else if (cVal && hVal) {
+          if (cVal <= hVal) {
+            setAlert('Hypotenuse must be longer than the height leg.');
+            height = hVal; base = hVal * 1.25;
+          } else {
+            height = hVal; base = Math.sqrt(cVal * cVal - hVal * hVal);
+          }
+        } else if (angA && angA > 2 && angA < 88) {
+          const radA = (angA * Math.PI) / 180;
+          if (bVal) { base = bVal; height = bVal * Math.tan(radA); }
+          else if (hVal) { height = hVal; base = hVal / Math.tan(radA); }
+          else if (cVal) { base = cVal * Math.cos(radA); height = cVal * Math.sin(radA); }
+          else { base = 10; height = 10 * Math.tan(radA); }
+        } else if (angB && angB > 2 && angB < 88) {
+          const radA = ((90 - angB) * Math.PI) / 180;
+          if (bVal) { base = bVal; height = bVal * Math.tan(radA); }
+          else if (hVal) { height = hVal; base = hVal / Math.tan(radA); }
+          else if (cVal) { base = cVal * Math.cos(radA); height = cVal * Math.sin(radA); }
+          else { base = 10; height = 10 * Math.tan(radA); }
+        } else if (bVal) {
+          base = bVal; height = bVal * 0.72;
+        } else if (hVal) {
+          height = hVal; base = hVal * 1.35;
+        } else if (cVal) {
+          base = cVal * 0.8; height = cVal * 0.6;
+        }
+
         // Vertices in local space: C = (0,0) right angle, A = (base, 0), B = (0, -height)
         const rawPts = [
           { x: 0, y: 0, lbl: t.vC },
-          { x: t.base, y: 0, lbl: t.vA },
-          { x: 0, y: -t.height, lbl: t.vB }
+          { x: base, y: 0, lbl: t.vA },
+          { x: 0, y: -height, lbl: t.vB }
         ];
         const rad = (t.rotation * Math.PI) / 180;
         const rotPts = rawPts.map(p => ({
@@ -1139,15 +1311,69 @@
         });
 
       } else if (t.mode === 'oblique') {
-        const a = Math.max(1, t.obSideA);
-        const b = Math.max(1, t.obSideB);
-        const angRad = (Math.min(160, Math.max(15, t.obAngleC)) * Math.PI) / 180;
+        // Auto-derive oblique triangle from numeric labels (SSS, SAS, or ASA/AAS)
+        let a = extractNum(t.obLabelA); // bottom CB
+        let b = extractNum(t.obLabelB); // left CA
+        let c = extractNum(t.obLabelC); // right AB
+        let angA = extractNum(t.obAngLabelA); // top
+        let angB = extractNum(t.obAngLabelB); // right
+        let angC = extractNum(t.obAngLabelC); // left
 
-        // C = (0,0), B = (a, 0), A = (b*cos(C), -b*sin(C))
+        let pA = { x: 3.5, y: -5.2 }, pB = { x: 7, y: 0 }, pC = { x: 0, y: 0 };
+
+        if (a && b && c) {
+          if (a + b <= c || a + c <= b || b + c <= a) {
+            setAlert('Invalid triangle: sum of any two sides must exceed the third side.');
+          } else {
+            const cosC = (a * a + b * b - c * c) / (2 * a * b);
+            const radC = Math.acos(Math.max(-0.99, Math.min(0.99, cosC)));
+            pA = { x: b * Math.cos(radC), y: -b * Math.sin(radC) };
+            pB = { x: a, y: 0 };
+          }
+        } else if (a && b && angC && angC > 5 && angC < 170) {
+          const radC = (angC * Math.PI) / 180;
+          pA = { x: b * Math.cos(radC), y: -b * Math.sin(radC) };
+          pB = { x: a, y: 0 };
+        } else if (a && c && angB && angB > 5 && angB < 170) {
+          const radB = (angB * Math.PI) / 180;
+          pA = { x: a - c * Math.cos(radB), y: -c * Math.sin(radB) };
+          pB = { x: a, y: 0 };
+        } else if (b && c && angA && angA > 5 && angA < 170) {
+          const radA = (angA * Math.PI) / 180;
+          const aComp = Math.sqrt(b * b + c * c - 2 * b * c * Math.cos(radA));
+          const cosC = (aComp * aComp + b * b - c * c) / (2 * aComp * b);
+          const radC = Math.acos(Math.max(-0.99, Math.min(0.99, cosC)));
+          pA = { x: b * Math.cos(radC), y: -b * Math.sin(radC) };
+          pB = { x: aComp, y: 0 };
+        } else {
+          // Check if 2 angles are known (ASA/AAS)
+          let Adeg = angA, Bdeg = angB, Cdeg = angC;
+          if (Adeg && Bdeg && !Cdeg) Cdeg = 180 - Adeg - Bdeg;
+          else if (Adeg && Cdeg && !Bdeg) Bdeg = 180 - Adeg - Cdeg;
+          else if (Bdeg && Cdeg && !Adeg) Adeg = 180 - Bdeg - Cdeg;
+
+          if (Adeg > 2 && Bdeg > 2 && Cdeg > 2 && Adeg + Bdeg + Cdeg < 180.5) {
+            const rA = (Adeg * Math.PI) / 180, rB = (Bdeg * Math.PI) / 180, rC = (Cdeg * Math.PI) / 180;
+            let kRatio = 10 / Math.sin(rA);
+            if (a) kRatio = a / Math.sin(rA);
+            else if (b) kRatio = b / Math.sin(rB);
+            else if (c) kRatio = c / Math.sin(rC);
+            const aSide = kRatio * Math.sin(rA);
+            const bSide = kRatio * Math.sin(rB);
+            pA = { x: bSide * Math.cos(rC), y: -bSide * Math.sin(rC) };
+            pB = { x: aSide, y: 0 };
+          } else {
+            const aDef = a || 7, bDef = b || 6;
+            const radC = ((angC || 65) * Math.PI) / 180;
+            pA = { x: bDef * Math.cos(radC), y: -bDef * Math.sin(radC) };
+            pB = { x: aDef, y: 0 };
+          }
+        }
+
         const rawPts = [
-          { x: b * Math.cos(angRad), y: -b * Math.sin(angRad), lbl: t.vA }, // Top A
-          { x: a, y: 0, lbl: t.vB }, // Right B
-          { x: 0, y: 0, lbl: t.vC }  // Left C
+          { x: pA.x, y: pA.y, lbl: t.vA }, // Top A
+          { x: pB.x, y: pB.y, lbl: t.vB }, // Right B
+          { x: pC.x, y: pC.y, lbl: t.vC }  // Left C
         ];
         const { pts, cx, cy } = fitPolygonToCanvas(rawPts, cfg.w, cfg.h, 54);
         const [A, B, C] = pts;
@@ -1171,18 +1397,23 @@
         });
 
       } else {
-        // Similar triangles side-by-side
+        // Similar triangles side-by-side (also auto-scales if 3 numbers are given in small triangle)
+        const s1 = t.simLabel1.split(',').map(x => x.trim());
+        const s2 = t.simLabel2.split(',').map(x => x.trim());
+        const sa = extractNum(s1[0]), sb = extractNum(s1[1]), sc = extractNum(s1[2]);
+        let smallRaw = [{ x: 0.4, y: -1 }, { x: 1.4, y: 0 }, { x: 0, y: 0 }];
+        if (sa && sb && sc && sa + sb > sc && sa + sc > sb && sb + sc > sa) {
+          const cosC = (sa * sa + sb * sb - sc * sc) / (2 * sa * sb);
+          const radC = Math.acos(Math.max(-0.99, Math.min(0.99, cosC)));
+          smallRaw = [{ x: sb * Math.cos(radC), y: -sb * Math.sin(radC) }, { x: sa, y: 0 }, { x: 0, y: 0 }];
+        }
         const s = t.simScale;
-        const smallRaw = [{ x: 0.4, y: -1 }, { x: 1.4, y: 0 }, { x: 0, y: 0 }];
         const bigRaw = smallRaw.map(p => ({ x: p.x * s, y: p.y * s }));
 
         const leftW = cfg.w * 0.42;
         const rightW = cfg.w * 0.54;
         const f1 = fitPolygonToCanvas(smallRaw, leftW, cfg.h, 42, 0, 0);
         const f2 = fitPolygonToCanvas(bigRaw, rightW, cfg.h, 42, leftW + 10, 0);
-
-        const s1 = t.simLabel1.split(',').map(x => x.trim());
-        const s2 = t.simLabel2.split(',').map(x => x.trim());
 
         const [A1, B1, C1] = f1.pts;
         const [A2, B2, C2] = f2.pts;
@@ -1588,6 +1819,247 @@
     }
 
     // ===========================
+    // MCR3U Functions Renderer
+    // ===========================
+    function renderFunctionsSVG(cfg) {
+      const f = state.functions;
+      const xMin = f.xMin, xMax = Math.max(f.xMin + 2, f.xMax);
+      const yMin = f.yMin, yMax = Math.max(f.yMin + 2, f.yMax);
+      const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 1, 1, f.showGridNumbers, true, 'x', 'y');
+      let inner = grid.svg;
+
+      const evalFn = (x, isParent = false) => {
+        const a = isParent ? 1 : f.a;
+        const k = isParent ? 1 : (Math.abs(f.k) < 1e-6 ? 1 : f.k);
+        const d = isParent ? 0 : f.d;
+        const c = isParent ? 0 : f.c;
+        const u = k * (x - d);
+        if (f.type === 'exponential') return a * Math.pow(f.b, u) + c;
+        if (f.type === 'sqrt') return u >= -1e-9 ? a * Math.sqrt(Math.max(0, u)) + c : null;
+        if (f.type === 'reciprocal') return Math.abs(u) > 0.04 ? a / u + c : null;
+        return a * Math.abs(u) + c;
+      };
+
+      const eqEl = document.getElementById('fnEqReadout');
+      if (eqEl) {
+        const innerStr = `${f.k === 1 ? '' : fmtNum(f.k)}(x ${f.d >= 0 ? '- ' + fmtNum(f.d) : '+ ' + fmtNum(-f.d)})`;
+        const cStr = f.c === 0 ? '' : (f.c > 0 ? ` + ${fmtNum(f.c)}` : ` - ${fmtNum(-f.c)}`);
+        const aStr = f.a === 1 ? '' : (f.a === -1 ? '-' : fmtNum(f.a));
+        if (f.type === 'exponential') eqEl.textContent = `y = ${aStr}${fmtNum(f.b)}^(${innerStr})${cStr}`;
+        else if (f.type === 'sqrt') eqEl.textContent = `y = ${aStr}√(${innerStr})${cStr}`;
+        else if (f.type === 'reciprocal') eqEl.textContent = `y = ${fmtNum(f.a)} / (${innerStr})${cStr}`;
+        else eqEl.textContent = `y = ${aStr}|${innerStr}|${cStr}`;
+      }
+
+      if (f.showAsymptotes) {
+        if ((f.type === 'exponential' || f.type === 'reciprocal') && f.c >= yMin && f.c <= yMax) {
+          const ay = grid.toY(f.c).toFixed(1);
+          inner += `<line x1="${grid.pad}" y1="${ay}" x2="${grid.pad + grid.plotW}" y2="${ay}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+        }
+        if (f.type === 'reciprocal' && f.d >= xMin && f.d <= xMax) {
+          const ax = grid.toX(f.d).toFixed(1);
+          inner += `<line x1="${ax}" y1="${grid.pad}" x2="${ax}" y2="${grid.pad + grid.plotH}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+        }
+      }
+
+      const plotCurve = (isParent, color, dashed) => {
+        let segments = [[]];
+        const steps = 260;
+        for (let i = 0; i <= steps; i++) {
+          const x = xMin + (i / steps) * (xMax - xMin);
+          const y = evalFn(x, isParent);
+          if (y === null || !isFinite(y) || y < yMin - 0.5 || y > yMax + 0.5) {
+            if (segments[segments.length - 1].length > 0) segments.push([]);
+          } else {
+            const yc = Math.max(yMin, Math.min(yMax, y));
+            segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(yc).toFixed(1)}`);
+          }
+        }
+        let s = '';
+        segments.forEach(pts => {
+          if (pts.length > 1) {
+            s += `<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="${dashed ? 1.5 : cfg.sw}" ${dashed ? 'stroke-dasharray="5,4"' : ''} stroke-linecap="round" stroke-linejoin="round" />`;
+          }
+        });
+        return s;
+      };
+
+      if (f.showParent) inner += plotCurve(true, cfg.muted, true);
+      if (f.showCurve) inner += plotCurve(false, cfg.primary, false);
+
+      if (f.showKeyPoints) {
+        const keyPts = [];
+        if (f.type === 'sqrt' || f.type === 'abs') keyPts.push({ x: f.d, y: f.c });
+        if (f.type === 'exponential') keyPts.push({ x: f.d, y: f.a + f.c });
+        if (f.type === 'reciprocal') {
+          const kSafe = Math.abs(f.k) < 1e-6 ? 1 : f.k;
+          keyPts.push({ x: f.d + 1 / kSafe, y: f.a + f.c }, { x: f.d - 1 / kSafe, y: -f.a + f.c });
+        }
+        keyPts.forEach(pt => {
+          if (pt.x >= xMin && pt.x <= xMax && pt.y >= yMin && pt.y <= yMax) {
+            inner += `<circle cx="${grid.toX(pt.x).toFixed(1)}" cy="${grid.toY(pt.y).toFixed(1)}" r="4.5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          }
+        });
+      }
+      return inner;
+    }
+
+    // ===========================
+    // MCR3U Sinusoidal Renderer
+    // ===========================
+    function renderSinusoidSVG(cfg) {
+      const s = state.sinusoid;
+      const xMin = s.xMinDeg, xMax = Math.max(s.xMinDeg + 90, s.xMaxDeg);
+      const yMin = s.yMin, yMax = Math.max(s.yMin + 2, s.yMax);
+
+      const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 45, 90, false, true, 'x', 'y');
+      let inner = grid.svg;
+
+      // Custom degree labels along x-axis
+      if (s.showGridNumbers) {
+        const numSize = Math.max(9, cfg.fs - 3);
+        const axisY = (yMin <= 0 && yMax >= 0) ? grid.toY(0) : (yMax < 0 ? grid.pad : grid.pad + grid.plotH);
+        const axisX = (xMin <= 0 && xMax >= 0) ? grid.toX(0) : (xMax < 0 ? grid.pad + grid.plotW : grid.pad);
+        for (let deg = Math.ceil(xMin / 90) * 90; deg <= xMax + 1e-9; deg += 90) {
+          if (Math.abs(deg) < 1e-9) continue;
+          const px = grid.toX(deg);
+          inner += `<line x1="${px.toFixed(2)}" y1="${(axisY - 3).toFixed(2)}" x2="${px.toFixed(2)}" y2="${(axisY + 3).toFixed(2)}" stroke="${cfg.gridAxis}" stroke-width="1.2" />`;
+          inner += `<text x="${px.toFixed(2)}" y="${(axisY + numSize + 4).toFixed(2)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${numSize}" fill="${cfg.muted}">${deg}°</text>`;
+        }
+        for (let y = Math.ceil(yMin); y <= yMax + 1e-9; y += 1) {
+          if (Math.abs(y) < 1e-9) continue;
+          const py = grid.toY(y);
+          inner += `<line x1="${(axisX - 3).toFixed(2)}" y1="${py.toFixed(2)}" x2="${(axisX + 3).toFixed(2)}" y2="${py.toFixed(2)}" stroke="${cfg.gridAxis}" stroke-width="1.2" />`;
+          inner += `<text x="${(axisX - 6).toFixed(2)}" y="${(py + numSize * 0.35).toFixed(2)}" text-anchor="end" font-family="Arial, sans-serif" font-size="${numSize}" fill="${cfg.muted}">${y}</text>`;
+        }
+      }
+
+      const eqEl = document.getElementById('sinEqReadout');
+      if (eqEl) {
+        const dStr = s.d === 0 ? 'x' : `(x ${s.d > 0 ? '- ' + s.d + '°' : '+ ' + (-s.d) + '°'})`;
+        const kStr = s.k === 1 ? dStr : `${fmtNum(s.k)}${dStr}`;
+        const cStr = s.c === 0 ? '' : (s.c > 0 ? ` + ${fmtNum(s.c)}` : ` - ${fmtNum(-s.c)}`);
+        eqEl.textContent = `y = ${fmtNum(s.a)} ${s.fn}(${kStr})${cStr}`;
+      }
+
+      if (s.showMidline && s.c >= yMin && s.c <= yMax) {
+        const my = grid.toY(s.c).toFixed(1);
+        inner += `<line x1="${grid.pad}" y1="${my}" x2="${grid.pad + grid.plotW}" y2="${my}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+      }
+
+      const evalSin = deg => {
+        const rad = (s.k * (deg - s.d) * Math.PI) / 180;
+        return s.a * (s.fn === 'sin' ? Math.sin(rad) : Math.cos(rad)) + s.c;
+      };
+
+      if (s.showCurve) {
+        const pts = [];
+        for (let i = 0; i <= 200; i++) {
+          const deg = xMin + (i / 200) * (xMax - xMin);
+          const y = evalSin(deg);
+          if (y >= yMin - 0.1 && y <= yMax + 0.1) {
+            pts.push(`${grid.toX(deg).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+          }
+        }
+        if (pts.length > 1) {
+          inner += `<polyline points="${pts.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" stroke-linejoin="round" />`;
+        }
+      }
+
+      if (s.showKeyPoints) {
+        const kSafe = Math.abs(s.k) < 1e-6 ? 1 : s.k;
+        const stepDeg = 90 / Math.abs(kSafe);
+        for (let deg = s.d - 8 * stepDeg; deg <= xMax + 1e-6; deg += stepDeg) {
+          if (deg >= xMin - 1e-6 && deg <= xMax + 1e-6) {
+            const y = evalSin(deg);
+            if (y >= yMin && y <= yMax) {
+              inner += `<circle cx="${grid.toX(deg).toFixed(1)}" cy="${grid.toY(y).toFixed(1)}" r="4" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+            }
+          }
+        }
+      }
+      return inner;
+    }
+
+    // ===========================
+    // MCR3U Unit Circle / CAST Renderer
+    // ===========================
+    function renderUnitCircleSVG(cfg) {
+      const u = state.unitcircle;
+      const cx = cfg.w / 2, cy = cfg.h / 2;
+      const r = Math.min(cfg.w, cfg.h) * 0.34;
+      let inner = '';
+
+      // Axes
+      inner += `<line x1="${cx - r - 34}" y1="${cy}" x2="${cx + r + 34}" y2="${cy}" stroke="${cfg.gridAxis}" stroke-width="1.5" marker-start="url(#arrow-axis-rev)" marker-end="url(#arrow-axis)" />`;
+      inner += `<line x1="${cx}" y1="${cy + r + 34}" x2="${cx}" y2="${cy - r - 34}" stroke="${cfg.gridAxis}" stroke-width="1.5" marker-start="url(#arrow-axis-rev)" marker-end="url(#arrow-axis)" />`;
+      inner += `<text x="${cx + r + 40}" y="${cy + 4}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.ink}">x</text>`;
+      inner += `<text x="${cx + 7}" y="${cy - r - 36}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.ink}">y</text>`;
+
+      // Circle
+      inner += `<circle cx="${cx}" cy="${cy}" r="${r.toFixed(1)}" fill="none" stroke="${cfg.gridMinor}" stroke-width="1.5" />`;
+
+      // CAST letters
+      if (u.showCast) {
+        const off = r * 0.72;
+        const fCast = cfg.fs + 2;
+        inner += `<text x="${cx + off}" y="${cy - off}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="${fCast}" fill="${cfg.muted}">A</text>`;
+        inner += `<text x="${cx - off}" y="${cy - off}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="${fCast}" fill="${cfg.muted}">S</text>`;
+        inner += `<text x="${cx - off}" y="${cy + off + 6}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="${fCast}" fill="${cfg.muted}">T</text>`;
+        inner += `<text x="${cx + off}" y="${cy + off + 6}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="${fCast}" fill="${cfg.muted}">C</text>`;
+      }
+
+      const rad = (u.angleDeg * Math.PI) / 180;
+      const px = cx + r * Math.cos(rad);
+      const py = cy - r * Math.sin(rad);
+
+      // Drop right triangle to x-axis
+      if (u.showDropTriangle && Math.abs(Math.sin(rad)) > 0.05 && Math.abs(Math.cos(rad)) > 0.05) {
+        inner += `<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${px.toFixed(1)}" y2="${cy}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="4,3" />`;
+        inner += `<line x1="${cx}" y1="${cy}" x2="${px.toFixed(1)}" y2="${cy}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" />`;
+        inner += drawRightAngleBox({ x: px, y: cy }, { x: cx, y: cy }, { x: px, y: py }, 10, cfg.ink, 1.3);
+      }
+
+      // Terminal arm
+      inner += `<line x1="${cx}" y1="${cy}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="${cfg.primary}" stroke-width="${cfg.sw + 0.5}" marker-end="url(#arrow-line)" />`;
+      inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${cfg.secondary}" />`;
+
+      // Principal angle arc
+      if (u.showArc && Math.abs(u.angleDeg) > 1) {
+        const arcR = r * 0.34;
+        const steps = Math.max(12, Math.round(Math.abs(u.angleDeg) / 6));
+        const pts = [];
+        for (let i = 0; i <= steps; i++) {
+          const a = (i / steps) * rad;
+          pts.push(`${(cx + arcR * Math.cos(a)).toFixed(1)},${(cy - arcR * Math.sin(a)).toFixed(1)}`);
+        }
+        inner += `<polyline points="${pts.join(' ')}" fill="none" stroke="${cfg.secondary}" stroke-width="1.6" />`;
+        if (u.angleLabel) {
+          const midA = rad / 2;
+          const lr = arcR + 15;
+          inner += `<text x="${(cx + lr * Math.cos(midA)).toFixed(1)}" y="${(cy - lr * Math.sin(midA) + 4).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs - 1}" fill="${cfg.secondary}">${esc(u.angleLabel)}</text>`;
+        }
+      }
+
+      // Reference angle arc
+      if (u.showRefAngle && u.refLabel) {
+        const norm = ((u.angleDeg % 360) + 360) % 360;
+        if (norm % 90 !== 0) {
+          const xAxisAng = (norm > 90 && norm < 270) ? Math.PI : 0;
+          const termAng = (norm * Math.PI) / 180;
+          let diff = termAng - xAxisAng;
+          if (diff > Math.PI) diff -= 2 * Math.PI;
+          if (diff < -Math.PI) diff += 2 * Math.PI;
+          const midRef = xAxisAng + diff / 2;
+          const lr = r * 0.24;
+          inner += `<text x="${(cx + lr * Math.cos(midRef)).toFixed(1)}" y="${(cy - lr * Math.sin(midRef) + 4).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs - 2}" fill="${cfg.tertiary}">${esc(u.refLabel)}</text>`;
+        }
+      }
+
+      return inner;
+    }
+
+    // ===========================
     // Master Render
     // ===========================
     function render() {
@@ -1598,6 +2070,9 @@
       if (state.category === 'triangle') content = renderTriangleSVG(cfg);
       else if (state.category === 'lines') content = renderLinesSVG(cfg);
       else if (state.category === 'parabola') content = renderParabolaSVG(cfg);
+      else if (state.category === 'functions') content = renderFunctionsSVG(cfg);
+      else if (state.category === 'sinusoid') content = renderSinusoidSVG(cfg);
+      else if (state.category === 'unitcircle') content = renderUnitCircleSVG(cfg);
       else content = renderBlankGridSVG(cfg);
 
       const bgRect = cfg.whiteBg
