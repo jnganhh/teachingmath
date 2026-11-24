@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="robots" content="noindex, nofollow" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="MPM2D Tracker" />
@@ -46,19 +47,49 @@
 </head>
 <body class="bg-yellow-50 text-slate-800 font-sans min-h-screen p-4 md:p-6">
 
+  <!-- TEACHER-ONLY PRIVACY LOCK OVERLAY -->
+  <div id="teacherLockOverlay" class="fixed inset-0 z-50 bg-slate-900/95 flex items-center justify-center p-4">
+    <div class="bg-white max-w-md w-full rounded-2xl comic-border p-6 space-y-4">
+      <div class="flex items-center gap-2.5">
+        <span class="text-3xl">🔒</span>
+        <div>
+          <span class="px-2 py-0.5 text-[11px] font-black uppercase rounded bg-amber-100 text-amber-900 border border-slate-800">Teacher-Only Access</span>
+          <h2 class="text-xl font-black text-slate-900 mt-0.5">MPM2D Private Class Tracker</h2>
+        </div>
+      </div>
+      <p id="lockModalDesc" class="text-xs font-bold text-slate-600">
+        To keep student participation and attendance data strictly private on your iPad &amp; MacBook, enter your Teacher PIN and Google Apps Script Sync URL below (saved locally on this device so you don't have to re-type it).
+      </p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Teacher PIN / Passcode (set your own on this device):</label>
+          <input type="password" id="lockPinInput" onkeydown="if(event.key==='Enter') unlockTeacherTracker()" placeholder="Enter your Teacher PIN (e.g. 2026)" class="w-full px-3 py-2 text-sm font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none" />
+        </div>
+        <div id="lockUrlBox">
+          <label class="block text-xs font-black text-slate-700 mb-1">Private Google Cloud Sync URL (kept out of public GitHub code):</label>
+          <input type="url" id="lockCloudUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none" />
+        </div>
+        <div id="lockErrorMsg" class="hidden text-xs font-black text-red-600"></div>
+        <button onclick="unlockTeacherTracker()" class="w-full py-2.5 text-sm font-black rounded-xl bg-blue-600 text-white comic-btn">
+          🔓 Unlock Teacher Tracker
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Top Navigation & Data Persistence Bar -->
   <header class="max-w-7xl mx-auto mb-6 bg-white p-5 rounded-xl comic-border flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <div>
       <div class="flex items-center gap-2 flex-wrap">
-        <a href="index.html" class="px-2.5 py-1 text-xs font-black rounded bg-slate-100 hover:bg-slate-200 border-2 border-slate-800">← Hub</a>
+        <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-slate-900 text-white border-2 border-slate-800">🔒 Private Teacher URL</span>
         <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
-        <span class="px-2.5 py-1 text-xs font-black rounded bg-amber-100 text-amber-900 border-2 border-slate-800">iPad + Desktop Ready</span>
+        <span class="px-2.5 py-1 text-xs font-black rounded bg-amber-100 text-amber-900 border-2 border-slate-800">iPad + MacBook Sync</span>
         <span id="saveIndicator" class="px-2.5 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800 flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span> Saved Locally
         </span>
       </div>
       <h1 class="text-2xl md:text-3xl font-black mt-2 text-blue-700">MPM2D Attendance, Homework, Tally & Learning Skills</h1>
-      <p class="text-xs font-bold text-slate-600 mt-0.5">Objective daily look-for dropdowns, homework checks, participation tallies, date review, and E/G/S/N Growing Success evidence</p>
+      <p class="text-xs font-bold text-slate-600 mt-0.5">Unlisted teacher tool — not visible on the student learning hub</p>
     </div>
 
     <!-- Data Persistence Controls (iPad Share + Google Cloud Sync + Desktop Disk Save) -->
@@ -75,6 +106,9 @@
       </label>
       <button onclick="exportReportCSV()" class="px-3 py-2 text-xs font-black rounded-lg bg-blue-600 text-white comic-btn flex items-center gap-1.5">
         <span>📊</span> Export CSV
+      </button>
+      <button onclick="lockTeacherTracker()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn flex items-center gap-1" title="Lock screen if leaving iPad on desk">
+        <span>🔒</span> Lock
       </button>
     </div>
   </header>
@@ -1525,30 +1559,89 @@
     }
 
     // ============================================================================
-    // iPAD NATIVE SHARE SHEET & GOOGLE APPS SCRIPT CLOUD SYNC
+    // TEACHER PRIVACY LOCK, iPAD SHARE SHEET & GOOGLE APPS SCRIPT CLOUD SYNC
     // ============================================================================
-    const DEFAULT_CLOUD_SYNC_URL = 'https://script.google.com/macros/s/AKfycbz5T6FQ02SXtk83R0UTTpLUNEuq3MTRNAoIQUPgoTLN2BU6cIL9ZemqUsWjRNhDDRuv/exec';
+    // IMPORTANT PRIVACY NOTE: The Google Apps Script URL is NOT hardcoded in public GitHub code.
+    // It is stored strictly in your private iPad / MacBook browser localStorage after unlocking.
     const CLOUD_URL_KEY = 'mpm2d_tracker_cloud_sync_url';
     const CLOUD_AUTO_KEY = 'mpm2d_tracker_cloud_auto_sync';
+    const TEACHER_PIN_KEY = 'mpm2d_tracker_teacher_pin';
+    const TEACHER_UNLOCKED_SESSION = 'mpm2d_tracker_unlocked_session';
     let cloudSyncTimer = null;
 
+    function initTeacherLock() {
+      const savedPin = localStorage.getItem(TEACHER_PIN_KEY) || '';
+      const savedUrl = localStorage.getItem(CLOUD_URL_KEY) || '';
+      const sessionUnlocked = sessionStorage.getItem(TEACHER_UNLOCKED_SESSION) === 'true';
+
+      const urlBox = document.getElementById('lockCloudUrlInput');
+      if (urlBox) urlBox.value = savedUrl;
+
+      if (savedPin && sessionUnlocked) {
+        document.getElementById('teacherLockOverlay').classList.add('hidden');
+        initCloudSyncControls();
+      } else {
+        document.getElementById('teacherLockOverlay').classList.remove('hidden');
+        const desc = document.getElementById('lockModalDesc');
+        if (savedPin) {
+          desc.textContent = 'Enter your Teacher PIN to unlock your MPM2D participation & attendance records.';
+          if (savedUrl) document.getElementById('lockUrlBox').classList.add('hidden');
+        }
+      }
+    }
+
+    function unlockTeacherTracker() {
+      const pinInput = (document.getElementById('lockPinInput').value || '').trim();
+      const urlInput = (document.getElementById('lockCloudUrlInput').value || '').trim();
+      const errEl = document.getElementById('lockErrorMsg');
+      const savedPin = localStorage.getItem(TEACHER_PIN_KEY) || '';
+
+      if (!pinInput) {
+        errEl.textContent = 'Please enter a Teacher PIN.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      if (savedPin && pinInput !== savedPin) {
+        errEl.textContent = 'Incorrect Teacher PIN for this device.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      // First time setup on this device: save PIN and optional Cloud Sync URL locally
+      if (!savedPin) {
+        localStorage.setItem(TEACHER_PIN_KEY, pinInput);
+      }
+      if (urlInput) {
+        localStorage.setItem(CLOUD_URL_KEY, urlInput);
+        if (localStorage.getItem(CLOUD_AUTO_KEY) === null) {
+          localStorage.setItem(CLOUD_AUTO_KEY, 'true');
+        }
+      }
+
+      sessionStorage.setItem(TEACHER_UNLOCKED_SESSION, 'true');
+      errEl.classList.add('hidden');
+      document.getElementById('lockPinInput').value = '';
+      document.getElementById('teacherLockOverlay').classList.add('hidden');
+      initCloudSyncControls();
+    }
+
+    function lockTeacherTracker() {
+      sessionStorage.removeItem(TEACHER_UNLOCKED_SESSION);
+      document.getElementById('lockPinInput').value = '';
+      document.getElementById('teacherLockOverlay').classList.remove('hidden');
+    }
+
     function getActiveCloudUrl() {
-      return (localStorage.getItem(CLOUD_URL_KEY) || DEFAULT_CLOUD_SYNC_URL).trim();
+      return (localStorage.getItem(CLOUD_URL_KEY) || '').trim();
     }
 
     function isAutoCloudSyncEnabled() {
       const val = localStorage.getItem(CLOUD_AUTO_KEY);
-      // Default to true when DEFAULT_CLOUD_SYNC_URL is configured
-      return val === null ? true : val === 'true';
+      return val === null ? Boolean(getActiveCloudUrl()) : val === 'true';
     }
 
     function initCloudSyncControls() {
-      if (!localStorage.getItem(CLOUD_URL_KEY)) {
-        localStorage.setItem(CLOUD_URL_KEY, DEFAULT_CLOUD_SYNC_URL);
-      }
-      if (localStorage.getItem(CLOUD_AUTO_KEY) === null) {
-        localStorage.setItem(CLOUD_AUTO_KEY, 'true');
-      }
       const savedUrl = getActiveCloudUrl();
       const autoSync = isAutoCloudSyncEnabled();
       const urlInput = document.getElementById('cloudSyncUrlInput');
@@ -1556,8 +1649,9 @@
       if (urlInput) urlInput.value = savedUrl;
       if (autoCheck) autoCheck.checked = autoSync;
 
-      // Automatically pull latest state from Google Cloud on page load so iPad & MacBook stay in sync
-      pullFromGoogleCloud(true);
+      if (savedUrl) {
+        pullFromGoogleCloud(true);
+      }
     }
 
     function saveCloudSyncUrl(val) {
@@ -1713,8 +1807,8 @@
       exportBackupJSON();
     }
 
-    initCloudSyncControls();
     renderCurrentView();
+    initTeacherLock();
   </script>
 </body>
 </html>
