@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MPM2D Which One Doesn't Belong? (WODB)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <style>
+    .comic-border {
+      border: 3px solid #1e293b;
+      box-shadow: 5px 5px 0px #1e293b;
+    }
+    .comic-btn {
+      border: 2px solid #1e293b;
+      box-shadow: 3px 3px 0px #1e293b;
+      transition: all 0.12s ease;
+    }
+    .comic-btn:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0px #1e293b;
+    }
+    .tab-active {
+      background-color: #2563eb !important;
+      color: #ffffff !important;
+    }
+  </style>
+</head>
+<body class="bg-yellow-50 text-slate-900 font-sans min-h-screen p-3 sm:p-5 overflow-x-hidden">
+  <div class="max-w-7xl mx-auto space-y-4">
+    <!-- Top Header -->
+    <header class="bg-white rounded-xl comic-border p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <a href="index.html" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-100 hover:bg-slate-200 border-2 border-slate-800">← Hub</a>
+          <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
+          <span class="px-2.5 py-1 text-xs font-black rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800">Building Thinking Classrooms</span>
+        </div>
+        <h1 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">🤔 Which One Doesn't Belong? (WODB)</h1>
+        <p class="text-xs font-bold text-slate-600">Every quadrant has a valid mathematical reason! Tap a card to tally class votes, then reveal reasons.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="toggleReasons()" id="reasonsToggleBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-emerald-600 text-white comic-btn">
+          👁️ Show Reasons
+        </button>
+        <button onclick="resetVotes()" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
+          🔄 Reset Votes
+        </button>
+        <button onclick="openCustomWodbModal()" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">
+          ➕ Custom WODB
+        </button>
+        <button onclick="toggleLargeFont()" id="fontBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
+          ⛶ Large Font
+        </button>
+        <button onclick="hardRefreshApp()" class="px-3 py-2 text-xs font-black rounded-lg bg-cyan-100 text-cyan-950 comic-btn" title="Reload latest version">
+          🔄 Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- Unit Filter & Puzzle Selector -->
+    <section class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3">
+      <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2" id="puzzleSelectorGrid"></div>
+    </section>
+
+    <!-- Active WODB 2x2 Stage -->
+    <section class="bg-white rounded-xl comic-border p-4 sm:p-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
+        <div>
+          <span id="activeUnitBadge" class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800">Unit</span>
+          <h2 id="activeTitle" class="text-lg sm:text-2xl font-black text-slate-900 mt-1">Puzzle Title</h2>
+        </div>
+        <div class="text-xs font-bold text-slate-500">Tap any box to add a class vote • Tap − to undo</div>
+      </div>
+
+      <div id="wodbGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+    </section>
+  </div>
+
+  <!-- Custom WODB Modal -->
+  <div id="customWodbModal" onclick="if(event.target===this) closeCustomWodbModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-white max-w-lg w-full rounded-2xl comic-border p-4 sm:p-5 space-y-3">
+      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2">
+        <h3 class="text-lg font-black">➕ Create Custom WODB</h3>
+        <button onclick="closeCustomWodbModal()" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-800 text-white">✕</button>
+      </div>
+      <input type="text" id="cwTitle" placeholder="Title (e.g., Quadratic Forms)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+      <div class="grid grid-cols-2 gap-2">
+        <input type="text" id="cwA" placeholder="Box A (e.g., $y = x^2 - 4$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        <input type="text" id="cwB" placeholder="Box B (e.g., $y = (x - 2)^2$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        <input type="text" id="cwC" placeholder="Box C (e.g., $y = -x^2 + 4$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        <input type="text" id="cwD" placeholder="Box D (e.g., $y = 2x^2 - 8$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+      </div>
+      <div class="grid grid-cols-1 gap-1.5">
+        <input type="text" id="cwRA" placeholder="Reason A doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        <input type="text" id="cwRB" placeholder="Reason B doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        <input type="text" id="cwRC" placeholder="Reason C doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        <input type="text" id="cwRD" placeholder="Reason D doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+      </div>
+      <button onclick="saveCustomWodb()" class="w-full py-2.5 text-xs font-black rounded-xl bg-emerald-600 text-white comic-btn">💾 Save &amp; Present</button>
+    </div>
+  </div>
+
+  <script>
+    const BUILTIN_WODB = [
+      {
+        id: 'quad-parabolas',
+        unit: 'Quadratics',
+        title: 'Four Parabolas',
+        items: [
+          { label: 'A', expr: '$y = x^2 - 4$', reason: 'Only one in standard form with no middle $x$ term AND $a=1$ opening up with 2 roots.' },
+          { label: 'B', expr: '$y = (x - 2)^2$', reason: 'Only one with 1 $x$-intercept (vertex on the $x$-axis at $(2, 0)$).' },
+          { label: 'C', expr: '$y = -x^2 + 4$', reason: 'Only parabola that opens downward ($a < 0$, has a maximum).' },
+          { label: 'D', expr: '$y = 2x^2 - 8$', reason: 'Only one with a vertical stretch ($a = 2 \\neq \\pm 1$).' }
+        ]
+      },
+      {
+        id: 'quad-factoring',
+        unit: 'Factoring',
+        title: 'Four Quadratic Expressions',
+        items: [
+          { label: 'A', expr: '$x^2 - 9$', reason: 'Only difference of squares (only 2 terms, no $bx$ term).' },
+          { label: 'B', expr: '$x^2 + 6x + 9$', reason: 'Only perfect square trinomial: $(x + 3)^2$.' },
+          { label: 'C', expr: '$x^2 + 5x + 6$', reason: 'Only trinomial with two different linear factors $(x+2)(x+3)$.' },
+          { label: 'D', expr: '$2x^2 + 6x$', reason: 'Only one with a GCF ($2x$) and constant term $c = 0$.' }
+        ]
+      },
+      {
+        id: 'quad-forms',
+        unit: 'Quadratics',
+        title: 'Quadratic Forms & Features',
+        items: [
+          { label: 'A', expr: '$y = 2(x - 1)(x - 5)$', reason: 'Only one written in factored form.' },
+          { label: 'B', expr: '$y = 2(x - 3)^2 - 8$', reason: 'Only one written in vertex form.' },
+          { label: 'C', expr: '$y = 2x^2 - 12x + 10$', reason: 'Only one written in standard form.' },
+          { label: 'D', expr: '$y = (x - 3)^2 - 4$', reason: 'Only parabola with $a = 1$ (A, B, and C are actually the SAME parabola!).' }
+        ]
+      },
+      {
+        id: 'lin-lines',
+        unit: 'Linear Systems',
+        title: 'Four Linear Equations',
+        items: [
+          { label: 'A', expr: '$y = 2x + 3$', reason: 'Only one in slope-intercept form with positive slope AND $y$-intercept $3$.' },
+          { label: 'B', expr: '$y = -2x + 3$', reason: 'Only line with a negative slope ($m = -2$).' },
+          { label: 'C', expr: '$2x - y = -3$', reason: 'Only equation written in standard form (and it is the same line as A!).' },
+          { label: 'D', expr: '$y = 2x - 5$', reason: 'Only line with a negative $y$-intercept ($b = -5$).' }
+        ]
+      },
+      {
+        id: 'lin-systems',
+        unit: 'Linear Systems',
+        title: 'Four Systems of Equations',
+        items: [
+          { label: 'A', expr: '$y = 2x + 1$ & $y = 2x - 3$', reason: 'Only system with NO solution (parallel lines).' },
+          { label: 'B', expr: '$y = 2x + 1$ & $4x - 2y = -2$', reason: 'Only system with INFINITELY many solutions (coincident lines).' },
+          { label: 'C', expr: '$y = 2x + 1$ & $y = -\\frac{1}{2}x + 6$', reason: 'Only pair of perpendicular lines.' },
+          { label: 'D', expr: '$x + y = 7$ & $x - y = 1$', reason: 'Only system where neither equation has $y$ isolated.' }
+        ]
+      },
+      {
+        id: 'ana-geo',
+        unit: 'Analytic Geometry',
+        title: 'Circles & Points',
+        items: [
+          { label: 'A', expr: '$x^2 + y^2 = 25$', reason: 'Only circle with integer radius $r = 5$ (and equation).' },
+          { label: 'B', expr: '$x^2 + y^2 = 20$', reason: 'Only circle with an irrational radius $r = \\sqrt{20} = 2\\sqrt{5}$.' },
+          { label: 'C', expr: '$(3, 4)$', reason: 'Only point in Quadrant I (lies on $x^2 + y^2 = 25$).' },
+          { label: 'D', expr: '$(0, -5)$', reason: 'Only point on an axis ($y$-intercept of $x^2 + y^2 = 25$).' }
+        ]
+      },
+      {
+        id: 'trig-ratios',
+        unit: 'Trigonometry',
+        title: 'Four Trig Values',
+        items: [
+          { label: 'A', expr: '$\\sin(30^\\circ)$', reason: 'Only sine ratio (equals $0.5$).' },
+          { label: 'B', expr: '$\\cos(60^\\circ)$', reason: 'Only cosine ratio (also equals $0.5$!).' },
+          { label: 'C', expr: '$\\tan(45^\\circ)$', reason: 'Only expression equal to $1$ (an integer).' },
+          { label: 'D', expr: '$\\sin(45^\\circ)$', reason: 'Only irrational value ($\\frac{\\sqrt{2}}{2} \\approx 0.707$).' }
+        ]
+      },
+      {
+        id: 'num-warmup',
+        unit: 'Warm-Up',
+        title: 'Four Numbers',
+        items: [
+          { label: 'A', expr: '$9$', reason: 'Only single-digit number.' },
+          { label: 'B', expr: '$16$', reason: 'Only even number (and $2^4$).' },
+          { label: 'C', expr: '$25$', reason: 'Only multiple of $5$.' },
+          { label: 'D', expr: '$43$', reason: 'Only prime number (not a perfect square!).' }
+        ]
+      }
+    ];
+
+    const CUSTOM_WODB_KEY = 'mpm2d_custom_wodb_v1';
+    let customWodb = JSON.parse(localStorage.getItem(CUSTOM_WODB_KEY) || '[]');
+    let activeUnit = 'All';
+    let activeId = BUILTIN_WODB[0].id;
+    let showReasons = false;
+    let largeFont = false;
+    let votes = { A: 0, B: 0, C: 0, D: 0 };
+
+    function getAllPuzzles() { return [...BUILTIN_WODB, ...customWodb]; }
+    function getActivePuzzle() { return getAllPuzzles().find(p => p.id === activeId) || BUILTIN_WODB[0]; }
+
+    function renderUnitFilters() {
+      const units = ['All', ...new Set(getAllPuzzles().map(p => p.unit))];
+      document.getElementById('unitFilterBar').innerHTML = units.map(u => `
+        <button onclick="setUnitFilter('${u}')" class="px-3 py-1 text-xs font-black rounded-lg border-2 border-slate-800 transition ${activeUnit === u ? 'tab-active' : 'bg-slate-50 hover:bg-slate-100'}">${u}</button>
+      `).join('');
+    }
+
+    function setUnitFilter(u) {
+      activeUnit = u;
+      renderUnitFilters();
+      renderSelector();
+    }
+
+    function renderSelector() {
+      const list = getAllPuzzles().filter(p => activeUnit === 'All' || p.unit === activeUnit);
+      document.getElementById('puzzleSelectorGrid').innerHTML = list.map(p => `
+        <button onclick="selectPuzzle('${p.id}')" class="text-left p-2.5 rounded-xl border-2 border-slate-800 transition ${p.id === activeId ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-yellow-50'}">
+          <div class="text-[10px] font-black uppercase text-blue-700">${p.unit}</div>
+          <div class="text-xs font-black text-slate-900 mt-0.5">${p.title}</div>
+        </button>
+      `).join('');
+    }
+
+    function selectPuzzle(id) {
+      activeId = id;
+      votes = { A: 0, B: 0, C: 0, D: 0 };
+      showReasons = false;
+      updateReasonsBtn();
+      renderSelector();
+      renderStage();
+    }
+
+    function addVote(label, delta) {
+      votes[label] = Math.max(0, (votes[label] || 0) + delta);
+      renderStage();
+    }
+
+    function resetVotes() {
+      votes = { A: 0, B: 0, C: 0, D: 0 };
+      renderStage();
+    }
+
+    function toggleReasons() {
+      showReasons = !showReasons;
+      updateReasonsBtn();
+      renderStage();
+    }
+
+    function updateReasonsBtn() {
+      const btn = document.getElementById('reasonsToggleBtn');
+      btn.textContent = showReasons ? '🙈 Hide Reasons' : '👁️ Show Reasons';
+    }
+
+    function toggleLargeFont() {
+      largeFont = !largeFont;
+      document.getElementById('fontBtn').textContent = largeFont ? '⛶ Normal Font' : '⛶ Large Font';
+      renderStage();
+    }
+
+    function renderStage() {
+      const p = getActivePuzzle();
+      document.getElementById('activeUnitBadge').textContent = p.unit;
+      document.getElementById('activeTitle').textContent = p.title;
+
+      const exprClass = largeFont ? 'text-2xl sm:text-4xl' : 'text-xl sm:text-2xl';
+      const colors = ['bg-blue-50', 'bg-emerald-50', 'bg-amber-50', 'bg-purple-50'];
+
+      document.getElementById('wodbGrid').innerHTML = p.items.map((item, idx) => {
+        const v = votes[item.label] || 0;
+        return `
+          <div onclick="addVote('${item.label}', 1)" class="cursor-pointer ${colors[idx % 4]} rounded-2xl comic-border p-5 sm:p-7 flex flex-col justify-between min-h-[170px] sm:min-h-[210px] hover:brightness-95 transition">
+            <div class="flex items-center justify-between">
+              <span class="w-8 h-8 rounded-full bg-slate-900 text-white text-sm font-black flex items-center justify-center">${item.label}</span>
+              <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                <button onclick="addVote('${item.label}', -1)" class="px-2 py-0.5 text-xs font-black rounded bg-white border-2 border-slate-800 hover:bg-slate-100">−</button>
+                <span class="px-2.5 py-0.5 text-xs font-mono font-black rounded bg-white border-2 border-slate-800">Votes: ${v}</span>
+              </div>
+            </div>
+            <div class="${exprClass} font-black text-center text-slate-900 my-4 break-words">${item.expr}</div>
+            ${showReasons && item.reason ? `
+              <div class="p-2.5 rounded-xl bg-white/90 border-2 border-slate-800 text-xs font-bold text-slate-800">
+                💡 ${item.reason}
+              </div>
+            ` : `<div class="text-[11px] font-bold text-slate-500 text-center">Why might ${item.label} not belong?</div>`}
+          </div>
+        `;
+      }).join('');
+
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.getElementById('wodbGrid'), {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    function openCustomWodbModal() { document.getElementById('customWodbModal').classList.remove('hidden'); }
+    function closeCustomWodbModal() { document.getElementById('customWodbModal').classList.add('hidden'); }
+    function saveCustomWodb() {
+      const title = document.getElementById('cwTitle').value.trim();
+      const a = document.getElementById('cwA').value.trim();
+      const b = document.getElementById('cwB').value.trim();
+      const c = document.getElementById('cwC').value.trim();
+      const d = document.getElementById('cwD').value.trim();
+      if (!title || !a || !b || !c || !d) { alert('Please fill in the title and all 4 boxes.'); return; }
+      const newP = {
+        id: 'cw-' + Date.now(),
+        unit: 'Custom',
+        title,
+        items: [
+          { label: 'A', expr: a, reason: document.getElementById('cwRA').value.trim() },
+          { label: 'B', expr: b, reason: document.getElementById('cwRB').value.trim() },
+          { label: 'C', expr: c, reason: document.getElementById('cwRC').value.trim() },
+          { label: 'D', expr: d, reason: document.getElementById('cwRD').value.trim() }
+        ]
+      };
+      customWodb.push(newP);
+      localStorage.setItem(CUSTOM_WODB_KEY, JSON.stringify(customWodb));
+      closeCustomWodbModal();
+      activeUnit = 'All';
+      renderUnitFilters();
+      selectPuzzle(newP.id);
+    }
+
+    function hardRefreshApp() {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_r', Date.now());
+      window.location.replace(url.toString());
+    }
+
+    renderUnitFilters();
+    renderSelector();
+    renderStage();
+    window.addEventListener('load', renderStage);
+  </script>
+</body>
+</html>
