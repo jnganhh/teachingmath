@@ -389,6 +389,26 @@
     ⏱️ 05:00
   </button>
 
+  <!-- HALL PASS REASON PICKER MODAL -->
+  <div id="hallPassReasonModal" onclick="if(event.target===this) closeHallPassReasonModal()" class="hidden fixed inset-0 z-50 bg-slate-900/75 flex items-center justify-center p-3">
+    <div class="bg-white max-w-sm w-full rounded-2xl comic-border p-4 space-y-3">
+      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2">
+        <div>
+          <div class="text-[10px] font-black uppercase text-orange-700">🚪 Leaving Room</div>
+          <h3 id="hpReasonStudentName" class="text-base font-black text-slate-900">Student Name</h3>
+        </div>
+        <button onclick="closeHallPassReasonModal()" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-800 text-white">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="confirmHallPassOut('Washroom')" class="py-3 px-3 text-xs font-black rounded-xl bg-blue-50 text-blue-900 comic-btn">🚻 Washroom</button>
+        <button onclick="confirmHallPassOut('Water')" class="py-3 px-3 text-xs font-black rounded-xl bg-cyan-50 text-cyan-900 comic-btn">💧 Water</button>
+        <button onclick="confirmHallPassOut('Office')" class="py-3 px-3 text-xs font-black rounded-xl bg-amber-50 text-amber-900 comic-btn">🏢 Office</button>
+        <button onclick="confirmHallPassOut('Other')" class="py-3 px-3 text-xs font-black rounded-xl bg-purple-50 text-purple-900 comic-btn">✏️ Other</button>
+      </div>
+      <input type="text" id="hpCustomReasonNote" placeholder="Optional note (if Other, e.g., Locker / Guidance)..." class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+    </div>
+  </div>
+
   <!-- Floating Scroll-to-Top Button (helpful on phone) -->
   <button onclick="window.scrollTo({top:0, behavior:'smooth'})" id="scrollTopBtn" class="fixed bottom-4 right-4 z-30 px-3 py-2 text-xs font-black rounded-full bg-slate-900 text-white comic-btn shadow-lg opacity-85 hover:opacity-100" title="Scroll to top">
     ⬆ Top
@@ -958,16 +978,52 @@
       return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     }
 
+    const PASS_REASON_ICONS = {
+      Washroom: '🚻',
+      Water: '💧',
+      Office: '🏢',
+      Other: '✏️'
+    };
+    let pendingHallPassStudentId = null;
+
     function toggleRoomPass(studentId) {
       const rec = getStudentDayRecord(state.activeDate, studentId);
       const passes = rec.hallPasses || [];
       const active = passes.length > 0 && passes[passes.length - 1].inTs === null ? passes[passes.length - 1] : null;
       if (active) {
         active.inTs = Date.now();
+        rec.hallPasses = passes;
+        saveState();
+        renderCurrentView();
       } else {
-        passes.push({ outTs: Date.now(), inTs: null });
+        pendingHallPassStudentId = studentId;
+        const stu = state.periods[state.currentPeriod].students.find(s => s.id === studentId);
+        const nameEl = document.getElementById('hpReasonStudentName');
+        if (nameEl) nameEl.textContent = stu ? stu.name : 'Student';
+        const noteEl = document.getElementById('hpCustomReasonNote');
+        if (noteEl) noteEl.value = '';
+        document.getElementById('hallPassReasonModal').classList.remove('hidden');
       }
-      rec.hallPasses = passes;
+    }
+
+    function closeHallPassReasonModal() {
+      pendingHallPassStudentId = null;
+      document.getElementById('hallPassReasonModal').classList.add('hidden');
+    }
+
+    function confirmHallPassOut(reason) {
+      if (!pendingHallPassStudentId) return;
+      const studentId = pendingHallPassStudentId;
+      const note = (document.getElementById('hpCustomReasonNote')?.value || '').trim();
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      if (!Array.isArray(rec.hallPasses)) rec.hallPasses = [];
+      rec.hallPasses.push({
+        outTs: Date.now(),
+        inTs: null,
+        reason: reason || 'Washroom',
+        note
+      });
+      closeHallPassReasonModal();
       saveState();
       renderCurrentView();
     }
@@ -1563,12 +1619,16 @@
             ? `<div class="text-[11px] font-bold text-slate-500">No out-of-room trips recorded today.</div>`
             : `<div class="space-y-1">${(rec.hallPasses || []).map((hp, idx) => {
                 const isOut = hp.inTs === null;
+                const rLabel = hp.reason || 'Out';
+                const rIcon = PASS_REASON_ICONS[rLabel] || '🚪';
+                const noteTxt = hp.note ? ` (${hp.note})` : '';
                 const dur = isOut
                   ? `<span class="live-out-timer font-mono font-black text-orange-700" data-out-ts="${hp.outTs}">${formatPassDuration(Date.now() - hp.outTs)}</span>`
                   : `<span class="font-mono font-black text-slate-800">${formatPassDuration(hp.inTs - hp.outTs)}</span>`;
                 return `
                   <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs">
                     <span class="font-bold">
+                      <span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-900 font-black mr-1">${rIcon} ${rLabel}${noteTxt}</span>
                       Left <strong>${formatPassTime(hp.outTs)}</strong> → ${isOut ? '<span class="text-orange-700 font-black">Still Out</span>' : `Returned <strong>${formatPassTime(hp.inTs)}</strong>`}
                       <span class="ml-1.5 text-slate-600">(${dur})</span>
                     </span>
@@ -1611,11 +1671,14 @@
         const activePass = passes.length > 0 && passes[passes.length - 1].inTs === null ? passes[passes.length - 1] : null;
         const completedPasses = passes.filter(hp => hp.inTs !== null);
         const totalOutMs = completedPasses.reduce((acc, hp) => acc + (hp.inTs - hp.outTs), 0);
+        const activeIcon = activePass ? (PASS_REASON_ICONS[activePass.reason] || '🚪') : '🚪';
+        const lastReason = completedPasses.length > 0 ? (completedPasses[completedPasses.length - 1].reason || '') : '';
+        const lastIcon = PASS_REASON_ICONS[lastReason] || '🚪';
 
         const outBadge = activePass
-          ? `<span class="px-1.5 py-0.5 rounded bg-orange-600 text-white font-black">🚪 OUT <span class="live-out-timer" data-out-ts="${activePass.outTs}">${formatPassDuration(Date.now() - activePass.outTs)}</span></span>`
+          ? `<span class="px-1.5 py-0.5 rounded bg-orange-600 text-white font-black">${activeIcon} OUT <span class="live-out-timer" data-out-ts="${activePass.outTs}">${formatPassDuration(Date.now() - activePass.outTs)}</span></span>`
           : (completedPasses.length > 0
-            ? `<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-900 font-black">🚪 ${completedPasses.length}× (${formatPassDuration(totalOutMs)})</span>`
+            ? `<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-900 font-black">${lastIcon} ${completedPasses.length}× (${formatPassDuration(totalOutMs)})</span>`
             : '');
 
         return `
