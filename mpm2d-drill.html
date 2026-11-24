@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MPM2D Factoring & Expansion Drill</title>
+<title>MPM2D Math Drill Center</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://unpkg.com/mathlive"></script>
 <style>
@@ -26,7 +26,7 @@
   <header class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <div>
       <a href="index.html" class="text-sm font-bold text-blue-600">← Learning Hub</a>
-      <h1 class="text-3xl font-black text-blue-600">MPM2D Factoring & Expansion Drill</h1>
+      <h1 class="text-3xl font-black text-blue-600">MPM2D Math Drill Center</h1>
     </div>
     <div class="comic bg-white px-4 py-2 text-sm font-bold flex gap-4 items-center">
       <span title="Student">👤 <span id="studentLabel"></span> <button id="changeStudent" class="text-xs text-blue-600 underline">change</button></span>
@@ -47,6 +47,7 @@
           <button class="btn chip px-3 py-1" data-mode="solve">Solve</button>
           <button class="btn chip px-3 py-1" data-mode="transform">Transform</button>
           <button class="btn chip px-3 py-1" data-mode="linear">Linear Systems</button>
+          <button class="btn chip px-3 py-1" data-mode="trig">Trigonometry</button>
           <button class="btn chip px-3 py-1" data-mode="mixed">Mixed</button>
         </div>
         <div class="font-black mb-2">2. Choose skills</div>
@@ -60,6 +61,8 @@
         </div>
         <div id="qPrompt" class="font-bold text-slate-600"></div>
         <div id="qExpr" class="math text-3xl md:text-4xl font-bold my-4 text-center"></div>
+
+        <div id="diagramWrap" class="hidden my-3 flex justify-center"></div>
 
         <div id="graphWrap" class="hidden my-3">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs font-bold">
@@ -624,7 +627,188 @@ const SKILLS = {
               `From Eq. 1, s = ${tot} − a. Substitute into Eq. 2: ${p1}a + ${p2}(${tot} − a) = ${rev}.`],
       steps: [`a + s = ${tot}  ⇒  s = ${tot} − a`, `${p1}a + ${p2}(${tot} − a) = ${rev}`, `${p1 - p2}a = ${rev - p2 * tot}  →  a = ${a} adult tickets (and ${s} student tickets)`] };
   }},
+  // ---------- TRIGONOMETRY ----------
+  tr_sin: { mode: 'trig', name: 'Sine (SOH)', gen() { return genRightTrig('sin'); } },
+  tr_cos: { mode: 'trig', name: 'Cosine (CAH)', gen() { return genRightTrig('cos'); } },
+  tr_tan: { mode: 'trig', name: 'Tangent (TOA)', gen() { return genRightTrig('tan'); } },
+  tr_sohcahtoa: { mode: 'trig', name: 'SOH-CAH-TOA Mix', gen() { return genRightTrig(pick(['sin', 'cos', 'tan'])); } },
+  tr_compound: { mode: 'trig', name: 'Compound Triangles', gen() {
+    // Two right triangles sharing vertical height h: left has base b1 & angle A, right has angle B & find hypotenuse x or base b2
+    const A = rnd(28, 58), B = rnd(30, 62), b1 = rnd(6, 15);
+    const h = b1 * Math.tan(A * Math.PI / 180);
+    const findHyp = Math.random() < 0.5;
+    const ans = findHyp ? h / Math.sin(B * Math.PI / 180) : h / Math.tan(B * Math.PI / 180);
+    const svg = `<svg viewBox="0 0 320 175" class="w-full max-w-[320px] bg-slate-50 rounded-lg border-2 border-slate-800">
+      <polygon points="35,145 165,145 165,30" fill="#dbeafe" stroke="#1e293b" stroke-width="2.5"/>
+      <polygon points="165,145 285,145 165,30" fill="#fef3c7" stroke="#1e293b" stroke-width="2.5"/>
+      <rect x="153" y="133" width="12" height="12" fill="none" stroke="#1e293b" stroke-width="2"/>
+      <rect x="165" y="133" width="12" height="12" fill="none" stroke="#1e293b" stroke-width="2"/>
+      <text x="58" y="138" font-size="13" font-weight="bold" fill="#1d4ed8">${A}°</text>
+      <text x="242" y="138" font-size="13" font-weight="bold" fill="#b45309">${B}°</text>
+      <text x="98" y="162" font-size="14" font-weight="bold" text-anchor="middle">${b1} cm</text>
+      <text x="172" y="92" font-size="13" font-weight="bold" fill="#64748b">h</text>
+      ${findHyp
+        ? `<text x="238" y="82" font-size="15" font-weight="bold" fill="#dc2626">x</text>`
+        : `<text x="225" y="162" font-size="15" font-weight="bold" fill="#dc2626" text-anchor="middle">x</text>`}
+    </svg>`;
+    return { expr: 'Find x (round to 1 decimal place)', svg, numAns: ans, tol: 0.2,
+      prompt: 'Compound right triangles — find the shared side h first, then solve for x:',
+      hints: [`Step 1 (left triangle): use tan(${A}°) = h / ${b1} to find the shared height h.`,
+              `h = ${b1} · tan(${A}°) ≈ ${h.toFixed(2)} cm.`,
+              findHyp ? `Step 2 (right triangle): sin(${B}°) = h / x  →  x = h / sin(${B}°).`
+                      : `Step 2 (right triangle): tan(${B}°) = h / x  →  x = h / tan(${B}°).`],
+      steps: [`Left triangle: h = ${b1} · tan(${A}°) ≈ ${h.toFixed(2)} cm`,
+              findHyp ? `Right triangle: x = ${h.toFixed(2)} / sin(${B}°) ≈ ${ans.toFixed(1)} cm`
+                      : `Right triangle: x = ${h.toFixed(2)} / tan(${B}°) ≈ ${ans.toFixed(1)} cm`] };
+  }},
+  tr_sinelaw: { mode: 'trig', name: 'Sine Law', gen() {
+    const findAngle = Math.random() < 0.45;
+    const A = rnd(35, 72), B = rnd(38, 70), a = rnd(8, 18);
+    const b = a * Math.sin(B * Math.PI / 180) / Math.sin(A * Math.PI / 180);
+    const bR = Math.round(b * 10) / 10;
+    const ans = findAngle ? Math.asin(Math.min(1, bR * Math.sin(A * Math.PI / 180) / a)) * 180 / Math.PI : b;
+    const svg = `<svg viewBox="0 0 300 175" class="w-full max-w-[300px] bg-slate-50 rounded-lg border-2 border-slate-800">
+      <polygon points="35,145 265,145 120,30" fill="#e0e7ff" stroke="#1e293b" stroke-width="2.5"/>
+      <text x="55" y="138" font-size="13" font-weight="bold" fill="#1d4ed8">A = ${A}°</text>
+      <text x="200" y="138" font-size="13" font-weight="bold" fill="${findAngle ? '#dc2626' : '#1d4ed8'}">B = ${findAngle ? 'θ' : B + '°'}</text>
+      <text x="205" y="82" font-size="14" font-weight="bold">a = ${a}</text>
+      <text x="52" y="82" font-size="14" font-weight="bold" fill="${findAngle ? '#1e293b' : '#dc2626'}">b = ${findAngle ? bR : 'x'}</text>
+    </svg>`;
+    return { expr: findAngle ? 'Find angle θ (round to 1 decimal place)' : 'Find side x (round to 1 decimal place)',
+      svg, numAns: ans, tol: 0.2,
+      prompt: 'Use the Sine Law: a / sin(A) = b / sin(B)',
+      hints: ['Match each side with its opposite angle: side a is opposite angle A, side b is opposite angle B.',
+              findAngle ? `sin(θ) / ${bR} = sin(${A}°) / ${a}  →  sin(θ) = ${bR} · sin(${A}°) / ${a}.`
+                        : `x / sin(${B}°) = ${a} / sin(${A}°)  →  x = ${a} · sin(${B}°) / sin(${A}°).`,
+              findAngle ? `Take sin⁻¹ of the result to get θ ≈ ${ans.toFixed(1)}°.` : `Compute x ≈ ${ans.toFixed(1)}.`],
+      steps: [findAngle ? `sin(θ) = (${bR} · sin(${A}°)) / ${a} ≈ ${(bR * Math.sin(A * Math.PI / 180) / a).toFixed(4)}`
+                        : `x = (${a} · sin(${B}°)) / sin(${A}°)`,
+              findAngle ? `θ = sin⁻¹(...) ≈ ${ans.toFixed(1)}°` : `x ≈ ${ans.toFixed(1)}`] };
+  }},
+  tr_coslaw: { mode: 'trig', name: 'Cosine Law', gen() {
+    const findAngle = Math.random() < 0.45;
+    if (!findAngle) {
+      const a = rnd(7, 15), b = rnd(7, 15), C = rnd(35, 115);
+      const c = Math.sqrt(a * a + b * b - 2 * a * b * Math.cos(C * Math.PI / 180));
+      const svg = `<svg viewBox="0 0 300 175" class="w-full max-w-[300px] bg-slate-50 rounded-lg border-2 border-slate-800">
+        <polygon points="35,145 265,145 115,32" fill="#fce7f3" stroke="#1e293b" stroke-width="2.5"/>
+        <text x="115" y="56" font-size="13" font-weight="bold" text-anchor="middle" fill="#1d4ed8">${C}°</text>
+        <text x="58" y="84" font-size="14" font-weight="bold">${a}</text>
+        <text x="200" y="84" font-size="14" font-weight="bold">${b}</text>
+        <text x="150" y="164" font-size="15" font-weight="bold" fill="#dc2626" text-anchor="middle">x</text>
+      </svg>`;
+      return { expr: 'Find side x (round to 1 decimal place)', svg, numAns: c, tol: 0.2,
+        prompt: 'Use the Cosine Law (SAS): c² = a² + b² − 2ab cos(C)',
+        hints: [`Plug in a = ${a}, b = ${b}, C = ${C}° into x² = a² + b² − 2ab cos(C).`,
+                `x² = ${a}² + ${b}² − 2(${a})(${b})cos(${C}°) ≈ ${(c * c).toFixed(2)}.`,
+                `Take the square root: x ≈ ${c.toFixed(1)}.`],
+        steps: [`x² = ${a}² + ${b}² − 2(${a})(${b})cos(${C}°)`, `x² ≈ ${(c * c).toFixed(2)}  →  x ≈ ${c.toFixed(1)}`] };
+    }
+    let a, b, c;
+    do { a = rnd(6, 14); b = rnd(6, 14); c = rnd(6, 14); } while (a + b <= c + 1 || a + c <= b + 1 || b + c <= a + 1);
+    const cosC = (a * a + b * b - c * c) / (2 * a * b);
+    const C = Math.acos(cosC) * 180 / Math.PI;
+    const svg = `<svg viewBox="0 0 300 175" class="w-full max-w-[300px] bg-slate-50 rounded-lg border-2 border-slate-800">
+      <polygon points="35,145 265,145 115,32" fill="#fce7f3" stroke="#1e293b" stroke-width="2.5"/>
+      <text x="115" y="56" font-size="14" font-weight="bold" text-anchor="middle" fill="#dc2626">θ</text>
+      <text x="58" y="84" font-size="14" font-weight="bold">${a}</text>
+      <text x="200" y="84" font-size="14" font-weight="bold">${b}</text>
+      <text x="150" y="164" font-size="14" font-weight="bold" text-anchor="middle">${c}</text>
+    </svg>`;
+    return { expr: 'Find angle θ (round to 1 decimal place)', svg, numAns: C, tol: 0.2,
+      prompt: 'Use the Cosine Law (SSS): cos(θ) = (a² + b² − c²) / (2ab)',
+      hints: [`Side ${c} is opposite angle θ, so c = ${c}, a = ${a}, b = ${b}.`,
+              `cos(θ) = (${a}² + ${b}² − ${c}²) / (2·${a}·${b}) = ${a*a + b*b - c*c} / ${2*a*b} ≈ ${cosC.toFixed(4)}.`,
+              `Take cos⁻¹(${cosC.toFixed(4)}) to get θ ≈ ${C.toFixed(1)}°.`],
+      steps: [`cos(θ) = (${a}² + ${b}² − ${c}²) / (2·${a}·${b}) ≈ ${cosC.toFixed(4)}`, `θ = cos⁻¹(${cosC.toFixed(4)}) ≈ ${C.toFixed(1)}°`] };
+  }},
+  tr_app: { mode: 'trig', name: 'Trig Applications', gen() {
+    const type = pick(['elev', 'ladder']);
+    if (type === 'elev') {
+      const dist = rnd(15, 45), ang = rnd(25, 62);
+      const h = dist * Math.tan(ang * Math.PI / 180);
+      return { expr: `From a point ${dist} m away from the base of a building,\nthe angle of elevation to the top is ${ang}°.\nHow tall is the building? (round to 1 decimal place)`,
+        numAns: h, tol: 0.2, textCard: true,
+        prompt: 'Draw a right triangle and solve the word problem:',
+        hints: [`The horizontal distance (${dist} m) is the <b>Adjacent</b> side, and the building height is the <b>Opposite</b> side.`,
+                `Use tangent (TOA): tan(${ang}°) = height / ${dist}.`,
+                `height = ${dist} · tan(${ang}°) ≈ ${h.toFixed(1)} m.`],
+        steps: [`tan(${ang}°) = height / ${dist}`, `height = ${dist} · tan(${ang}°) ≈ ${h.toFixed(1)} m`] };
+    }
+    const len = rnd(5, 10), ang = rnd(58, 76);
+    const h = len * Math.sin(ang * Math.PI / 180);
+    return { expr: `A ${len} m ladder leans against a vertical wall,\nmaking an angle of ${ang}° with the ground.\nHow high up the wall does the ladder reach? (round to 1 d.p.)`,
+      numAns: h, tol: 0.2, textCard: true,
+      prompt: 'Draw a right triangle and solve the word problem:',
+      hints: [`The ladder (${len} m) is the <b>Hypotenuse</b>, and the height on the wall is <b>Opposite</b> to ${ang}°.`,
+              `Use sine (SOH): sin(${ang}°) = height / ${len}.`,
+              `height = ${len} · sin(${ang}°) ≈ ${h.toFixed(1)} m.`],
+      steps: [`sin(${ang}°) = height / ${len}`, `height = ${len} · sin(${ang}°) ≈ ${h.toFixed(1)} m`] };
+  }},
 };
+
+function genRightTrig(fn) {
+  const findAngle = Math.random() < 0.45;
+  const hyp = rnd(10, 22), deg = rnd(24, 66);
+  const opp = Math.round(hyp * Math.sin(deg * Math.PI / 180) * 10) / 10;
+  const adj = Math.round(hyp * Math.cos(deg * Math.PI / 180) * 10) / 10;
+  let oLbl = '', aLbl = '', hLbl = '', angLbl = `${deg}°`, ans, hintEq, step1, step2;
+  if (fn === 'sin') {
+    if (findAngle) {
+      angLbl = 'θ'; oLbl = `${opp}`; hLbl = `${hyp}`;
+      ans = Math.asin(Math.min(1, opp / hyp)) * 180 / Math.PI;
+      hintEq = `sin(θ) = Opposite / Hypotenuse = ${opp} / ${hyp}`;
+      step1 = `sin(θ) = ${opp} / ${hyp} ≈ ${(opp / hyp).toFixed(4)}`;
+      step2 = `θ = sin⁻¹(${(opp / hyp).toFixed(4)}) ≈ ${ans.toFixed(1)}°`;
+    } else {
+      oLbl = 'x'; hLbl = `${hyp}`; ans = hyp * Math.sin(deg * Math.PI / 180);
+      hintEq = `sin(${deg}°) = x / ${hyp}`;
+      step1 = `sin(${deg}°) = x / ${hyp}`;
+      step2 = `x = ${hyp} · sin(${deg}°) ≈ ${ans.toFixed(1)}`;
+    }
+  } else if (fn === 'cos') {
+    if (findAngle) {
+      angLbl = 'θ'; aLbl = `${adj}`; hLbl = `${hyp}`;
+      ans = Math.acos(Math.min(1, adj / hyp)) * 180 / Math.PI;
+      hintEq = `cos(θ) = Adjacent / Hypotenuse = ${adj} / ${hyp}`;
+      step1 = `cos(θ) = ${adj} / ${hyp} ≈ ${(adj / hyp).toFixed(4)}`;
+      step2 = `θ = cos⁻¹(${(adj / hyp).toFixed(4)}) ≈ ${ans.toFixed(1)}°`;
+    } else {
+      aLbl = 'x'; hLbl = `${hyp}`; ans = hyp * Math.cos(deg * Math.PI / 180);
+      hintEq = `cos(${deg}°) = x / ${hyp}`;
+      step1 = `cos(${deg}°) = x / ${hyp}`;
+      step2 = `x = ${hyp} · cos(${deg}°) ≈ ${ans.toFixed(1)}`;
+    }
+  } else {
+    if (findAngle) {
+      angLbl = 'θ'; oLbl = `${opp}`; aLbl = `${adj}`;
+      ans = Math.atan(opp / adj) * 180 / Math.PI;
+      hintEq = `tan(θ) = Opposite / Adjacent = ${opp} / ${adj}`;
+      step1 = `tan(θ) = ${opp} / ${adj} ≈ ${(opp / adj).toFixed(4)}`;
+      step2 = `θ = tan⁻¹(${(opp / adj).toFixed(4)}) ≈ ${ans.toFixed(1)}°`;
+    } else {
+      oLbl = 'x'; aLbl = `${adj}`; ans = adj * Math.tan(deg * Math.PI / 180);
+      hintEq = `tan(${deg}°) = x / ${adj}`;
+      step1 = `tan(${deg}°) = x / ${adj}`;
+      step2 = `x = ${adj} · tan(${deg}°) ≈ ${ans.toFixed(1)}`;
+    }
+  }
+  const svg = `<svg viewBox="0 0 280 175" class="w-full max-w-[280px] bg-slate-50 rounded-lg border-2 border-slate-800">
+    <polygon points="45,145 235,145 235,32" fill="#dbeafe" stroke="#1e293b" stroke-width="2.5"/>
+    <rect x="221" y="131" width="14" height="14" fill="none" stroke="#1e293b" stroke-width="2"/>
+    <text x="72" y="138" font-size="14" font-weight="bold" fill="${findAngle ? '#dc2626' : '#1d4ed8'}">${angLbl}</text>
+    ${oLbl ? `<text x="245" y="95" font-size="15" font-weight="bold" fill="${oLbl === 'x' ? '#dc2626' : '#1e293b'}">${oLbl}</text>` : ''}
+    ${aLbl ? `<text x="140" y="164" font-size="15" font-weight="bold" text-anchor="middle" fill="${aLbl === 'x' ? '#dc2626' : '#1e293b'}">${aLbl}</text>` : ''}
+    ${hLbl ? `<text x="128" y="80" font-size="15" font-weight="bold" fill="${hLbl === 'x' ? '#dc2626' : '#1e293b'}">${hLbl}</text>` : ''}
+  </svg>`;
+  return { expr: findAngle ? 'Find angle θ (round to 1 decimal place)' : 'Find side x (round to 1 decimal place)',
+    svg, numAns: ans, tol: 0.2,
+    prompt: 'Right-triangle trigonometry (make sure your calculator is in DEG mode):',
+    hints: ['Label the sides relative to the angle: <b>Opposite</b>, <b>Adjacent</b>, <b>Hypotenuse</b> (SOH-CAH-TOA).',
+            `Set up the ratio: <b>${hintEq}</b>.`,
+            findAngle ? `Use the inverse trig button (${fn}⁻¹) on your calculator.` : `Multiply to isolate x.`],
+    steps: [step1, step2] };
+}
 
 /* ================= Answer checking ================= */
 function checkGraph(q) {
@@ -654,12 +838,14 @@ function checkChoice(input, q) {
   return { ok: false, msg: '❌ Not quite. Compare both slopes (m) and y-intercepts (b) after writing both in y = mx + b form.' };
 }
 function checkNumber(input, q) {
-  const raw = String(input || '').trim().replace(/^[a-z]\s*=\s*/i, '').replace(/\s*(hours?|tickets?|dollars?)\s*$/i, '');
+  const raw = String(input || '').trim()
+    .replace(/^(?:[a-z]|θ|\\theta)\s*=\s*/i, '')
+    .replace(/\s*(?:°|\\circ|deg|degrees?|cm|m|hours?|tickets?|dollars?)\s*$/i, '');
   let ast;
   try { ast = parse(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
   const v = evalAst(ast, 0);
-  if (Math.abs(v - q.numAns) < 1e-6) return { ok: true, msg: '🎉 Correct! Nicely solved.' };
-  return { ok: false, msg: '❌ Not quite. Check your two equations and solve again, or press <b>Hint 💡</b>.' };
+  if (Math.abs(v - q.numAns) <= (q.tol || 1e-6)) return { ok: true, msg: '🎉 Correct! Nicely solved.' };
+  return { ok: false, msg: '❌ Not quite. Check your formula (and make sure your calculator is in DEG mode), or press <b>Hint 💡</b>.' };
 }
 function checkPoint(input, q) {
   let raw = normalizeLatex(input).trim();
@@ -1013,7 +1199,9 @@ function newQuestion() {
   $('qExpr').className = isText ? 'text-lg md:text-xl font-bold my-4 text-center text-slate-800 whitespace-pre-line' : 'math text-2xl md:text-3xl font-bold my-4 text-center whitespace-pre-line';
   $('qExpr').textContent = isText ? q.expr : pretty(q.expr);
 
-  // Show/hide graph, choices, and answer box
+  // Show/hide diagram, graph, choices, and answer box
+  $('diagramWrap').classList.toggle('hidden', !q.svg);
+  $('diagramWrap').innerHTML = q.svg || '';
   $('graphWrap').classList.toggle('hidden', !q.lines);
   if (q.lines) renderGraph();
   $('choiceWrap').classList.toggle('hidden', !q.choices);
