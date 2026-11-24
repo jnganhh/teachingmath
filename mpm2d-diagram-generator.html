@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MPM2D Test Paper SVG Diagram Generator</title>
+  <meta name="description" content="Create crisp, print-ready SVG math diagrams for Ontario MPM2D test papers: triangles, parallel & perpendicular lines, parabolas, and coordinate grids." />
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --border: #d8dee6;
+      --border-strong: #1e293b;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --accent: #1d4ed8;
+      --accent-hover: #1e40af;
+      --accent-soft: #eff6ff;
+      --success: #15803d;
+      --success-soft: #dcfce7;
+      --warn: #b45309;
+      --warn-soft: #fef3c7;
+      --radius: 10px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .back-link:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .title-group p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid #bfdbfe;
+    }
+
+    /* Main Layout */
+    .workspace {
+      max-width: 1320px;
+      margin: 18px auto;
+      padding: 0 16px 32px;
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+
+    /* Category Tabs */
+    .cat-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      padding: 8px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .cat-tab {
+      border: 1px solid transparent;
+      background: transparent;
+      padding: 8px 6px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .cat-tab:hover {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+    .cat-tab.active {
+      background: var(--surface);
+      color: var(--accent);
+      border-color: var(--border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    .controls-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin: 0 0 8px 0;
+    }
+
+    .submode-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill-btn {
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .pill-btn:hover {
+      border-color: #94a3b8;
+    }
+    .pill-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .field label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .field input[type="text"],
+    .field input[type="number"],
+    .field select {
+      width: 100%;
+      padding: 7px 9px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color 0.15s;
+    }
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15);
+    }
+
+    .field input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .check-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+    }
+
+    .check-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    .check-label input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 2px 0;
+    }
+
+    .alert-box {
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--warn-soft);
+      color: var(--warn);
+      border: 1px solid #fde68a;
+      display: none;
+    }
+    .alert-box.show { display: block; }
+
+    .info-box {
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      background: var(--accent-soft);
+      color: #1e3a8a;
+      border: 1px solid #bfdbfe;
+      font-family: var(--mono);
+    }
+
+    /* Preview Side */
+    .preview-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-toolbar {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--surface-2);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .action-buttons {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+    .btn-success {
+      background: var(--success) !important;
+      color: #ffffff !important;
+      border-color: var(--success) !important;
+    }
+
+    .canvas-stage {
+      padding: 28px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      background-color: #e2e8f0;
+      background-image:
+        linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+        linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
+        linear-gradient(-45deg, transparent 75%, #cbd5e1 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    }
+
+    .svg-frame {
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+      border-radius: 4px;
+      line-height: 0;
+      max-width: 100%;
+      overflow: auto;
+    }
+
+    .svg-frame svg {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .status-bar {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .copy-feedback {
+      font-weight: 700;
+      color: var(--success);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .copy-feedback.show {
+      opacity: 1;
+    }
+
+    .code-drawer {
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 0 0 var(--radius) var(--radius);
+      display: none;
+    }
+    .code-drawer.open { display: block; }
+    .code-drawer pre {
+      margin: 0;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .preset-chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .preset-chip:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a href="index.html" class="back-link">← Hub</a>
+      <div class="title-group">
+        <h1>MPM2D Test Paper SVG Diagram Generator <span class="badge">Vector SVG</span></h1>
+        <p>Print-ready triangles, parallel/perpendicular lines, parabolas, and coordinate grids</p>
+      </div>
+    </div>
+    <div class="action-buttons">
+      <button type="button" class="btn" id="btnToggleCode" onclick="toggleCodeDrawer()">View SVG Code</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <!-- Left Controls -->
+    <section class="panel">
+      <div class="cat-tabs" role="tablist">
+        <button type="button" class="cat-tab active" data-cat="triangle" onclick="setCategory('triangle')">Triangles</button>
+        <button type="button" class="cat-tab" data-cat="lines" onclick="setCategory('lines')">Lines</button>
+        <button type="button" class="cat-tab" data-cat="parabola" onclick="setCategory('parabola')">Parabola</button>
+        <button type="button" class="cat-tab" data-cat="grid" onclick="setCategory('grid')">Blank Grid</button>
+      </div>
+
+      <div class="controls-body">
+        <!-- Dynamic Category Controls -->
+        <div id="categoryControls"></div>
+
+        <div id="mathAlert" class="alert-box"></div>
+
+        <div class="divider"></div>
+
+        <!-- Global Test Paper Style Controls -->
+        <div>
+          <p class="section-title">Test Paper Style &amp; Size</p>
+          <div class="form-grid">
+            <div class="field">
+              <label for="styleMode">Ink Style</label>
+              <select id="styleMode" onchange="render()">
+                <option value="exam" selected>Exam Print (B&amp;W)</option>
+                <option value="color">Color Key (Blue/Red)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="canvasPreset">Canvas Size</label>
+              <select id="canvasPreset" onchange="render()">
+                <option value="300x260">Small (300×260)</option>
+                <option value="380x320" selected>Medium (380×320)</option>
+                <option value="460x380">Large (460×380)</option>
+                <option value="400x400">Square (400×400)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="strokeWidth">Line Thickness (<span id="strokeVal">2</span>px)</label>
+              <input type="range" id="strokeWidth" min="1.2" max="3.2" step="0.2" value="2" oninput="document.getElementById('strokeVal').textContent=this.value; render()" />
+            </div>
+            <div class="field">
+              <label for="fontSize">Label Size (<span id="fontVal">14</span>px)</label>
+              <input type="range" id="fontSize" min="11" max="19" step="1" value="14" oninput="document.getElementById('fontVal').textContent=this.value; render()" />
+            </div>
+          </div>
+          <div class="check-row" style="margin-top: 10px;">
+            <label class="check-label">
+              <input type="checkbox" id="whiteBg" checked onchange="render()" />
+              White background (uncheck for transparent)
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Preview & Export -->
+    <section class="panel preview-panel">
+      <div class="preview-toolbar">
+        <div class="action-buttons">
+          <button type="button" class="btn btn-primary" id="btnCopyDocs" onclick="copyHighResPngForDocs()">
+            📄 Copy for Google Docs (Hi-Res)
+          </button>
+          <button type="button" class="btn" id="btnCopySvg" onclick="copySvgCode()">
+            📋 Copy SVG Code
+          </button>
+          <button type="button" class="btn" id="btnCopyImage" onclick="copySvgClipboardImage()">
+            🖼️ Copy SVG Image
+          </button>
+          <button type="button" class="btn" onclick="downloadSvg()">
+            ⬇️ Download .SVG
+          </button>
+        </div>
+        <span class="copy-feedback" id="copyFeedback">Copied!</span>
+      </div>
+
+      <div class="canvas-stage">
+        <div class="svg-frame" id="svgPreview"></div>
+      </div>
+
+      <div class="status-bar">
+        <span id="statusInfo">Vector SVG • Ready to paste</span>
+        <span>Tip: <b>Copy SVG Image</b> works in Word/rich editors; <b>Copy SVG Code</b> works in Figma/Inkscape/HTML; use <b>Download .SVG</b> for Insert → Picture.</span>
+      </div>
+
+      <div class="code-drawer" id="codeDrawer">
+        <pre id="svgCodeOutput"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ===========================
+    // App State
+    // ===========================
+    const state = {
+      category: 'triangle',
+      // Triangle state
+      tri: {
+        mode: 'right', // 'right' | 'oblique' | 'similar'
+        // Right triangle
+        base: 7,
+        height: 5,
+        rotation: 0,
+        vA: 'A', vB: 'B', vC: 'C',
+        labelBase: '7 cm',
+        labelHeight: '5 cm',
+        labelHyp: 'x',
+        angleA: '35°',
+        angleB: '',
+        showRightAngle: true,
+        showAngleArcs: true,
+        // Oblique triangle (SAS or SSS)
+        obSideA: 7,
+        obSideB: 6,
+        obAngleC: 65,
+        obLabelA: '7 cm',
+        obLabelB: '6 cm',
+        obLabelC: 'c',
+        obAngLabelA: '',
+        obAngLabelB: '',
+        obAngLabelC: '65°',
+        tickA: false,
+        tickB: false,
+        tickC: false,
+        // Similar triangles
+        simScale: 1.45,
+        simLabel1: '4 cm, 6 cm, x',
+        simLabel2: '6 cm, 9 cm, 12 cm',
+      },
+      // Lines state
+      lines: {
+        mode: 'transversal', // 'transversal' | 'grid_parallel' | 'grid_perp' | 'grid_system'
+        transAngle: 62,
+        transThirdLine: false,
+        ang1: '', ang2: '118°', ang3: '', ang4: '',
+        ang5: '', ang6: 'x', ang7: '', ang8: '',
+        showParallelMarkers: true,
+        // Coordinate grid lines
+        gridMin: -5,
+        gridMax: 5,
+        m1: '2',
+        b1: '1',
+        m2: '-1/2',
+        b2: '-2',
+        labelLine1: 'l₁',
+        labelLine2: 'l₂',
+        showEqLabels: true,
+        showInterceptDots: true,
+        showIntersection: true,
+        showPerpSquare: true,
+        showGridNumbers: true,
+      },
+      // Parabola state
+      parabola: {
+        mode: 'given_vertex_pt', // 'vertex_form' | 'factored_form' | 'standard_form' | 'given_vertex_pt' | 'given_zeros_pt' | 'given_vertex_yint'
+        // Vertex form
+        a: 1, h: 2, k: -4,
+        // Factored form
+        fa: 1, r: -1, s: 3,
+        // Standard form
+        sa: 1, sb: -4, sc: 3,
+        // Given two info: Vertex + Point
+        gvH: 2, gvK: -4, gvPx: 4, gvPy: 0,
+        // Given two info: 2 zeros + Point
+        gzR: -1, gzS: 5, gzPx: 2, gzPy: -4.5,
+        // Given two info: Vertex + y-intercept
+        gyH: 2, gyK: -3, gyC: 1,
+        // Grid & Display
+        xMin: -6, xMax: 6, yMin: -6, yMax: 6,
+        showCurve: true,
+        showKeyPoints: true,
+        showPointCoords: true,
+        showAxisSym: true,
+        showArrows: true,
+        showGridNumbers: true,
+        curveLabel: '',
+      },
+      // Blank Grid state
+      grid: {
+        xMin: -6, xMax: 6, yMin: -6, yMax: 6,
+        step: 1,
+        labelStep: 1,
+        showNumbers: true,
+        showMinor: true,
+        xAxisLabel: 'x',
+        yAxisLabel: 'y',
+      }
+    };
+
+    let currentSvgString = '';
+
+    // ===========================
+    // Helpers
+    // ===========================
+    function esc(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function parseFrac(val, fallback = 0) {
+      if (typeof val === 'number') return isFinite(val) ? val : fallback;
+      const s = String(val || '').trim();
+      if (!s) return fallback;
+      if (s.includes('/')) {
+        const parts = s.split('/');
+        if (parts.length === 2) {
+          const num = parseFloat(parts[0]);
+          const den = parseFloat(parts[1]);
+          if (isFinite(num) && isFinite(den) && den !== 0) return num / den;
+        }
+      }
+      const n = parseFloat(s);
+      return isFinite(n) ? n : fallback;
+    }
+
+    function fmtNum(n) {
+      const r = Math.round(n * 100) / 100;
+      return Object.is(r, -0) ? '0' : String(r);
+    }
+
+    function getGlobalStyle() {
+      const mode = document.getElementById('styleMode').value;
+      const [w, h] = document.getElementById('canvasPreset').value.split('x').map(Number);
+      const sw = parseFloat(document.getElementById('strokeWidth').value) || 2;
+      const fs = parseInt(document.getElementById('fontSize').value, 10) || 14;
+      const whiteBg = document.getElementById('whiteBg').checked;
+      const isColor = mode === 'color';
+      return {
+        w, h, sw, fs, whiteBg, isColor,
+        ink: '#0f172a',
+        primary: isColor ? '#1d4ed8' : '#0f172a',
+        secondary: isColor ? '#dc2626' : '#0f172a',
+        tertiary: isColor ? '#059669' : '#334155',
+        gridMinor: '#cbd5e1',
+        gridAxis: '#334155',
+        muted: '#475569',
+      };
+    }
+
+    function setAlert(msg) {
+      const el = document.getElementById('mathAlert');
+      if (msg) {
+        el.textContent = msg;
+        el.classList.add('show');
+      } else {
+        el.textContent = '';
+        el.classList.remove('show');
+      }
+    }
+
+    // ===========================
+    // UI Builders per Category
+    // ===========================
+    function setCategory(cat) {
+      state.category = cat;
+      document.querySelectorAll('.cat-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.cat === cat);
+      });
+      buildControls();
+      render();
+    }
+
+    function buildControls() {
+      const container = document.getElementById('categoryControls');
+      if (state.category === 'triangle') {
+        container.innerHTML = buildTriangleControls();
+      } else if (state.category === 'lines') {
+        container.innerHTML = buildLinesControls();
+      } else if (state.category === 'parabola') {
+        container.innerHTML = buildParabolaControls();
+      } else {
+        container.innerHTML = buildGridControls();
+      }
+    }
+
+    function buildTriangleControls() {
+      const t = state.tri;
+      let html = `
+        <div>
+          <p class="section-title">Triangle Type</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${t.mode==='right'?'active':''}" onclick="state.tri.mode='right'; buildControls(); render();">Right Triangle</button>
+            <button type="button" class="pill-btn ${t.mode==='oblique'?'active':''}" onclick="state.tri.mode='oblique'; buildControls(); render();">Oblique (Sine/Cosine)</button>
+            <button type="button" class="pill-btn ${t.mode==='similar'?'active':''}" onclick="state.tri.mode='similar'; buildControls(); render();">Similar Triangles</button>
+          </div>
+        </div>
+      `;
+
+      if (t.mode === 'right') {
+        html += `
+          <div class="preset-row">
+            <button type="button" class="preset-chip" onclick="applyTriPreset('sohcahtoa')">SOH CAH TOA</button>
+            <button type="button" class="preset-chip" onclick="applyTriPreset('pythag')">Pythagorean</button>
+            <button type="button" class="preset-chip" onclick="applyTriPreset('elevation')">Angle of Elevation</button>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Base Width (ratio)</label><input type="number" min="1" max="20" step="0.5" value="${t.base}" oninput="state.tri.base=+this.value||4; render()"></div>
+            <div class="field"><label>Height (ratio)</label><input type="number" min="1" max="20" step="0.5" value="${t.height}" oninput="state.tri.height=+this.value||4; render()"></div>
+            <div class="field full"><label>Rotation (${t.rotation}°)</label><input type="range" min="0" max="345" step="15" value="${t.rotation}" oninput="state.tri.rotation=+this.value; this.previousElementSibling.textContent='Rotation ('+this.value+'°)'; render()"></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>Vertex 1 (Top)</label><input type="text" value="${esc(t.vB)}" oninput="state.tri.vB=this.value; render()"></div>
+            <div class="field"><label>Vertex 2 (Right ∠)</label><input type="text" value="${esc(t.vC)}" oninput="state.tri.vC=this.value; render()"></div>
+            <div class="field"><label>Vertex 3 (Acute)</label><input type="text" value="${esc(t.vA)}" oninput="state.tri.vA=this.value; render()"></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>Base Label</label><input type="text" value="${esc(t.labelBase)}" oninput="state.tri.labelBase=this.value; render()"></div>
+            <div class="field"><label>Height Label</label><input type="text" value="${esc(t.labelHeight)}" oninput="state.tri.labelHeight=this.value; render()"></div>
+            <div class="field"><label>Hypotenuse Label</label><input type="text" value="${esc(t.labelHyp)}" oninput="state.tri.labelHyp=this.value; render()"></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Angle at ${esc(t.vA || 'A')}</label><input type="text" value="${esc(t.angleA)}" placeholder="e.g. 35° or θ" oninput="state.tri.angleA=this.value; render()"></div>
+            <div class="field"><label>Angle at ${esc(t.vB || 'B')}</label><input type="text" value="${esc(t.angleB)}" placeholder="blank to hide" oninput="state.tri.angleB=this.value; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${t.showRightAngle?'checked':''} onchange="state.tri.showRightAngle=this.checked; render()"> Right-angle box</label>
+            <label class="check-label"><input type="checkbox" ${t.showAngleArcs?'checked':''} onchange="state.tri.showAngleArcs=this.checked; render()"> Angle arcs</label>
+          </div>
+        `;
+      } else if (t.mode === 'oblique') {
+        html += `
+          <div class="form-grid-3">
+            <div class="field"><label>Side a (bottom)</label><input type="number" min="1" max="25" step="0.5" value="${t.obSideA}" oninput="state.tri.obSideA=+this.value||5; render()"></div>
+            <div class="field"><label>Side b (left)</label><input type="number" min="1" max="25" step="0.5" value="${t.obSideB}" oninput="state.tri.obSideB=+this.value||5; render()"></div>
+            <div class="field"><label>Angle C (°)</label><input type="number" min="15" max="155" step="1" value="${t.obAngleC}" oninput="state.tri.obAngleC=+this.value||60; render()"></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>Bottom Label</label><input type="text" value="${esc(t.obLabelA)}" oninput="state.tri.obLabelA=this.value; render()"></div>
+            <div class="field"><label>Left Label</label><input type="text" value="${esc(t.obLabelB)}" oninput="state.tri.obLabelB=this.value; render()"></div>
+            <div class="field"><label>Right Label</label><input type="text" value="${esc(t.obLabelC)}" oninput="state.tri.obLabelC=this.value; render()"></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>Vertex Top</label><input type="text" value="${esc(t.vA)}" oninput="state.tri.vA=this.value; render()"></div>
+            <div class="field"><label>Vertex Left</label><input type="text" value="${esc(t.vC)}" oninput="state.tri.vC=this.value; render()"></div>
+            <div class="field"><label>Vertex Right</label><input type="text" value="${esc(t.vB)}" oninput="state.tri.vB=this.value; render()"></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>Angle Top</label><input type="text" value="${esc(t.obAngLabelA)}" oninput="state.tri.obAngLabelA=this.value; render()"></div>
+            <div class="field"><label>Angle Left</label><input type="text" value="${esc(t.obAngLabelC)}" oninput="state.tri.obAngLabelC=this.value; render()"></div>
+            <div class="field"><label>Angle Right</label><input type="text" value="${esc(t.obAngLabelB)}" oninput="state.tri.obAngLabelB=this.value; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${t.tickA?'checked':''} onchange="state.tri.tickA=this.checked; render()"> Tick bottom</label>
+            <label class="check-label"><input type="checkbox" ${t.tickB?'checked':''} onchange="state.tri.tickB=this.checked; render()"> Tick left</label>
+            <label class="check-label"><input type="checkbox" ${t.tickC?'checked':''} onchange="state.tri.tickC=this.checked; render()"> Tick right</label>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="form-grid">
+            <div class="field full"><label>Scale Factor (${t.simScale}×)</label><input type="range" min="1.1" max="2.0" step="0.05" value="${t.simScale}" oninput="state.tri.simScale=+this.value; this.previousElementSibling.textContent='Scale Factor ('+this.value+'×)'; render()"></div>
+            <div class="field full"><label>Small △ Sides (base, left, right)</label><input type="text" value="${esc(t.simLabel1)}" oninput="state.tri.simLabel1=this.value; render()"></div>
+            <div class="field full"><label>Large △ Sides (base, left, right)</label><input type="text" value="${esc(t.simLabel2)}" oninput="state.tri.simLabel2=this.value; render()"></div>
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function applyTriPreset(name) {
+      const t = state.tri;
+      if (name === 'sohcahtoa') {
+        t.base = 7; t.height = 5; t.rotation = 0;
+        t.labelBase = '12 m'; t.labelHeight = 'x'; t.labelHyp = '';
+        t.angleA = '34°'; t.angleB = '';
+      } else if (name === 'pythag') {
+        t.base = 8; t.height = 6; t.rotation = 0;
+        t.labelBase = '8 cm'; t.labelHeight = '6 cm'; t.labelHyp = 'c';
+        t.angleA = ''; t.angleB = '';
+      } else if (name === 'elevation') {
+        t.base = 9; t.height = 4.5; t.rotation = 0;
+        t.labelBase = '45 m'; t.labelHeight = 'h'; t.labelHyp = '';
+        t.angleA = '28°'; t.angleB = '';
+      }
+      buildControls();
+      render();
+    }
+
+    function buildLinesControls() {
+      const l = state.lines;
+      let html = `
+        <div>
+          <p class="section-title">Line Diagram Type</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${l.mode==='transversal'?'active':''}" onclick="state.lines.mode='transversal'; buildControls(); render();">Parallel + Transversal</button>
+            <button type="button" class="pill-btn ${l.mode==='grid_parallel'?'active':''}" onclick="state.lines.mode='grid_parallel'; buildControls(); render();">Parallel (Grid)</button>
+            <button type="button" class="pill-btn ${l.mode==='grid_perp'?'active':''}" onclick="state.lines.mode='grid_perp'; buildControls(); render();">Perpendicular (Grid)</button>
+            <button type="button" class="pill-btn ${l.mode==='grid_system'?'active':''}" onclick="state.lines.mode='grid_system'; buildControls(); render();">Linear System</button>
+          </div>
+        </div>
+      `;
+
+      if (l.mode === 'transversal') {
+        html += `
+          <div class="form-grid">
+            <div class="field full"><label>Transversal Angle (${l.transAngle}°)</label><input type="range" min="25" max="155" step="1" value="${l.transAngle}" oninput="state.lines.transAngle=+this.value; this.previousElementSibling.textContent='Transversal Angle ('+this.value+'°)'; render()"></div>
+          </div>
+          <p class="section-title" style="margin-top:4px;">Angle Labels (Top Intersection: TL, TR, BL, BR)</p>
+          <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="field"><label>Top-L</label><input type="text" value="${esc(l.ang1)}" oninput="state.lines.ang1=this.value; render()"></div>
+            <div class="field"><label>Top-R</label><input type="text" value="${esc(l.ang2)}" oninput="state.lines.ang2=this.value; render()"></div>
+            <div class="field"><label>Bot-L</label><input type="text" value="${esc(l.ang3)}" oninput="state.lines.ang3=this.value; render()"></div>
+            <div class="field"><label>Bot-R</label><input type="text" value="${esc(l.ang4)}" oninput="state.lines.ang4=this.value; render()"></div>
+          </div>
+          <p class="section-title" style="margin-top:4px;">Angle Labels (Bottom Intersection)</p>
+          <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="field"><label>Top-L</label><input type="text" value="${esc(l.ang5)}" oninput="state.lines.ang5=this.value; render()"></div>
+            <div class="field"><label>Top-R</label><input type="text" value="${esc(l.ang6)}" oninput="state.lines.ang6=this.value; render()"></div>
+            <div class="field"><label>Bot-L</label><input type="text" value="${esc(l.ang7)}" oninput="state.lines.ang7=this.value; render()"></div>
+            <div class="field"><label>Bot-R</label><input type="text" value="${esc(l.ang8)}" oninput="state.lines.ang8=this.value; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${l.showParallelMarkers?'checked':''} onchange="state.lines.showParallelMarkers=this.checked; render()"> Parallel arrow markers</label>
+          </div>
+        `;
+      } else {
+        const isParallel = l.mode === 'grid_parallel';
+        const isPerp = l.mode === 'grid_perp';
+        const m1Num = parseFrac(l.m1, 2);
+        const autoM2 = isParallel ? l.m1 : (isPerp ? (m1Num === 0 ? 'undefined' : fmtNum(-1 / m1Num)) : l.m2);
+
+        html += `
+          <div class="form-grid">
+            <div class="field"><label>Line 1 Slope (m₁, e.g. 2/3)</label><input type="text" value="${esc(l.m1)}" oninput="state.lines.m1=this.value; render()"></div>
+            <div class="field"><label>Line 1 y-intercept (b₁)</label><input type="text" value="${esc(l.b1)}" oninput="state.lines.b1=this.value; render()"></div>
+            <div class="field"><label>Line 2 Slope (m₂)</label><input type="text" value="${esc(isParallel || isPerp ? autoM2 : l.m2)}" ${isParallel || isPerp ? 'disabled style="background:#f1f5f9;color:#64748b;"' : ''} oninput="state.lines.m2=this.value; render()"></div>
+            <div class="field"><label>Line 2 y-intercept (b₂)</label><input type="text" value="${esc(l.b2)}" oninput="state.lines.b2=this.value; render()"></div>
+            <div class="field"><label>Line 1 Label</label><input type="text" value="${esc(l.labelLine1)}" oninput="state.lines.labelLine1=this.value; render()"></div>
+            <div class="field"><label>Line 2 Label</label><input type="text" value="${esc(l.labelLine2)}" oninput="state.lines.labelLine2=this.value; render()"></div>
+            <div class="field"><label>Grid Min</label><input type="number" min="-12" max="-2" value="${l.gridMin}" oninput="state.lines.gridMin=+this.value||-5; render()"></div>
+            <div class="field"><label>Grid Max</label><input type="number" min="2" max="12" value="${l.gridMax}" oninput="state.lines.gridMax=+this.value||5; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${l.showEqLabels?'checked':''} onchange="state.lines.showEqLabels=this.checked; render()"> Line labels</label>
+            <label class="check-label"><input type="checkbox" ${l.showInterceptDots?'checked':''} onchange="state.lines.showInterceptDots=this.checked; render()"> y-intercept dots</label>
+            ${!isParallel ? `<label class="check-label"><input type="checkbox" ${l.showIntersection?'checked':''} onchange="state.lines.showIntersection=this.checked; render()"> Intersection dot</label>` : ''}
+            ${isPerp ? `<label class="check-label"><input type="checkbox" ${l.showPerpSquare?'checked':''} onchange="state.lines.showPerpSquare=this.checked; render()"> Right-angle box</label>` : ''}
+            <label class="check-label"><input type="checkbox" ${l.showGridNumbers?'checked':''} onchange="state.lines.showGridNumbers=this.checked; render()"> Axis numbers</label>
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function buildParabolaControls() {
+      const p = state.parabola;
+      let html = `
+        <div>
+          <p class="section-title">Given Information / Form</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${p.mode==='given_vertex_pt'?'active':''}" onclick="state.parabola.mode='given_vertex_pt'; buildControls(); render();">Vertex + 1 Point</button>
+            <button type="button" class="pill-btn ${p.mode==='given_zeros_pt'?'active':''}" onclick="state.parabola.mode='given_zeros_pt'; buildControls(); render();">2 Zeros + 1 Point</button>
+            <button type="button" class="pill-btn ${p.mode==='given_vertex_yint'?'active':''}" onclick="state.parabola.mode='given_vertex_yint'; buildControls(); render();">Vertex + y-int</button>
+            <button type="button" class="pill-btn ${p.mode==='vertex_form'?'active':''}" onclick="state.parabola.mode='vertex_form'; buildControls(); render();">Vertex Form</button>
+            <button type="button" class="pill-btn ${p.mode==='factored_form'?'active':''}" onclick="state.parabola.mode='factored_form'; buildControls(); render();">Factored Form</button>
+            <button type="button" class="pill-btn ${p.mode==='standard_form'?'active':''}" onclick="state.parabola.mode='standard_form'; buildControls(); render();">Standard Form</button>
+          </div>
+        </div>
+      `;
+
+      if (p.mode === 'given_vertex_pt') {
+        html += `
+          <div class="form-grid">
+            <div class="field"><label>Vertex h</label><input type="number" step="0.5" value="${p.gvH}" oninput="state.parabola.gvH=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Vertex k</label><input type="number" step="0.5" value="${p.gvK}" oninput="state.parabola.gvK=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Given Point x₁</label><input type="number" step="0.5" value="${p.gvPx}" oninput="state.parabola.gvPx=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Given Point y₁</label><input type="number" step="0.5" value="${p.gvPy}" oninput="state.parabola.gvPy=parseFloat(this.value)||0; render()"></div>
+          </div>
+        `;
+      } else if (p.mode === 'given_zeros_pt') {
+        html += `
+          <div class="form-grid">
+            <div class="field"><label>Zero r (x₁)</label><input type="number" step="0.5" value="${p.gzR}" oninput="state.parabola.gzR=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Zero s (x₂)</label><input type="number" step="0.5" value="${p.gzS}" oninput="state.parabola.gzS=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Given Point x</label><input type="number" step="0.5" value="${p.gzPx}" oninput="state.parabola.gzPx=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Given Point y</label><input type="number" step="0.5" value="${p.gzPy}" oninput="state.parabola.gzPy=parseFloat(this.value)||0; render()"></div>
+          </div>
+        `;
+      } else if (p.mode === 'given_vertex_yint') {
+        html += `
+          <div class="form-grid-3">
+            <div class="field"><label>Vertex h</label><input type="number" step="0.5" value="${p.gyH}" oninput="state.parabola.gyH=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Vertex k</label><input type="number" step="0.5" value="${p.gyK}" oninput="state.parabola.gyK=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>y-intercept c</label><input type="number" step="0.5" value="${p.gyC}" oninput="state.parabola.gyC=parseFloat(this.value)||0; render()"></div>
+          </div>
+        `;
+      } else if (p.mode === 'vertex_form') {
+        html += `
+          <div class="form-grid-3">
+            <div class="field"><label>a</label><input type="text" value="${p.a}" oninput="state.parabola.a=parseFrac(this.value,1); render()"></div>
+            <div class="field"><label>h</label><input type="number" step="0.5" value="${p.h}" oninput="state.parabola.h=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>k</label><input type="number" step="0.5" value="${p.k}" oninput="state.parabola.k=parseFloat(this.value)||0; render()"></div>
+          </div>
+        `;
+      } else if (p.mode === 'factored_form') {
+        html += `
+          <div class="form-grid-3">
+            <div class="field"><label>a</label><input type="text" value="${p.fa}" oninput="state.parabola.fa=parseFrac(this.value,1); render()"></div>
+            <div class="field"><label>Zero r</label><input type="number" step="0.5" value="${p.r}" oninput="state.parabola.r=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Zero s</label><input type="number" step="0.5" value="${p.s}" oninput="state.parabola.s=parseFloat(this.value)||0; render()"></div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="form-grid-3">
+            <div class="field"><label>a</label><input type="text" value="${p.sa}" oninput="state.parabola.sa=parseFrac(this.value,1); render()"></div>
+            <div class="field"><label>b</label><input type="number" step="0.5" value="${p.sb}" oninput="state.parabola.sb=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>c</label><input type="number" step="0.5" value="${p.sc}" oninput="state.parabola.sc=parseFloat(this.value)||0; render()"></div>
+          </div>
+        `;
+      }
+
+      html += `
+        <div id="parabolaEqReadout" class="info-box"></div>
+        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="field"><label>x min</label><input type="number" value="${p.xMin}" oninput="state.parabola.xMin=+this.value||-6; render()"></div>
+          <div class="field"><label>x max</label><input type="number" value="${p.xMax}" oninput="state.parabola.xMax=+this.value||6; render()"></div>
+          <div class="field"><label>y min</label><input type="number" value="${p.yMin}" oninput="state.parabola.yMin=+this.value||-6; render()"></div>
+          <div class="field"><label>y max</label><input type="number" value="${p.yMax}" oninput="state.parabola.yMax=+this.value||6; render()"></div>
+        </div>
+        <div class="check-row">
+          <label class="check-label"><input type="checkbox" ${p.showCurve?'checked':''} onchange="state.parabola.showCurve=this.checked; render()"> Show curve (uncheck for student sketch!)</label>
+          <label class="check-label"><input type="checkbox" ${p.showKeyPoints?'checked':''} onchange="state.parabola.showKeyPoints=this.checked; render()"> Key points</label>
+          <label class="check-label"><input type="checkbox" ${p.showPointCoords?'checked':''} onchange="state.parabola.showPointCoords=this.checked; render()"> Coordinate labels</label>
+          <label class="check-label"><input type="checkbox" ${p.showAxisSym?'checked':''} onchange="state.parabola.showAxisSym=this.checked; render()"> Axis of symmetry</label>
+          <label class="check-label"><input type="checkbox" ${p.showArrows?'checked':''} onchange="state.parabola.showArrows=this.checked; render()"> Curve arrows</label>
+          <label class="check-label"><input type="checkbox" ${p.showGridNumbers?'checked':''} onchange="state.parabola.showGridNumbers=this.checked; render()"> Axis numbers</label>
+        </div>
+      `;
+      return html;
+    }
+
+    function buildGridControls() {
+      const g = state.grid;
+      return `
+        <div>
+          <p class="section-title">Blank Coordinate Grid Settings</p>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>x min</label><input type="number" value="${g.xMin}" oninput="state.grid.xMin=+this.value||-6; render()"></div>
+          <div class="field"><label>x max</label><input type="number" value="${g.xMax}" oninput="state.grid.xMax=+this.value||6; render()"></div>
+          <div class="field"><label>y min</label><input type="number" value="${g.yMin}" oninput="state.grid.yMin=+this.value||-6; render()"></div>
+          <div class="field"><label>y max</label><input type="number" value="${g.yMax}" oninput="state.grid.yMax=+this.value||6; render()"></div>
+          <div class="field"><label>Grid Step</label><input type="number" min="0.5" step="0.5" value="${g.step}" oninput="state.grid.step=+this.value||1; render()"></div>
+          <div class="field"><label>Number Step</label><input type="number" min="1" step="1" value="${g.labelStep}" oninput="state.grid.labelStep=+this.value||1; render()"></div>
+          <div class="field"><label>x-axis Label</label><input type="text" value="${esc(g.xAxisLabel)}" oninput="state.grid.xAxisLabel=this.value; render()"></div>
+          <div class="field"><label>y-axis Label</label><input type="text" value="${esc(g.yAxisLabel)}" oninput="state.grid.yAxisLabel=this.value; render()"></div>
+        </div>
+        <div class="check-row">
+          <label class="check-label"><input type="checkbox" ${g.showNumbers?'checked':''} onchange="state.grid.showNumbers=this.checked; render()"> Axis numbers</label>
+          <label class="check-label"><input type="checkbox" ${g.showMinor?'checked':''} onchange="state.grid.showMinor=this.checked; render()"> Grid lines</label>
+        </div>
+      `;
+    }
+
+    // ===========================
+    // Shared SVG Grid Helper
+    // ===========================
+    function drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, step = 1, labelStep = 1, showNumbers = true, showMinor = true, xLbl = 'x', yLbl = 'y') {
+      const pad = 34;
+      const plotW = cfg.w - pad * 2;
+      const plotH = cfg.h - pad * 2;
+      const xSpan = Math.max(1, xMax - xMin);
+      const ySpan = Math.max(1, yMax - yMin);
+
+      const toX = x => pad + ((x - xMin) / xSpan) * plotW;
+      const toY = y => pad + ((yMax - y) / ySpan) * plotH;
+
+      let out = '';
+      // Minor gridlines
+      if (showMinor) {
+        for (let x = Math.ceil(xMin / step) * step; x <= xMax + 1e-9; x += step) {
+          const px = toX(x).toFixed(2);
+          out += `<line x1="${px}" y1="${pad}" x2="${px}" y2="${pad + plotH}" stroke="${cfg.gridMinor}" stroke-width="1" />`;
+        }
+        for (let y = Math.ceil(yMin / step) * step; y <= yMax + 1e-9; y += step) {
+          const py = toY(y).toFixed(2);
+          out += `<line x1="${pad}" y1="${py}" x2="${pad + plotW}" y2="${py}" stroke="${cfg.gridMinor}" stroke-width="1" />`;
+        }
+      }
+
+      // Axes (clamped if 0 is outside range)
+      const axisY = (yMin <= 0 && yMax >= 0) ? toY(0) : (yMax < 0 ? pad : pad + plotH);
+      const axisX = (xMin <= 0 && xMax >= 0) ? toX(0) : (xMax < 0 ? pad + plotW : pad);
+
+      out += `<line x1="${pad - 8}" y1="${axisY.toFixed(2)}" x2="${pad + plotW + 10}" y2="${axisY.toFixed(2)}" stroke="${cfg.gridAxis}" stroke-width="${Math.max(1.5, cfg.sw * 0.85)}" marker-start="url(#arrow-axis-rev)" marker-end="url(#arrow-axis)" />`;
+      out += `<line x1="${axisX.toFixed(2)}" y1="${pad + plotH + 8}" x2="${axisX.toFixed(2)}" y2="${pad - 10}" stroke="${cfg.gridAxis}" stroke-width="${Math.max(1.5, cfg.sw * 0.85)}" marker-start="url(#arrow-axis-rev)" marker-end="url(#arrow-axis)" />`;
+
+      // Axis labels
+      if (xLbl) {
+        out += `<text x="${pad + plotW + 16}" y="${(axisY + 4).toFixed(2)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(xLbl)}</text>`;
+      }
+      if (yLbl) {
+        out += `<text x="${(axisX + 6).toFixed(2)}" y="${pad - 14}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(yLbl)}</text>`;
+      }
+
+      // Tick numbers
+      if (showNumbers) {
+        const numSize = Math.max(9, cfg.fs - 3);
+        for (let x = Math.ceil(xMin / labelStep) * labelStep; x <= xMax + 1e-9; x += labelStep) {
+          if (Math.abs(x) < 1e-9) continue;
+          const px = toX(x);
+          out += `<line x1="${px.toFixed(2)}" y1="${(axisY - 3).toFixed(2)}" x2="${px.toFixed(2)}" y2="${(axisY + 3).toFixed(2)}" stroke="${cfg.gridAxis}" stroke-width="1.2" />`;
+          out += `<text x="${px.toFixed(2)}" y="${(axisY + numSize + 4).toFixed(2)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${numSize}" fill="${cfg.muted}">${fmtNum(x)}</text>`;
+        }
+        for (let y = Math.ceil(yMin / labelStep) * labelStep; y <= yMax + 1e-9; y += labelStep) {
+          if (Math.abs(y) < 1e-9) continue;
+          const py = toY(y);
+          out += `<line x1="${(axisX - 3).toFixed(2)}" y1="${py.toFixed(2)}" x2="${(axisX + 3).toFixed(2)}" y2="${py.toFixed(2)}" stroke="${cfg.gridAxis}" stroke-width="1.2" />`;
+          out += `<text x="${(axisX - 6).toFixed(2)}" y="${(py + numSize * 0.35).toFixed(2)}" text-anchor="end" font-family="Arial, sans-serif" font-size="${numSize}" fill="${cfg.muted}">${fmtNum(y)}</text>`;
+        }
+      }
+
+      return { svg: out, toX, toY, pad, plotW, plotH };
+    }
+
+    // ===========================
+    // Triangle Renderer
+    // ===========================
+    function renderTriangleSVG(cfg) {
+      const t = state.tri;
+      let inner = '';
+
+      if (t.mode === 'right') {
+        // Vertices in local space: C = (0,0) right angle, A = (base, 0), B = (0, -height)
+        const rawPts = [
+          { x: 0, y: 0, lbl: t.vC },
+          { x: t.base, y: 0, lbl: t.vA },
+          { x: 0, y: -t.height, lbl: t.vB }
+        ];
+        const rad = (t.rotation * Math.PI) / 180;
+        const rotPts = rawPts.map(p => ({
+          x: p.x * Math.cos(rad) - p.y * Math.sin(rad),
+          y: p.x * Math.sin(rad) + p.y * Math.cos(rad),
+          lbl: p.lbl
+        }));
+
+        const { pts, cx, cy } = fitPolygonToCanvas(rotPts, cfg.w, cfg.h, 54);
+        const [C, A, B] = pts;
+
+        inner += `<polygon points="${C.x.toFixed(1)},${C.y.toFixed(1)} ${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+
+        if (t.showRightAngle) {
+          inner += drawRightAngleBox(C, A, B, 14, cfg.ink, Math.max(1.3, cfg.sw * 0.75));
+        }
+
+        if (t.showAngleArcs) {
+          if (t.angleA) inner += drawAngleArcAndLabel(A, C, B, t.angleA, cfg);
+          if (t.angleB) inner += drawAngleArcAndLabel(B, A, C, t.angleB, cfg);
+        }
+
+        // Edge labels with outward normal
+        if (t.labelBase) inner += drawEdgeLabel(C, A, { x: cx, y: cy }, t.labelBase, cfg);
+        if (t.labelHeight) inner += drawEdgeLabel(C, B, { x: cx, y: cy }, t.labelHeight, cfg);
+        if (t.labelHyp) inner += drawEdgeLabel(A, B, { x: cx, y: cy }, t.labelHyp, cfg);
+
+        // Vertex labels
+        pts.forEach(p => {
+          if (p.lbl) inner += drawVertexLabel(p, { x: cx, y: cy }, p.lbl, cfg);
+        });
+
+      } else if (t.mode === 'oblique') {
+        const a = Math.max(1, t.obSideA);
+        const b = Math.max(1, t.obSideB);
+        const angRad = (Math.min(160, Math.max(15, t.obAngleC)) * Math.PI) / 180;
+
+        // C = (0,0), B = (a, 0), A = (b*cos(C), -b*sin(C))
+        const rawPts = [
+          { x: b * Math.cos(angRad), y: -b * Math.sin(angRad), lbl: t.vA }, // Top A
+          { x: a, y: 0, lbl: t.vB }, // Right B
+          { x: 0, y: 0, lbl: t.vC }  // Left C
+        ];
+        const { pts, cx, cy } = fitPolygonToCanvas(rawPts, cfg.w, cfg.h, 54);
+        const [A, B, C] = pts;
+
+        inner += `<polygon points="${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)} ${C.x.toFixed(1)},${C.y.toFixed(1)}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+
+        if (t.obAngLabelA) inner += drawAngleArcAndLabel(A, C, B, t.obAngLabelA, cfg);
+        if (t.obAngLabelB) inner += drawAngleArcAndLabel(B, A, C, t.obAngLabelB, cfg);
+        if (t.obAngLabelC) inner += drawAngleArcAndLabel(C, B, A, t.obAngLabelC, cfg);
+
+        if (t.obLabelA) inner += drawEdgeLabel(C, B, { x: cx, y: cy }, t.obLabelA, cfg);
+        if (t.obLabelB) inner += drawEdgeLabel(C, A, { x: cx, y: cy }, t.obLabelB, cfg);
+        if (t.obLabelC) inner += drawEdgeLabel(A, B, { x: cx, y: cy }, t.obLabelC, cfg);
+
+        if (t.tickA) inner += drawTickMark(C, B, cfg);
+        if (t.tickB) inner += drawTickMark(C, A, cfg);
+        if (t.tickC) inner += drawTickMark(A, B, cfg);
+
+        pts.forEach(p => {
+          if (p.lbl) inner += drawVertexLabel(p, { x: cx, y: cy }, p.lbl, cfg);
+        });
+
+      } else {
+        // Similar triangles side-by-side
+        const s = t.simScale;
+        const smallRaw = [{ x: 0.4, y: -1 }, { x: 1.4, y: 0 }, { x: 0, y: 0 }];
+        const bigRaw = smallRaw.map(p => ({ x: p.x * s, y: p.y * s }));
+
+        const leftW = cfg.w * 0.42;
+        const rightW = cfg.w * 0.54;
+        const f1 = fitPolygonToCanvas(smallRaw, leftW, cfg.h, 42, 0, 0);
+        const f2 = fitPolygonToCanvas(bigRaw, rightW, cfg.h, 42, leftW + 10, 0);
+
+        const s1 = t.simLabel1.split(',').map(x => x.trim());
+        const s2 = t.simLabel2.split(',').map(x => x.trim());
+
+        const [A1, B1, C1] = f1.pts;
+        const [A2, B2, C2] = f2.pts;
+
+        inner += `<polygon points="${A1.x.toFixed(1)},${A1.y.toFixed(1)} ${B1.x.toFixed(1)},${B1.y.toFixed(1)} ${C1.x.toFixed(1)},${C1.y.toFixed(1)}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += `<polygon points="${A2.x.toFixed(1)},${A2.y.toFixed(1)} ${B2.x.toFixed(1)},${B2.y.toFixed(1)} ${C2.x.toFixed(1)},${C2.y.toFixed(1)}" fill="none" stroke="${cfg.secondary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+
+        if (s1[0]) inner += drawEdgeLabel(C1, B1, { x: f1.cx, y: f1.cy }, s1[0], cfg);
+        if (s1[1]) inner += drawEdgeLabel(C1, A1, { x: f1.cx, y: f1.cy }, s1[1], cfg);
+        if (s1[2]) inner += drawEdgeLabel(A1, B1, { x: f1.cx, y: f1.cy }, s1[2], cfg);
+
+        if (s2[0]) inner += drawEdgeLabel(C2, B2, { x: f2.cx, y: f2.cy }, s2[0], cfg);
+        if (s2[1]) inner += drawEdgeLabel(C2, A2, { x: f2.cx, y: f2.cy }, s2[1], cfg);
+        if (s2[2]) inner += drawEdgeLabel(A2, B2, { x: f2.cx, y: f2.cy }, s2[2], cfg);
+
+        const vLabels1 = ['A', 'B', 'C'];
+        const vLabels2 = ['D', 'E', 'F'];
+        f1.pts.forEach((p, i) => inner += drawVertexLabel(p, { x: f1.cx, y: f1.cy }, vLabels1[i], cfg));
+        f2.pts.forEach((p, i) => inner += drawVertexLabel(p, { x: f2.cx, y: f2.cy }, vLabels2[i], cfg));
+
+        inner += drawAngleArcAndLabel(C1, B1, A1, '', cfg);
+        inner += drawAngleArcAndLabel(C2, B2, A2, '', cfg);
+      }
+
+      return inner;
+    }
+
+    function fitPolygonToCanvas(rawPts, w, h, pad, offsetX = 0, offsetY = 0) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      rawPts.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+      const bw = Math.max(0.01, maxX - minX);
+      const bh = Math.max(0.01, maxY - minY);
+      const scale = Math.min((w - pad * 2) / bw, (h - pad * 2) / bh);
+      const cxRaw = (minX + maxX) / 2;
+      const cyRaw = (minY + maxY) / 2;
+      const cxTarget = offsetX + w / 2;
+      const cyTarget = offsetY + h / 2;
+
+      const pts = rawPts.map(p => ({
+        x: cxTarget + (p.x - cxRaw) * scale,
+        y: cyTarget + (p.y - cyRaw) * scale,
+        lbl: p.lbl
+      }));
+      const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+      return { pts, cx, cy };
+    }
+
+    function drawRightAngleBox(V, P1, P2, size, color, sw) {
+      const v1 = normalize(P1.x - V.x, P1.y - V.y);
+      const v2 = normalize(P2.x - V.x, P2.y - V.y);
+      const p1 = { x: V.x + v1.x * size, y: V.y + v1.y * size };
+      const p2 = { x: p1.x + v2.x * size, y: p1.y + v2.y * size };
+      const p3 = { x: V.x + v2.x * size, y: V.y + v2.y * size };
+      return `<polyline points="${p1.x.toFixed(1)},${p1.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)} ${p3.x.toFixed(1)},${p3.y.toFixed(1)}" fill="none" stroke="${color}" stroke-width="${sw}" />`;
+    }
+
+    function drawAngleArcAndLabel(V, P1, P2, label, cfg) {
+      const r = 22;
+      const a1 = Math.atan2(P1.y - V.y, P1.x - V.x);
+      const a2 = Math.atan2(P2.y - V.y, P2.x - V.x);
+      let diff = a2 - a1;
+      while (diff <= -Math.PI) diff += 2 * Math.PI;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      const sweep = diff >= 0 ? 1 : 0;
+
+      const sx = V.x + r * Math.cos(a1);
+      const sy = V.y + r * Math.sin(a1);
+      const ex = V.x + r * Math.cos(a2);
+      const ey = V.y + r * Math.sin(a2);
+
+      let out = `<path d="M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r} ${r} 0 0 ${sweep} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${cfg.ink}" stroke-width="${Math.max(1.2, cfg.sw * 0.7)}" />`;
+      if (label) {
+        const mid = a1 + diff / 2;
+        const lr = r + cfg.fs * 1.1;
+        const lx = V.x + lr * Math.cos(mid);
+        const ly = V.y + lr * Math.sin(mid) + cfg.fs * 0.32;
+        out += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs - 1}" fill="${cfg.ink}">${esc(label)}</text>`;
+      }
+      return out;
+    }
+
+    function drawEdgeLabel(P1, P2, centroid, label, cfg) {
+      const mx = (P1.x + P2.x) / 2;
+      const my = (P1.y + P2.y) / 2;
+      let nx = -(P2.y - P1.y);
+      let ny = P2.x - P1.x;
+      const len = Math.hypot(nx, ny) || 1;
+      nx /= len; ny /= len;
+      // Ensure outward from centroid
+      if (nx * (mx - centroid.x) + ny * (my - centroid.y) < 0) {
+        nx = -nx; ny = -ny;
+      }
+      const dist = cfg.fs * 1.15 + 4;
+      const lx = mx + nx * dist;
+      const ly = my + ny * dist + cfg.fs * 0.35;
+      return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(label)}</text>`;
+    }
+
+    function drawVertexLabel(P, centroid, label, cfg) {
+      const dir = normalize(P.x - centroid.x, P.y - centroid.y);
+      const dist = cfg.fs * 1.1 + 4;
+      const lx = P.x + dir.x * dist;
+      const ly = P.y + dir.y * dist + cfg.fs * 0.35;
+      return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(label)}</text>`;
+    }
+
+    function drawTickMark(P1, P2, cfg) {
+      const mx = (P1.x + P2.x) / 2;
+      const my = (P1.y + P2.y) / 2;
+      const n = normalize(-(P2.y - P1.y), P2.x - P1.x);
+      const len = 6;
+      return `<line x1="${(mx - n.x * len).toFixed(1)}" y1="${(my - n.y * len).toFixed(1)}" x2="${(mx + n.x * len).toFixed(1)}" y2="${(my + n.y * len).toFixed(1)}" stroke="${cfg.ink}" stroke-width="${Math.max(1.5, cfg.sw * 0.8)}" />`;
+    }
+
+    function normalize(x, y) {
+      const l = Math.hypot(x, y) || 1;
+      return { x: x / l, y: y / l };
+    }
+
+    // ===========================
+    // Lines Renderer
+    // ===========================
+    function renderLinesSVG(cfg) {
+      const l = state.lines;
+      let inner = '';
+
+      if (l.mode === 'transversal') {
+        const y1 = cfg.h * 0.34;
+        const y2 = cfg.h * 0.68;
+        const xLeft = 36;
+        const xRight = cfg.w - 36;
+
+        // Parallel horizontal lines with arrows
+        inner += `<line x1="${xLeft}" y1="${y1}" x2="${xRight}" y2="${y1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" marker-start="url(#arrow-line-rev)" marker-end="url(#arrow-line)" />`;
+        inner += `<line x1="${xLeft}" y1="${y2}" x2="${xRight}" y2="${y2}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" marker-start="url(#arrow-line-rev)" marker-end="url(#arrow-line)" />`;
+
+        if (l.showParallelMarkers) {
+          const mx = cfg.w * 0.78;
+          inner += drawChevron(mx, y1, cfg.primary, cfg.sw);
+          inner += drawChevron(mx, y2, cfg.primary, cfg.sw);
+        }
+
+        // Transversal passing through center
+        const cx = cfg.w * 0.46;
+        const cy = (y1 + y2) / 2;
+        const rad = (l.transAngle * Math.PI) / 180;
+        const dx = Math.cos(rad);
+        const dy = -Math.sin(rad);
+        const tLen = Math.min(cfg.w, cfg.h) * 0.44;
+        const tx1 = cx - dx * tLen, ty1 = cy - dy * tLen;
+        const tx2 = cx + dx * tLen, ty2 = cy + dy * tLen;
+
+        inner += `<line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="${cfg.secondary}" stroke-width="${cfg.sw}" marker-start="url(#arrow-line-rev)" marker-end="url(#arrow-line)" />`;
+
+        // Intersection points
+        const ix1 = cx + ((y1 - cy) / dy) * dx;
+        const ix2 = cx + ((y2 - cy) / dy) * dx;
+
+        const labelsTop = [l.ang1, l.ang2, l.ang3, l.ang4];
+        const labelsBot = [l.ang5, l.ang6, l.ang7, l.ang8];
+        const offsets = [
+          { ox: -26, oy: -14 }, // TL
+          { ox: 26, oy: -14 },  // TR
+          { ox: -26, oy: 22 },  // BL
+          { ox: 26, oy: 22 },   // BR
+        ];
+
+        labelsTop.forEach((lbl, idx) => {
+          if (lbl) {
+            const o = offsets[idx];
+            inner += `<text x="${(ix1 + o.ox).toFixed(1)}" y="${(y1 + o.oy).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(lbl)}</text>`;
+          }
+        });
+        labelsBot.forEach((lbl, idx) => {
+          if (lbl) {
+            const o = offsets[idx];
+            inner += `<text x="${(ix2 + o.ox).toFixed(1)}" y="${(y2 + o.oy).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(lbl)}</text>`;
+          }
+        });
+
+      } else {
+        // Coordinate Grid Lines (Parallel / Perpendicular / System)
+        const gMin = l.gridMin;
+        const gMax = Math.max(gMin + 2, l.gridMax);
+        const grid = drawCartesianGrid(cfg, gMin, gMax, gMin, gMax, 1, 1, l.showGridNumbers, true, 'x', 'y');
+        inner += grid.svg;
+
+        const m1 = parseFrac(l.m1, 2);
+        const b1 = parseFrac(l.b1, 1);
+        const isParallel = l.mode === 'grid_parallel';
+        const isPerp = l.mode === 'grid_perp';
+        const m2 = isParallel ? m1 : (isPerp ? (Math.abs(m1) < 1e-9 ? 1e9 : -1 / m1) : parseFrac(l.m2, -1));
+        const b2 = parseFrac(l.b2, -2);
+
+        const clipId = 'grid-clip-' + Math.floor(Math.random() * 100000);
+        inner += `<defs><clipPath id="${clipId}"><rect x="${grid.pad}" y="${grid.pad}" width="${grid.plotW}" height="${grid.plotH}" /></clipPath></defs>`;
+
+        const drawClippedLine = (m, b, color, labelText) => {
+          const x1 = gMin - 1, y1 = m * x1 + b;
+          const x2 = gMax + 1, y2 = m * x2 + b;
+          let s = `<g clip-path="url(#${clipId})">`;
+          s += `<line x1="${grid.toX(x1).toFixed(1)}" y1="${grid.toY(y1).toFixed(1)}" x2="${grid.toX(x2).toFixed(1)}" y2="${grid.toY(y2).toFixed(1)}" stroke="${color}" stroke-width="${cfg.sw}" />`;
+          s += `</g>`;
+          if (l.showInterceptDots && b >= gMin && b <= gMax) {
+            s += `<circle cx="${grid.toX(0).toFixed(1)}" cy="${grid.toY(b).toFixed(1)}" r="4" fill="${color}" />`;
+          }
+          if (l.showEqLabels && labelText) {
+            // Place label near right-ish visible point
+            let lx = gMax - 1.2;
+            let ly = m * lx + b;
+            if (ly > gMax - 0.6) { lx = (gMax - 0.8 - b) / (m || 1); ly = m * lx + b; }
+            if (ly < gMin + 0.6) { lx = (gMin + 0.8 - b) / (m || 1); ly = m * lx + b; }
+            lx = Math.max(gMin + 0.8, Math.min(gMax - 0.8, lx));
+            ly = Math.max(gMin + 0.8, Math.min(gMax - 0.8, ly));
+            s += `<text x="${(grid.toX(lx) + 6).toFixed(1)}" y="${(grid.toY(ly) - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${color}">${esc(labelText)}</text>`;
+          }
+          return s;
+        };
+
+        inner += drawClippedLine(m1, b1, cfg.primary, l.labelLine1);
+        inner += drawClippedLine(m2, b2, cfg.secondary, l.labelLine2);
+
+        // Intersection & Perpendicular Square
+        if (!isParallel && Math.abs(m1 - m2) > 1e-6) {
+          const ix = (b2 - b1) / (m1 - m2);
+          const iy = m1 * ix + b1;
+          if (ix >= gMin && ix <= gMax && iy >= gMin && iy <= gMax) {
+            const px = grid.toX(ix);
+            const py = grid.toY(iy);
+            if (isPerp && l.showPerpSquare) {
+              const V = { x: px, y: py };
+              const P1 = { x: grid.toX(ix + 1), y: grid.toY(iy + m1) };
+              const P2 = { x: grid.toX(ix + 1), y: grid.toY(iy + m2) };
+              inner += drawRightAngleBox(V, P1, P2, 12, cfg.ink, Math.max(1.3, cfg.sw * 0.75));
+            }
+            if (l.showIntersection) {
+              inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.5" fill="${cfg.ink}" />`;
+            }
+          }
+        }
+      }
+
+      return inner;
+    }
+
+    function drawChevron(x, y, color, sw) {
+      return `<polyline points="${x - 6},${y - 5} ${x + 2},${y} ${x - 6},${y + 5}" fill="none" stroke="${color}" stroke-width="${Math.max(1.5, sw * 0.85)}" />`;
+    }
+
+    // ===========================
+    // Parabola Renderer
+    // ===========================
+    function renderParabolaSVG(cfg) {
+      const p = state.parabola;
+      let a = 1, b = 0, c = 0;
+      let h = 0, k = 0;
+      let specialPts = [];
+      let alertMsg = '';
+      let eqText = '';
+
+      if (p.mode === 'given_vertex_pt') {
+        h = p.gvH; k = p.gvK;
+        const dx = p.gvPx - h;
+        if (Math.abs(dx) < 1e-6) {
+          alertMsg = 'Given point cannot have the same x-coordinate as the vertex.';
+          a = 1;
+        } else {
+          a = (p.gvPy - k) / (dx * dx);
+        }
+        b = -2 * a * h;
+        c = a * h * h + k;
+        specialPts.push({ x: h, y: k, tag: 'Vertex' });
+        specialPts.push({ x: p.gvPx, y: p.gvPy, tag: 'Point' });
+        eqText = `y = ${fmtNum(a)}(x ${h >= 0 ? '- ' + fmtNum(h) : '+ ' + fmtNum(-h)})² ${k >= 0 ? '+ ' + fmtNum(k) : '- ' + fmtNum(-k)}`;
+      } else if (p.mode === 'given_zeros_pt') {
+        const r = p.gzR, s = p.gzS;
+        const denom = (p.gzPx - r) * (p.gzPx - s);
+        if (Math.abs(denom) < 1e-6) {
+          alertMsg = 'Given point cannot be at one of the x-intercepts.';
+          a = 1;
+        } else {
+          a = p.gzPy / denom;
+        }
+        b = -a * (r + s);
+        c = a * r * s;
+        h = (r + s) / 2;
+        k = a * (h - r) * (h - s);
+        specialPts.push({ x: r, y: 0, tag: 'Zero' });
+        specialPts.push({ x: s, y: 0, tag: 'Zero' });
+        specialPts.push({ x: p.gzPx, y: p.gzPy, tag: 'Point' });
+        eqText = `y = ${fmtNum(a)}(x ${r >= 0 ? '- ' + fmtNum(r) : '+ ' + fmtNum(-r)})(x ${s >= 0 ? '- ' + fmtNum(s) : '+ ' + fmtNum(-s)})`;
+      } else if (p.mode === 'given_vertex_yint') {
+        h = p.gyH; k = p.gyK;
+        if (Math.abs(h) < 1e-6) {
+          alertMsg = 'Vertex h cannot be 0 when also specifying a separate y-intercept.';
+          a = 1;
+        } else {
+          a = (p.gyC - k) / (h * h);
+        }
+        b = -2 * a * h;
+        c = p.gyC;
+        specialPts.push({ x: h, y: k, tag: 'Vertex' });
+        specialPts.push({ x: 0, y: p.gyC, tag: 'y-int' });
+        eqText = `y = ${fmtNum(a)}(x ${h >= 0 ? '- ' + fmtNum(h) : '+ ' + fmtNum(-h)})² ${k >= 0 ? '+ ' + fmtNum(k) : '- ' + fmtNum(-k)}`;
+      } else if (p.mode === 'vertex_form') {
+        a = p.a; h = p.h; k = p.k;
+        b = -2 * a * h;
+        c = a * h * h + k;
+        specialPts.push({ x: h, y: k, tag: 'Vertex' });
+        eqText = `y = ${fmtNum(a)}(x ${h >= 0 ? '- ' + fmtNum(h) : '+ ' + fmtNum(-h)})² ${k >= 0 ? '+ ' + fmtNum(k) : '- ' + fmtNum(-k)}`;
+      } else if (p.mode === 'factored_form') {
+        a = p.fa;
+        b = -a * (p.r + p.s);
+        c = a * p.r * p.s;
+        h = (p.r + p.s) / 2;
+        k = a * (h - p.r) * (h - p.s);
+        specialPts.push({ x: p.r, y: 0, tag: 'Zero' }, { x: p.s, y: 0, tag: 'Zero' }, { x: h, y: k, tag: 'Vertex' });
+        eqText = `y = ${fmtNum(a)}(x ${p.r >= 0 ? '- ' + fmtNum(p.r) : '+ ' + fmtNum(-p.r)})(x ${p.s >= 0 ? '- ' + fmtNum(p.s) : '+ ' + fmtNum(-p.s)})`;
+      } else {
+        a = p.sa; b = p.sb; c = p.sc;
+        h = a !== 0 ? -b / (2 * a) : 0;
+        k = a * h * h + b * h + c;
+        specialPts.push({ x: h, y: k, tag: 'Vertex' }, { x: 0, y: c, tag: 'y-int' });
+        eqText = `y = ${fmtNum(a)}x² ${b >= 0 ? '+ ' + fmtNum(b) : '- ' + fmtNum(-b)}x ${c >= 0 ? '+ ' + fmtNum(c) : '- ' + fmtNum(-c)}`;
+      }
+
+      setAlert(alertMsg);
+      const readout = document.getElementById('parabolaEqReadout');
+      if (readout) readout.textContent = eqText;
+
+      const xMin = p.xMin, xMax = Math.max(p.xMin + 2, p.xMax);
+      const yMin = p.yMin, yMax = Math.max(p.yMin + 2, p.yMax);
+
+      const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 1, 1, p.showGridNumbers, true, 'x', 'y');
+      let inner = grid.svg;
+
+      // Axis of symmetry
+      if (p.showAxisSym && h >= xMin && h <= xMax) {
+        const axX = grid.toX(h).toFixed(1);
+        inner += `<line x1="${axX}" y1="${grid.pad}" x2="${axX}" y2="${grid.pad + grid.plotH}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+      }
+
+      // Parabola curve clipped cleanly inside grid
+      if (p.showCurve && Math.abs(a) > 1e-6) {
+        const segPts = [];
+        const steps = 180;
+        for (let i = 0; i <= steps; i++) {
+          const x = xMin + (i / steps) * (xMax - xMin);
+          const y = a * x * x + b * x + c;
+          if (y >= yMin - 0.15 && y <= yMax + 0.15) {
+            segPts.push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+          }
+        }
+        if (segPts.length > 1) {
+          const markerAttr = p.showArrows ? `marker-start="url(#arrow-curve-rev)" marker-end="url(#arrow-curve)"` : '';
+          inner += `<polyline points="${segPts.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" stroke-linejoin="round" ${markerAttr} />`;
+        }
+      }
+
+      // Key points
+      if (p.showKeyPoints) {
+        specialPts.forEach(pt => {
+          if (pt.x >= xMin && pt.x <= xMax && pt.y >= yMin && pt.y <= yMax) {
+            const px = grid.toX(pt.x);
+            const py = grid.toY(pt.y);
+            inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+            if (p.showPointCoords) {
+              const lbl = `(${fmtNum(pt.x)}, ${fmtNum(pt.y)})`;
+              const dy = pt.y >= k ? -10 : 16;
+              inner += `<text x="${(px + 6).toFixed(1)}" y="${(py + dy).toFixed(1)}" font-family="Arial, sans-serif" font-weight="700" font-size="${Math.max(10, cfg.fs - 2)}" fill="${cfg.ink}">${lbl}</text>`;
+            }
+          }
+        });
+      }
+
+      return inner;
+    }
+
+    // ===========================
+    // Blank Grid Renderer
+    // ===========================
+    function renderBlankGridSVG(cfg) {
+      setAlert('');
+      const g = state.grid;
+      const grid = drawCartesianGrid(
+        cfg,
+        g.xMin, Math.max(g.xMin + 1, g.xMax),
+        g.yMin, Math.max(g.yMin + 1, g.yMax),
+        Math.max(0.5, g.step),
+        Math.max(1, g.labelStep),
+        g.showNumbers,
+        g.showMinor,
+        g.xAxisLabel,
+        g.yAxisLabel
+      );
+      return grid.svg;
+    }
+
+    // ===========================
+    // Master Render
+    // ===========================
+    function render() {
+      const cfg = getGlobalStyle();
+      setAlert('');
+
+      let content = '';
+      if (state.category === 'triangle') content = renderTriangleSVG(cfg);
+      else if (state.category === 'lines') content = renderLinesSVG(cfg);
+      else if (state.category === 'parabola') content = renderParabolaSVG(cfg);
+      else content = renderBlankGridSVG(cfg);
+
+      const bgRect = cfg.whiteBg
+        ? `<rect x="0" y="0" width="${cfg.w}" height="${cfg.h}" fill="#ffffff" />`
+        : '';
+
+      const defs = `
+        <defs>
+          <marker id="arrow-axis" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="${cfg.gridAxis}" />
+          </marker>
+          <marker id="arrow-axis-rev" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 10 1 L 0 5 L 10 9 z" fill="${cfg.gridAxis}" />
+          </marker>
+          <marker id="arrow-line" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="${cfg.primary}" />
+          </marker>
+          <marker id="arrow-line-rev" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 10 1 L 0 5 L 10 9 z" fill="${cfg.primary}" />
+          </marker>
+          <marker id="arrow-curve" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="${cfg.primary}" />
+          </marker>
+          <marker id="arrow-curve-rev" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+            <path d="M 10 1.5 L 1 5 L 10 8.5 z" fill="${cfg.primary}" />
+          </marker>
+        </defs>
+      `.trim();
+
+      currentSvgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${cfg.w}" height="${cfg.h}" viewBox="0 0 ${cfg.w} ${cfg.h}">\n${defs}\n${bgRect}\n${content}\n</svg>`;
+
+      document.getElementById('svgPreview').innerHTML = currentSvgString;
+      document.getElementById('svgCodeOutput').textContent = currentSvgString;
+      document.getElementById('statusInfo').textContent = `Vector SVG • ${cfg.w}×${cfg.h}px • ${(currentSvgString.length / 1024).toFixed(1)} KB`;
+    }
+
+    // ===========================
+    // Copy & Download Actions
+    // ===========================
+    function showCopyFeedback(msg, btnId) {
+      const fb = document.getElementById('copyFeedback');
+      fb.textContent = msg;
+      fb.classList.add('show');
+      if (btnId) {
+        const btn = document.getElementById(btnId);
+        btn.classList.add('btn-success');
+        setTimeout(() => btn.classList.remove('btn-success'), 1600);
+      }
+      setTimeout(() => fb.classList.remove('show'), 2200);
+    }
+
+    async function copySvgCode() {
+      try {
+        await navigator.clipboard.writeText(currentSvgString);
+        showCopyFeedback('✓ Copied SVG code to clipboard!', 'btnCopySvg');
+      } catch (e) {
+        // Fallback textarea copy
+        const ta = document.createElement('textarea');
+        ta.value = currentSvgString;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showCopyFeedback('✓ Copied SVG code!', 'btnCopySvg');
+      }
+    }
+
+    async function copyHighResPngForDocs() {
+      const cfg = getGlobalStyle();
+      const scale = 3;
+      const b64 = btoa(unescape(encodeURIComponent(currentSvgString)));
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = cfg.w * scale;
+        canvas.height = cfg.h * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0, cfg.w, cfg.h);
+        canvas.toBlob(async (blob) => {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            showCopyFeedback('✓ Copied 3× Hi-Res image! Paste (Ctrl+V) into Google Docs.', 'btnCopyDocs');
+          } catch (err) {
+            showCopyFeedback('Clipboard image blocked by browser; use Download .SVG instead.', 'btnCopyDocs');
+          }
+        }, 'image/png');
+      };
+      img.src = `data:image/svg+xml;base64,${b64}`;
+    }
+
+    async function copySvgClipboardImage() {
+      const b64 = btoa(unescape(encodeURIComponent(currentSvgString)));
+      const htmlImg = `<img src="data:image/svg+xml;base64,${b64}" alt="MPM2D Math Diagram" />`;
+
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+        const items = {
+          'text/html': new Blob([htmlImg], { type: 'text/html' }),
+          'text/plain': new Blob([currentSvgString], { type: 'text/plain' })
+        };
+        const supportsSvgMime = typeof ClipboardItem.supports === 'function' && ClipboardItem.supports('image/svg+xml');
+        if (supportsSvgMime) {
+          items['image/svg+xml'] = new Blob([currentSvgString], { type: 'image/svg+xml' });
+        }
+        try {
+          await navigator.clipboard.write([new ClipboardItem(items)]);
+          showCopyFeedback(
+            supportsSvgMime
+              ? '✓ Copied SVG image + HTML to clipboard!'
+              : '✓ Copied SVG (HTML image + SVG code) to clipboard!',
+            'btnCopyImage'
+          );
+          return;
+        } catch (err) {
+          // Retry without image/svg+xml in case browser rejected it
+          if (items['image/svg+xml']) {
+            delete items['image/svg+xml'];
+            try {
+              await navigator.clipboard.write([new ClipboardItem(items)]);
+              showCopyFeedback('✓ Copied SVG (HTML image + SVG code) to clipboard!', 'btnCopyImage');
+              return;
+            } catch (err2) {}
+          }
+        }
+      }
+      await copySvgCode();
+      showCopyFeedback('✓ Copied SVG code to clipboard!', 'btnCopyImage');
+    }
+
+    function downloadSvg() {
+      const xmlSvg = `<?xml version="1.0" encoding="UTF-8"?>\n${currentSvgString}`;
+      const blob = new Blob([xmlSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mpm2d-${state.category}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showCopyFeedback('✓ Downloaded .svg file!');
+    }
+
+    function toggleCodeDrawer() {
+      const drawer = document.getElementById('codeDrawer');
+      const btn = document.getElementById('btnToggleCode');
+      const open = drawer.classList.toggle('open');
+      btn.textContent = open ? 'Hide SVG Code' : 'View SVG Code';
+    }
+
+    // Boot
+    buildControls();
+    render();
+  </script>
+</body>
+</html>
