@@ -1027,30 +1027,6 @@
       document.getElementById('statTallies').textContent = tallySum;
       document.getElementById('statLogs').textContent = obsSum;
 
-      let dailyLayout = localStorage.getItem('mpm2d_daily_layout') || 'grid';
-      let activeModalStudentId = null;
-
-      function setDailyLayout(mode) {
-        dailyLayout = mode === 'table' ? 'table' : 'grid';
-        localStorage.setItem('mpm2d_daily_layout', dailyLayout);
-        const gridBtn = document.getElementById('layoutBtn-grid');
-        const tableBtn = document.getElementById('layoutBtn-table');
-        if (gridBtn && tableBtn) {
-          if (dailyLayout === 'grid') {
-            gridBtn.classList.add('tab-active');
-            gridBtn.classList.remove('text-slate-700');
-            tableBtn.classList.remove('tab-active');
-            tableBtn.classList.add('text-slate-700');
-          } else {
-            tableBtn.classList.add('tab-active');
-            tableBtn.classList.remove('text-slate-700');
-            gridBtn.classList.remove('tab-active');
-            gridBtn.classList.add('text-slate-700');
-          }
-        }
-        renderCurrentView();
-      }
-
       if (state.currentView === 'daily') {
         const gridEl = document.getElementById('dailyGridContainer');
         const tableEl = document.getElementById('dailyTableContainer');
@@ -1072,6 +1048,30 @@
       if (activeModalStudentId) {
         renderStudentModalBody(activeModalStudentId);
       }
+    }
+
+    let dailyLayout = localStorage.getItem('mpm2d_daily_layout') || 'grid';
+    let activeModalStudentId = null;
+
+    function setDailyLayout(mode) {
+      dailyLayout = mode === 'table' ? 'table' : 'grid';
+      localStorage.setItem('mpm2d_daily_layout', dailyLayout);
+      const gridBtn = document.getElementById('layoutBtn-grid');
+      const tableBtn = document.getElementById('layoutBtn-table');
+      if (gridBtn && tableBtn) {
+        if (dailyLayout === 'grid') {
+          gridBtn.classList.add('tab-active');
+          gridBtn.classList.remove('text-slate-700');
+          tableBtn.classList.remove('tab-active');
+          tableBtn.classList.add('text-slate-700');
+        } else {
+          tableBtn.classList.add('tab-active');
+          tableBtn.classList.remove('text-slate-700');
+          gridBtn.classList.remove('tab-active');
+          gridBtn.classList.add('text-slate-700');
+        }
+      }
+      renderCurrentView();
     }
 
     function openStudentModal(studentId) {
