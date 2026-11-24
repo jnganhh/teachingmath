@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="A teacher workspace for MPM2D attendance, participation evidence, and Growing Success learning skills.">
+<title>MPM2D Attendance & Participation</title>
+<link rel="stylesheet" href="tracker.css">
+<script src="tracker.js" defer></script>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+<p class="course">MPM2D · Grade 10 Mathematics</p>
+<h1>Attendance &amp; Participation</h1>
+<p>Take attendance and capture what students do while the lesson is happening.</p>
+</div></header>
+<main class="wrap">
+<div class="period-bar"><label>Class period <select id="period"><option value="1">Period 1</option><option value="2">Period 2</option><option value="3">Period 3</option></select></label></div>
+<nav aria-label="Tracker views">
+<button type="button" data-view="today" aria-current="page">Today</button>
+<button type="button" data-view="history">Review by date</button>
+<button type="button" data-view="summary">Student review</button>
+<button type="button" data-view="guide">Look-fors</button>
+</nav>
+<p id="notice" role="status"></p>
+<section id="today">
+<section class="lesson panel" aria-labelledby="lesson-title">
+<div class="lesson-heading"><h2 id="lesson-title">Class session</h2><p id="roll-progress" aria-live="polite"></p></div>
+<div class="fields">
+<label>Class date <input id="class-date" type="date" required></label>
+<label>Activity <select id="session-activity"></select></label>
+<label>Look-for <select id="session-focus"></select></label>
+</div>
+<p id="focus-example" class="focus-example" hidden></p>
+</section>
+<div class="today-grid">
+<section class="panel" aria-labelledby="roll-title">
+<div class="roll-heading"><h2 id="roll-title">Attendance</h2><button id="mark-present" type="button">Mark remaining present</button></div>
+<div id="daily-totals" class="daily-totals"></div>
+<div class="roster-tools"><label>Find student <input id="student-search" type="search" autocomplete="off"></label>
+<div class="actions" aria-label="Roster layout"><button id="grid-view" type="button" aria-pressed="true">Grid</button><button id="table-view" type="button" aria-pressed="false">Table</button></div></div>
+<div id="student-grid" class="student-grid"></div>
+<div id="roster-table" class="table-wrap" hidden><table class="roll-table"><thead><tr><th scope="col">Student</th><th scope="col">Attendance</th><th scope="col">Evidence</th></tr></thead><tbody id="roll"></tbody></table></div>
+<details id="roster-settings"><summary>Add students</summary>
+<form id="roster-form">
+<label for="names">Names or identifiers, one per line</label>
+<textarea id="names" rows="3" required></textarea>
+<button class="primary">Add to roster</button>
+</form>
+</details>
+</section>
+<section class="panel quick-panel" aria-labelledby="quick-title">
+<h2 id="quick-title">Quick evidence</h2>
+<p id="capture-context" class="meta"></p>
+<form id="evidence-form">
+<label>Student <select name="student" required></select></label>
+<input type="hidden" name="date">
+<input type="hidden" name="activity">
+<label>What did the student say, write, show, or do?
+<textarea name="observation" rows="3" required></textarea></label>
+<details id="evidence-details"><summary>Tags and feedback</summary>
+<label>Participation criterion <select name="criterion"></select></label>
+<label>Learning skill / work habit <select name="skill"></select></label>
+<label>Feedback or next step <input name="feedback"></label>
+</details>
+<div class="actions"><button class="primary" type="submit">Save observation</button><button id="cancel-edit" type="button" hidden>Cancel edit</button></div>
+</form>
+<h3 id="history-title">Session observations</h3>
+<div id="today-observations"></div>
+</section>
+</div>
+</section>
+<section id="history" class="panel" hidden>
+<div class="split"><div><h2>Review by date</h2><p>See the attendance, homework, tallies, and observations for a class meeting.</p></div><label>Review date <input id="review-date" type="date"></label></div>
+<div class="table-wrap"><table><thead><tr><th>Student</th><th>Attendance</th><th>Homework</th><th>Device flag</th><th>Math tallies</th><th>Observations</th></tr></thead><tbody id="history-rows"></tbody></table></div>
+</section>
+<section id="summary" class="panel" hidden>
+<div class="split review-heading"><div><h2>Student review</h2><p>Review attendance and dated evidence before entering a mark.</p></div>
+<label>Student <select id="evidence-filter"></select></label></div>
+<div class="table-wrap"><table><thead><tr><th>Recorded</th><th>Present</th><th>Late</th><th>Excused</th><th>Unexcused</th><th>Unexcused rate</th><th>Math tallies</th><th>Mark /100</th><th>Course points /15</th></tr></thead><tbody id="summary-rows"></tbody></table></div>
+<p class="meta summary-note">Unexcused rate = unexcused absences ÷ recorded classes. Excused absences carry no penalty. Tallies provide context for review.</p>
+<details id="attendance-history"><summary>Attendance by date</summary><ul id="attendance-dates"></ul></details>
+<h3>Participation evidence</h3>
+<div id="observations"></div>
+</section>
+<section id="guide" class="panel" hidden>
+<h2>Classroom look-fors</h2>
+<p>Use the learning skills to name what you notice and give feedback. Use the participation criteria and attendance evidence to judge the course component.</p>
+<div class="guide-grid" id="skill-examples"></div>
+<h3>Participation criteria</h3>
+<div class="guide-grid" id="criterion-examples"></div>
+<h3>Provincial attendance and participation bands</h3>
+<div class="table-wrap"><table><thead><tr><th>Mark band</th><th>Unexcused absence rate</th><th>Participation pattern</th></tr></thead><tbody>
+<tr><td>Level 4 · 80–100%</td><td>0–2.5%</td><td>Consistent, with positive leadership</td></tr>
+<tr><td>Level 3 · 70–79%</td><td>2.5–5%</td><td>Generally demonstrates criteria</td></tr>
+<tr><td>Level 2 · 60–69%</td><td>5–7.5%</td><td>Occasionally demonstrates criteria</td></tr>
+<tr><td>Level 1 · 50–59%</td><td>7.5–10%</td><td>Infrequently demonstrates criteria</td></tr>
+<tr><td>Below Level 1 · Under 50%</td><td>Over 10%</td><td>Evidence shows criteria are unmet</td></tr>
+</tbody></table></div>
+<p>Use school guidance for shared cutoffs, late arrivals, and evidence across levels.</p>
+<a href="https://www.ontario.ca/page/growing-success-assessment-evaluation-and-reporting-ontario-schools-kindergarten-grade-12">Ontario Growing Success · September 2026 update</a>
+</section>
+<footer>
+<p>Records are stored in this browser. Use a school-approved device and keep exported records in school-approved storage.</p>
+<div class="actions"><button id="export">Download period backup</button><label class="button">Restore period backup <input id="import" type="file" accept=".json,application/json"></label></div>
+</footer>
+<dialog id="student-card" aria-labelledby="student-card-title">
+<div class="roll-heading"><h2 id="student-card-title"></h2><form method="dialog"><button aria-label="Close student card">Close</button></form></div>
+<label>Attendance <select id="card-attendance"></select></label>
+<label>Homework <select id="card-homework"><option value="">Unrecorded</option><option value="done">Done</option><option value="partial">Partial</option><option value="missing">Missing</option></select></label>
+<label class="check"><input id="card-device" type="checkbox"> Device use required a reminder</label>
+<div class="card-tally"><strong>Math contributions <output id="card-tally">0</output></strong><div class="actions">
+<button id="subtract-tally" type="button" aria-label="Remove one math contribution">−</button>
+<button id="add-tally" type="button" aria-label="Add one math contribution">+1</button>
+</div></div>
+<button id="card-note" type="button" class="primary">Add observation</button>
+</dialog>
+</main>
+</body>
+</html>
