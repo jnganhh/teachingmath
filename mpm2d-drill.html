@@ -50,9 +50,12 @@
           <button class="btn chip px-3 py-1" data-mode="analytic">Analytic Geometry</button>
           <button class="btn chip px-3 py-1" data-mode="trig">Trigonometry</button>
           <button class="btn chip px-3 py-1" data-mode="mixed">Mixed</button>
+          <button class="btn chip px-3 py-1 bg-purple-100 text-purple-900" data-mode="beauty">✨ Beauty of Math</button>
         </div>
-        <div class="font-black mb-2">2. Choose skills</div>
-        <div id="skillChips" class="flex flex-wrap gap-2"></div>
+        <div id="skillSection">
+          <div class="font-black mb-2">2. Choose skills</div>
+          <div id="skillChips" class="flex flex-wrap gap-2"></div>
+        </div>
         <details id="currBox" class="mt-3 pt-3 border-t-2 border-slate-200 text-xs text-slate-700">
           <summary class="font-black text-blue-700 cursor-pointer select-none">📚 Ontario MPM2D Curriculum Expectations (click to view)</summary>
           <div id="currContent" class="mt-2 space-y-2 leading-relaxed"></div>
@@ -105,6 +108,32 @@
 
         <div id="feedback" class="mt-4 hidden p-3 rounded-lg border-2 font-bold"></div>
         <div id="hints" class="mt-3 space-y-2"></div>
+      </section>
+
+      <!-- Beauty of Math interactive playground -->
+      <section id="beautySection" class="comic bg-white p-5 hidden space-y-4">
+        <div>
+          <span class="text-xs font-black bg-purple-100 text-purple-900 px-3 py-1 border-2 border-slate-800 rounded-full">✨ Mathematical Art &amp; Wonder</span>
+          <h2 class="text-2xl font-black text-slate-800 mt-2">The Hidden Beauty of Grade 10 Math</h2>
+          <p class="text-sm text-slate-600">Every strand of MPM2D hides surprising visual patterns in art, nature, physics, and geometry. Pick an exploration and play with the sliders!</p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="btn px-3 py-1 text-sm bg-purple-600 text-white" data-beauty="stitch">🕸️ Straight Lines → Parabola</button>
+          <button type="button" class="btn px-3 py-1 text-sm bg-white" data-beauty="mirror">📡 Parabolic Mirror &amp; Focus</button>
+          <button type="button" class="btn px-3 py-1 text-sm bg-white" data-beauty="euler">📐 Triangle's Secret Euler Line</button>
+          <button type="button" class="btn px-3 py-1 text-sm bg-white" data-beauty="golden">🌻 Golden Quadratic x² − x − 1 = 0</button>
+        </div>
+
+        <div id="beautyStage" class="p-4 bg-slate-50 rounded-xl border-2 border-slate-800 space-y-3">
+          <div id="beautyTitle" class="font-black text-lg text-blue-700"></div>
+          <div id="beautyLink" class="text-xs font-bold text-purple-800"></div>
+          <div class="flex justify-center">
+            <svg id="beautySvg" viewBox="0 0 380 280" class="w-full max-w-[420px] bg-white rounded-lg border-2 border-slate-800 select-none"></svg>
+          </div>
+          <div id="beautyControls" class="space-y-2 text-sm font-bold"></div>
+          <p id="beautyDesc" class="text-sm text-slate-700 leading-relaxed"></p>
+        </div>
       </section>
     </main>
 
@@ -1545,9 +1574,150 @@ document.addEventListener('keydown', e => { if (e.key === 'Enter' && done && doc
 $('answer').addEventListener('input', () => { $('preview').textContent = $('answer').value ? 'Preview: ' + pretty(normalizeLatex($('answer').value).replace(/\*/g,'·')) : ''; markActive(); });
 $('mathAnswer').addEventListener('input', () => markActive());
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
-  mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
-  renderChips(); newQuestion();
+  mode = b.dataset.mode;
+  document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
+  const isBeauty = mode === 'beauty';
+  $('skillSection').classList.toggle('hidden', isBeauty);
+  $('currBox').classList.toggle('hidden', isBeauty);
+  $('card').classList.toggle('hidden', isBeauty);
+  $('beautySection').classList.toggle('hidden', !isBeauty);
+  if (isBeauty) renderBeauty();
+  else { renderChips(); newQuestion(); }
 });
+
+/* ================= ✨ Beauty of Math Explorations ================= */
+let beautyTab = 'stitch';
+const bState = { n: 16, rays: 9, a: 0.5, vx: 130, vy: 45, seeds: 140, angleDeg: 137.5 };
+
+document.querySelectorAll('[data-beauty]').forEach(b => b.onclick = () => {
+  beautyTab = b.dataset.beauty;
+  document.querySelectorAll('[data-beauty]').forEach(x => {
+    x.classList.toggle('bg-purple-600', x === b);
+    x.classList.toggle('text-white', x === b);
+    x.classList.toggle('bg-white', x !== b);
+  });
+  renderBeauty();
+});
+
+function renderBeauty() {
+  const svg = $('beautySvg'), ctrl = $('beautyControls');
+  markActive();
+  if (beautyTab === 'stitch') {
+    $('beautyTitle').textContent = '1. Straight Lines Create a Curve (String Art Envelope)';
+    $('beautyLink').textContent = 'MPM2D Connection: Linear Relations (y = mx + b) × Quadratic Parabolas';
+    $('beautyDesc').innerHTML = 'Not a single curve is drawn above! Every segment is a <b>straight line</b> connecting (0, k) on the y-axis to (N − k, 0) on the x-axis. Yet the family of straight lines wraps around a smooth <b>parabola</b> (called their <i>envelope</i>) — the exact principle behind string art and suspension bridges like Santiago Calatrava\'s.';
+    ctrl.innerHTML = `<label class="flex items-center gap-3">Number of straight strings: <span id="bNVal" class="text-blue-700">${bState.n}</span>
+      <input id="bNSlider" type="range" min="4" max="40" value="${bState.n}" class="flex-1 accent-purple-600"></label>`;
+    const draw = () => {
+      const N = bState.n, ox = 45, oy = 245, len = 215;
+      let s = `<line x1="${ox}" y1="${oy - len}" x2="${ox}" y2="${oy}" stroke="#1e293b" stroke-width="2.5"/>`;
+      s += `<line x1="${ox}" y1="${oy}" x2="${ox + len}" y2="${oy}" stroke="#1e293b" stroke-width="2.5"/>`;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        const x1 = ox, y1 = oy - len * (1 - t);
+        const x2 = ox + len * t, y2 = oy;
+        const hue = Math.round(210 + 110 * t);
+        s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="hsl(${hue},80%,48%)" stroke-width="1.4" opacity="0.85"/>`;
+      }
+      svg.innerHTML = s;
+    };
+    draw();
+    $('bNSlider').oninput = e => { bState.n = +e.target.value; $('bNVal').textContent = bState.n; draw(); };
+  } else if (beautyTab === 'mirror') {
+    $('beautyTitle').textContent = '2. Why Satellite Dishes & Flashlights Are Parabolas';
+    $('beautyLink').textContent = 'MPM2D Connection: Quadratic Transformations y = a x² & Reflective Focus';
+    $('beautyDesc').innerHTML = 'A parabola has a magical point called the <b>focus</b> at (0, 1/(4a)). Every vertical beam hitting <b>y = a x²</b> bounces straight through that single focus! That\'s why satellite dishes, radio telescopes, solar cookers, and car headlights all use quadratic cross-sections.';
+    ctrl.innerHTML = `
+      <label class="flex items-center gap-3">Curvature (a): <span id="bAVal" class="text-blue-700">${bState.a.toFixed(2)}</span>
+        <input id="bASlider" type="range" min="20" max="100" value="${Math.round(bState.a * 100)}" class="flex-1 accent-purple-600"></label>
+      <label class="flex items-center gap-3">Incoming rays: <span id="bRVal" class="text-blue-700">${bState.rays}</span>
+        <input id="bRSlider" type="range" min="3" max="17" step="2" value="${bState.rays}" class="flex-1 accent-purple-600"></label>`;
+    const draw = () => {
+      const a = bState.a, cx = 190, vy = 245, scale = 36;
+      const fy = vy - scale / (4 * a);
+      let path = '';
+      for (let px = -3.8; px <= 3.81; px += 0.1) {
+        const sx = cx + px * scale, sy = vy - a * px * px * scale;
+        path += (path ? ' L ' : 'M ') + sx.toFixed(1) + ' ' + sy.toFixed(1);
+      }
+      let s = `<path d="${path}" fill="none" stroke="#1e293b" stroke-width="3.5"/>`;
+      const R = bState.rays;
+      for (let i = 0; i < R; i++) {
+        const x = -3.4 + (6.8 * i) / (R - 1);
+        if (Math.abs(x) < 0.05) continue;
+        const hx = cx + x * scale, hy = vy - a * x * x * scale;
+        s += `<line x1="${hx.toFixed(1)}" y1="12" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="4 3"/>`;
+        // Extend reflected ray through focus
+        const dx = cx - hx, dy = fy - hy;
+        s += `<line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${(cx + dx * 0.45).toFixed(1)}" y2="${(fy + dy * 0.45).toFixed(1)}" stroke="#dc2626" stroke-width="1.8"/>`;
+      }
+      s += `<circle cx="${cx}" cy="${fy.toFixed(1)}" r="6" fill="#7c3aed" stroke="white" stroke-width="2"/>`;
+      s += `<text x="${cx + 10}" y="${fy.toFixed(1) - 6}" font-size="12" font-weight="bold" fill="#7c3aed">Focus (0, ${(1 / (4 * a)).toFixed(2)})</text>`;
+      svg.innerHTML = s;
+    };
+    draw();
+    $('bASlider').oninput = e => { bState.a = +e.target.value / 100; $('bAVal').textContent = bState.a.toFixed(2); draw(); };
+    $('bRSlider').oninput = e => { bState.rays = +e.target.value; $('bRVal').textContent = bState.rays; draw(); };
+  } else if (beautyTab === 'euler') {
+    $('beautyTitle').textContent = '3. Leonhard Euler\'s Secret Collinear Centres (1765)';
+    $('beautyLink').textContent = 'MPM2D Connection: Medians, Right Bisectors & Altitudes (Analytic Geometry)';
+    $('beautyDesc').innerHTML = 'In Analytic Geometry you find equations of <b>medians</b>, <b>right bisectors</b>, and <b>altitudes</b>. Amazingly, in <i>every</i> triangle, the <span class="text-blue-700 font-bold">Centroid G</span> (medians), <span class="text-green-700 font-bold">Circumcentre O</span> (right bisectors &amp; circumcircle), and <span class="text-red-600 font-bold">Orthocentre H</span> (altitudes) always lie on one straight line — the <b>Euler Line</b> — with HG = 2·GO!';
+    ctrl.innerHTML = `<label class="flex items-center gap-3">Move top vertex A horizontally:
+      <input id="bVxSlider" type="range" min="65" max="315" value="${bState.vx}" class="flex-1 accent-purple-600"></label>`;
+    const draw = () => {
+      const A = { x: bState.vx, y: 42 }, B = { x: 65, y: 230 }, C = { x: 315, y: 215 };
+      const G = { x: (A.x + B.x + C.x) / 3, y: (A.y + B.y + C.y) / 3 };
+      const D = 2 * (A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y));
+      const a2 = A.x * A.x + A.y * A.y, b2 = B.x * B.x + B.y * B.y, c2 = C.x * C.x + C.y * C.y;
+      const O = {
+        x: (a2 * (B.y - C.y) + b2 * (C.y - A.y) + c2 * (A.y - B.y)) / D,
+        y: (a2 * (C.x - B.x) + b2 * (A.x - C.x) + c2 * (B.x - A.x)) / D
+      };
+      const H = { x: 3 * G.x - 2 * O.x, y: 3 * G.y - 2 * O.y }; // Euler's theorem!
+      const R = Math.hypot(A.x - O.x, A.y - O.y);
+      const dx = H.x - O.x, dy = H.y - O.y;
+      let s = `<circle cx="${O.x.toFixed(1)}" cy="${O.y.toFixed(1)}" r="${R.toFixed(1)}" fill="none" stroke="#bbf7d0" stroke-width="2"/>`;
+      s += `<polygon points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}" fill="#eff6ff" stroke="#1e293b" stroke-width="2.5"/>`;
+      // Medians (faint)
+      s += `<line x1="${A.x}" y1="${A.y}" x2="${(B.x + C.x) / 2}" y2="${(B.y + C.y) / 2}" stroke="#93c5fd" stroke-dasharray="3 3"/>`;
+      s += `<line x1="${B.x}" y1="${B.y}" x2="${(A.x + C.x) / 2}" y2="${(A.y + C.y) / 2}" stroke="#93c5fd" stroke-dasharray="3 3"/>`;
+      // Euler line through O, G, H
+      s += `<line x1="${(O.x - dx * 0.6).toFixed(1)}" y1="${(O.y - dy * 0.6).toFixed(1)}" x2="${(H.x + dx * 0.6).toFixed(1)}" y2="${(H.y + dy * 0.6).toFixed(1)}" stroke="#7c3aed" stroke-width="2.8"/>`;
+      s += `<circle cx="${O.x.toFixed(1)}" cy="${O.y.toFixed(1)}" r="5.5" fill="#15803d" stroke="white" stroke-width="1.5"/>`;
+      s += `<circle cx="${G.x.toFixed(1)}" cy="${G.y.toFixed(1)}" r="5.5" fill="#2563eb" stroke="white" stroke-width="1.5"/>`;
+      s += `<circle cx="${H.x.toFixed(1)}" cy="${H.y.toFixed(1)}" r="5.5" fill="#dc2626" stroke="white" stroke-width="1.5"/>`;
+      s += `<text x="${O.x + 8}" y="${O.y - 6}" font-size="11" font-weight="bold" fill="#15803d">O</text>`;
+      s += `<text x="${G.x + 8}" y="${G.y - 6}" font-size="11" font-weight="bold" fill="#2563eb">G</text>`;
+      s += `<text x="${H.x + 8}" y="${H.y - 6}" font-size="11" font-weight="bold" fill="#dc2626">H</text>`;
+      s += `<text x="12" y="20" font-size="11" font-weight="bold" fill="#7c3aed">Purple = Euler Line (O, G, H always collinear!)</text>`;
+      svg.innerHTML = s;
+    };
+    draw();
+    $('bVxSlider').oninput = e => { bState.vx = +e.target.value; draw(); };
+  } else {
+    $('beautyTitle').textContent = '4. The Golden Quadratic x² − x − 1 = 0 in Sunflowers';
+    $('beautyLink').textContent = 'MPM2D Connection: Quadratic Formula + Trigonometry';
+    $('beautyDesc').innerHTML = 'Solve <b>x² − x − 1 = 0</b> with the quadratic formula and you get the Golden Ratio <b>φ = (1 + √5)/2 ≈ 1.618</b>! Sunflowers, pinecones, and daisies pack seeds by turning <b>360° / φ² ≈ 137.5°</b> between each seed. Slide the angle slightly away from 137.5° and watch the spiral packing break into spokes!';
+    ctrl.innerHTML = `
+      <label class="flex items-center gap-3">Turn angle: <span id="bAngVal" class="text-blue-700">${bState.angleDeg.toFixed(2)}°</span>
+        <input id="bAngSlider" type="range" min="13500" max="14000" value="${Math.round(bState.angleDeg * 100)}" class="flex-1 accent-purple-600">
+        <button id="bGoldBtn" type="button" class="btn bg-yellow-300 px-2 py-0.5 text-xs">Reset 137.51°</button></label>`;
+    const draw = () => {
+      const cx = 190, cy = 140, N = bState.seeds, ang = bState.angleDeg * Math.PI / 180;
+      let s = '';
+      for (let k = 1; k <= N; k++) {
+        const r = 9.5 * Math.sqrt(k), th = k * ang;
+        const x = cx + r * Math.cos(th), y = cy + r * Math.sin(th);
+        const hue = (k * 11) % 60 + 25;
+        s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(2.6 + k * 0.014).toFixed(1)}" fill="hsl(${hue},90%,48%)" stroke="#1e293b" stroke-width="0.7"/>`;
+      }
+      svg.innerHTML = s;
+    };
+    draw();
+    $('bAngSlider').oninput = e => { bState.angleDeg = +e.target.value / 100; $('bAngVal').textContent = bState.angleDeg.toFixed(2) + '°'; draw(); };
+    $('bGoldBtn').onclick = () => { bState.angleDeg = 360 / Math.pow((1 + Math.sqrt(5)) / 2, 2); $('bAngSlider').value = Math.round(bState.angleDeg * 100); $('bAngVal').textContent = bState.angleDeg.toFixed(2) + '°'; draw(); };
+  }
+}
 $('exportBtn').onclick = () => {
   const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const row = cols => cols.map(esc).join(',');
