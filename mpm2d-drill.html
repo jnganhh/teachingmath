@@ -958,6 +958,152 @@ const SKILLS = {
               `Use m = ${mStr} and point A(${ax}, ${ay}) in y = mx + b to find b.`],
       steps: [`Slope of BC = ${dy}/${dx}  ⇒  altitude slope m_⊥ = ${mStr}`, `Through A(${ax}, ${ay}): y = ${mStr}x ${bInt >= 0 ? '+ ' : '− '}${Math.abs(Math.round(bInt * 100) / 100)}`] };
   }},
+  // ---------- WATERLOO CEMC / PUBLIC MPM2D EXTENSIONS ----------
+  l_mixture: { mode: 'linear', name: 'Mixture & Interest Systems', gen() {
+    if (Math.random() < 0.5) {
+      // Investment split between r1% and r2%
+      const x = rnd(2, 8) * 500, y = rnd(2, 8) * 500, tot = x + y;
+      const r1 = pick([4, 5, 6]), r2 = r1 + pick([2, 3, 4]);
+      const intr = Math.round((x * r1 + y * r2) / 100);
+      return { expr: `$${tot} is invested across two accounts:\nAccount A pays ${r1}%/yr and Account B pays ${r2}%/yr.\nTotal interest after 1 year is $${intr}.\nHow much was invested in Account A (${r1}%)?`,
+        numAns: x, tol: 1e-4, textCard: true,
+        prompt: 'Set up a 2-equation linear system and solve (enter the dollar amount in Account A):',
+        hints: [`Let x = amount at ${r1}% and y = amount at ${r2}%.`,
+                `Eq. 1: x + y = ${tot}.   Eq. 2: ${(r1/100).toFixed(2)}x + ${(r2/100).toFixed(2)}y = ${intr}.`,
+                `Substitute y = ${tot} − x into Eq. 2 (or multiply Eq. 2 by 100) and solve for x.`],
+        steps: [`x + y = ${tot}`, `${r1}x + ${r2}y = ${intr * 100}`, `Solve → x = $${x} in Account A (and $${y} in Account B)`] };
+    }
+    // Solution mixture: x L of p1% + y L of p2% = tot L of target%
+    const x = rnd(2, 8) * 5, y = rnd(2, 8) * 5, tot = x + y;
+    const p1 = pick([10, 20, 25]), p2 = p1 + pick([20, 30, 40]);
+    const target = Math.round(((x * p1 + y * p2) / tot) * 10) / 10;
+    return { expr: `A chemist mixes a ${p1}% saline solution with a ${p2}% solution\nto make ${tot} L of a ${target}% solution.\nHow many litres of the ${p1}% solution are needed?`,
+      numAns: x, tol: 0.1, textCard: true,
+      prompt: 'Set up a linear system and solve (enter litres of the weaker solution):',
+      hints: [`Let x = litres of ${p1}% and y = litres of ${p2}%.`,
+              `Eq. 1: x + y = ${tot}.   Eq. 2: ${p1}x + ${p2}y = ${Math.round(target * tot)}.`,
+              `Substitute y = ${tot} − x into Eq. 2 and solve for x.`],
+      steps: [`x + y = ${tot}`, `${p1}x + ${p2}(${tot} − x) = ${Math.round(target * tot)}`, `Solve → x = ${x} L of ${p1}% (and ${y} L of ${p2}%)`] };
+  }},
+  ag_multi: { mode: 'analytic', name: 'Multi-Condition Line Equation', gen() {
+    const perp = Math.random() < 0.5;
+    const m1 = pick([-2, -1, 1, 2, 3]), b1 = rndNZ(-6, 6);
+    const m = perp ? -1 / m1 : m1;
+    const useXInt = Math.random() < 0.5;
+    if (useXInt) {
+      const xInt = rndNZ(-5, 5), m2 = rndNZ(-3, 3), b2 = -m2 * xInt;
+      const b = -m * xInt;
+      const eq1 = `y = ${m1 === 1 ? '' : m1 === -1 ? '−' : m1}x ${b1 < 0 ? '−' : '+'} ${Math.abs(b1)}`;
+      const eq2 = `y = ${m2 === 1 ? '' : m2 === -1 ? '−' : m2}x ${b2 < 0 ? '−' : '+'} ${Math.abs(b2)}`;
+      const mStr = Number.isInteger(m) ? (m === 1 ? '' : m === -1 ? '−' : String(m)) : `${m < 0 ? '−' : ''}1/${Math.abs(m1)}`;
+      return { expr: `${perp ? 'Perpendicular (⊥)' : 'Parallel (∥)'} to  ${eq1}\nSame x-intercept as  ${eq2}`,
+        lineEq: { m, b }, textCard: true,
+        prompt: 'Find the equation y = mx + b that satisfies BOTH conditions:',
+        hints: [`Condition 1: slope of ${eq1} is ${m1}, so our slope is m = ${mStr || '1'}.`,
+                `Condition 2: set y = 0 in ${eq2} to find the x-intercept: (${xInt}, 0).`,
+                `Plug m and (${xInt}, 0) into y = mx + b to solve for b = ${Number.isInteger(b) ? b : b.toFixed(2)}.`],
+        steps: [`Slope m = ${mStr || '1'}`, `x-intercept of second line: (${xInt}, 0)`, `0 = (${mStr || '1'})(${xInt}) + b  ⇒  y = ${mStr}x ${b >= 0 ? '+ ' : '− '}${Math.abs(Number.isInteger(b) ? b : +b.toFixed(2))}`] };
+    }
+    const px = rndNZ(-4, 4), py = rndNZ(-5, 5), b = py - m * px;
+    const eq1 = `y = ${m1 === 1 ? '' : m1 === -1 ? '−' : m1}x ${b1 < 0 ? '−' : '+'} ${Math.abs(b1)}`;
+    const mStr = Number.isInteger(m) ? (m === 1 ? '' : m === -1 ? '−' : String(m)) : `${m < 0 ? '−' : ''}1/${Math.abs(m1)}`;
+    return { expr: `${perp ? 'Perpendicular (⊥)' : 'Parallel (∥)'} to  ${eq1}\nPasses through  P(${px}, ${py})`,
+      lineEq: { m, b }, textCard: true,
+      prompt: 'Find the equation y = mx + b that satisfies BOTH conditions:',
+      hints: [`Condition 1: slope of ${eq1} is ${m1}, so our slope is m = ${mStr || '1'}.`,
+              `Condition 2: substitute P(${px}, ${py}) into y = mx + b.`,
+              `Solve for b = ${Number.isInteger(b) ? b : b.toFixed(2)}.`],
+      steps: [`Slope m = ${mStr || '1'}`, `Plug in (${px}, ${py}): ${py} = (${mStr || '1'})(${px}) + b`, `y = ${mStr}x ${b >= 0 ? '+ ' : '− '}${Math.abs(Number.isInteger(b) ? b : +b.toFixed(2))}`] };
+  }},
+  ag_classify: { mode: 'analytic', name: 'Classify Triangle (Distance)', gen() {
+    const isIso = Math.random() < 0.55;
+    let A, B, C;
+    if (isIso) {
+      const mx = rnd(-2, 2), my = rnd(-2, 2), dx = rnd(2, 4), dy = rnd(-2, 2);
+      B = [mx - dx, my - dy]; C = [mx + dx, my + dy];
+      const k = rndNZ(1, 3) * pick([1, -1]);
+      A = [mx - k * dy, my + k * dx]; // on perpendicular bisector of BC => AB = AC
+    } else {
+      A = [rnd(-5, 0), rnd(-4, 0)]; B = [rnd(1, 5), rnd(-3, 2)]; C = [rnd(-2, 3), rnd(2, 6)];
+    }
+    const dAB = (A[0]-B[0])**2 + (A[1]-B[1])**2;
+    const dAC = (A[0]-C[0])**2 + (A[1]-C[1])**2;
+    const dBC = (B[0]-C[0])**2 + (B[1]-C[1])**2;
+    const eqCount = (dAB === dAC ? 1 : 0) + (dAB === dBC ? 1 : 0) + (dAC === dBC ? 1 : 0);
+    const kind = eqCount === 3 ? 'equilateral' : eqCount >= 1 ? 'isosceles' : 'scalene';
+    return { expr: `A(${A[0]}, ${A[1]}),   B(${B[0]}, ${B[1]}),   C(${C[0]}, ${C[1]})`,
+      choice: kind,
+      choices: [{ val: 'isosceles', label: 'Isosceles (2 equal sides)' }, { val: 'scalene', label: 'Scalene (all sides different)' }, { val: 'equilateral', label: 'Equilateral (3 equal sides)' }],
+      prompt: 'Use the distance formula to classify ΔABC by its side lengths:',
+      hints: ['Compute AB², AC², and BC² using d² = (x₂ − x₁)² + (y₂ − y₁)².',
+              `AB² = ${dAB},   AC² = ${dAC},   BC² = ${dBC}.`,
+              '2 equal lengths → Isosceles; 3 different → Scalene; all 3 equal → Equilateral.'],
+      steps: [`AB = √${dAB},  AC = √${dAC},  BC = √${dBC}`, `Classification: ${kind.toUpperCase()}`] };
+  }},
+  s_disc: { mode: 'solve', name: 'Discriminant (Number of Roots)', gen() {
+    const kind = pick(['2', '1', '0']);
+    let a, b, c;
+    if (kind === '1') {
+      const p = pick([1, 2, 3]), q = rndNZ(-5, 5);
+      a = p * p; b = 2 * p * q; c = q * q;
+    } else if (kind === '2') {
+      do { a = pick([1, 2, 3]); b = rndNZ(-7, 7); c = rndNZ(-6, 6); } while (b * b - 4 * a * c <= 0);
+    } else {
+      a = pick([1, 2, 3]); b = rnd(-4, 4); c = Math.ceil((b * b) / (4 * a)) + rnd(1, 5);
+    }
+    const D = b * b - 4 * a * c;
+    return { expr: `${poly([c, b, a])} = 0`, choice: kind,
+      choices: [{ val: '2', label: '2 distinct real roots' }, { val: '1', label: '1 real root (equal)' }, { val: '0', label: '0 real roots (none)' }],
+      prompt: 'Use the discriminant D = b² − 4ac to determine how many real roots the equation has:',
+      hints: [`Identify a = ${a}, b = ${b}, c = ${c}.`,
+              `Compute D = b² − 4ac = (${b})² − 4(${a})(${c}) = ${D}.`,
+              'D > 0 → 2 real roots;  D = 0 → 1 real root;  D < 0 → 0 real roots.'],
+      steps: [`D = (${b})² − 4(${a})(${c}) = ${D}`, kind === '2' ? 'D > 0 → 2 distinct real roots' : kind === '1' ? 'D = 0 → 1 real root' : 'D < 0 → 0 real roots'] };
+  }},
+  s_opt: { mode: 'transform', name: 'Quadratic Optimization & Projectiles', gen() {
+    if (Math.random() < 0.5) {
+      // Projectile: h = -5t^2 + v*t + h0 where v = 10*tMax => max height at t = tMax
+      const tMax = rnd(2, 6), v = 10 * tMax, h0 = rnd(1, 15);
+      const maxH = -5 * tMax * tMax + v * tMax + h0;
+      return { expr: `A ball's height (in metres) after t seconds is:\nh = −5t² + ${v}t + ${h0}\nWhat is the maximum height reached by the ball?`,
+        numAns: maxH, tol: 0.1, textCard: true,
+        prompt: 'Complete the square (or use t = −b/(2a)) to find the maximum height:',
+        hints: [`The maximum occurs at the vertex: t = −b / (2a) = −${v} / (2·(−5)) = ${tMax} s.`,
+                `Substitute t = ${tMax} into h = −5t² + ${v}t + ${h0}.`,
+                `h = −5(${tMax})² + ${v}(${tMax}) + ${h0} = ${maxH} m.`],
+        steps: [`Vertex at t = −${v} / (−10) = ${tMax} s`, `Max height h = −5(${tMax})² + ${v}(${tMax}) + ${h0} = ${maxH} m`] };
+    }
+    // Barn-wall fencing: 2w + L = F => A = w(F - 2w) => max at w = F/4
+    const w = rnd(4, 15), F = 4 * w, maxA = w * (F - 2 * w);
+    return { expr: `A farmer has ${F} m of fencing to enclose a rectangular pen\nagainst a straight barn wall (so only 3 sides need fencing).\nWhat is the maximum possible area (in m²)?`,
+      numAns: maxA, tol: 0.1, textCard: true,
+      prompt: 'Model the area as a quadratic and find the maximum area:',
+      hints: [`Let w = width of the two side fences, so length = ${F} − 2w.`,
+              `Area A = w(${F} − 2w) = −2w² + ${F}w. Find the vertex (or midpoint of zeros 0 and ${F / 2}).`,
+              `Best width w = ${w} m, length = ${2 * w} m → Max Area = ${w} × ${2 * w} = ${maxA} m².`],
+      steps: [`A(w) = −2w² + ${F}w = −2w(w − ${F / 2})`, `Vertex at w = ${w} m → Max Area = ${maxA} m²`] };
+  }},
+  tr_two_obs: { mode: 'trig', name: 'Two-Observer Elevation (Sine Law)', gen() {
+    const a = rnd(24, 40), b = a + rnd(14, 24), d = rnd(15, 35);
+    const C = b - a;
+    const hypB = d * Math.sin(a * Math.PI / 180) / Math.sin(C * Math.PI / 180);
+    const h = hypB * Math.sin(b * Math.PI / 180);
+    const svg = `<svg viewBox="0 0 330 170" class="w-full max-w-[330px] bg-slate-50 rounded-lg border-2 border-slate-800">
+      <polygon points="30,140 165,140 275,30" fill="#fef3c7" stroke="#1e293b" stroke-width="2.5"/>
+      <polygon points="165,140 275,140 275,30" fill="#dbeafe" stroke="#1e293b" stroke-width="2.5"/>
+      <rect x="263" y="128" width="12" height="12" fill="none" stroke="#1e293b" stroke-width="2"/>
+      <text x="64" y="134" font-size="13" font-weight="bold" fill="#b45309">${a}°</text>
+      <text x="184" y="134" font-size="13" font-weight="bold" fill="#1d4ed8">${b}°</text>
+      <text x="98" y="158" font-size="13" font-weight="bold" text-anchor="middle">${d} m</text>
+      <text x="286" y="90" font-size="15" font-weight="bold" fill="#dc2626">h</text>
+    </svg>`;
+    return { expr: 'Find tower height h (round to 1 decimal place)', svg, numAns: h, tol: 0.3,
+      prompt: 'Two observers are apart on level ground. Combine Sine Law + SOH-CAH-TOA:',
+      hints: [`In the left oblique triangle, the top angle is ${b}° − ${a}° = ${C}°.`,
+              `Use Sine Law to find the shared slanted side s: s / sin(${a}°) = ${d} / sin(${C}°) → s ≈ ${hypB.toFixed(2)} m.`,
+              `Now in the right triangle: sin(${b}°) = h / s → h = s · sin(${b}°) ≈ ${h.toFixed(1)} m.`],
+      steps: [`Top angle = ${b}° − ${a}° = ${C}°`, `Sine Law: s = ${d} · sin(${a}°) / sin(${C}°) ≈ ${hypB.toFixed(2)} m`, `h = ${hypB.toFixed(2)} · sin(${b}°) ≈ ${h.toFixed(1)} m`] };
+  }},
 };
 
 /* ================= Ontario MPM2D Curriculum Expectations ================= */
@@ -1035,7 +1181,13 @@ const SKILL_EXP = {
   tr_compound: 'MPM2D TR2.3 — Solve multi-step problems involving two right triangles',
   tr_sinelaw: 'MPM2D TR3.1 — Apply the Sine Law in acute triangles',
   tr_coslaw: 'MPM2D TR3.2 — Apply the Cosine Law in acute triangles',
-  tr_app: 'MPM2D TR2.3 / TR3.3 — Solve real-world problems using trigonometry'
+  tr_app: 'MPM2D TR2.3 / TR3.3 — Solve real-world problems using trigonometry',
+  l_mixture: 'MPM2D AG1.3 — Model and solve mixture & interest linear systems',
+  ag_multi: 'MPM2D AG2.4 / AG3.1 — Determine line equations from multiple geometric conditions',
+  ag_classify: 'MPM2D AG3.2 — Classify triangles using distance and slope properties',
+  s_disc: 'MPM2D QR4.2 — Interpret the discriminant b² − 4ac for number of real roots',
+  s_opt: 'MPM2D QR3.3 / QR4.3 — Solve quadratic optimization & projectile motion problems',
+  tr_two_obs: 'MPM2D TR2.3 / TR3.3 — Solve multi-step elevation problems using Sine Law + right triangles'
 };
 
 function genRightTrig(fn) {
