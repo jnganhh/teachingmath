@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MPM2D Algebra Problem String Presenter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .comic-border {
+      border: 3px solid #1e293b;
+      box-shadow: 5px 5px 0px #1e293b;
+    }
+    .comic-btn {
+      border: 2px solid #1e293b;
+      box-shadow: 3px 3px 0px #1e293b;
+      transition: all 0.12s ease;
+    }
+    .comic-btn:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0px #1e293b;
+    }
+    .comic-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px #1e293b;
+    }
+    .tab-active {
+      background-color: #2563eb !important;
+      color: #ffffff !important;
+    }
+  </style>
+</head>
+<body class="bg-yellow-50 text-slate-900 font-sans min-h-screen p-3 sm:p-5 overflow-x-hidden">
+  <div class="max-w-7xl mx-auto space-y-4">
+    <!-- Top Header -->
+    <header class="bg-white rounded-xl comic-border p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <a href="index.html" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-100 hover:bg-slate-200 border-2 border-slate-800">← Hub</a>
+          <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
+          <span class="px-2.5 py-1 text-xs font-black rounded bg-purple-100 text-purple-900 border-2 border-slate-800">Building Thinking Classrooms</span>
+        </div>
+        <h1 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">🔗 Algebra Problem String Presenter</h1>
+        <p class="text-xs font-bold text-slate-600">Reveal one connected problem at a time. Press <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-400 rounded">Space</kbd> or tap <strong>Reveal Next</strong>.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="toggleSketchPad()" id="sketchToggleBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
+          ✏️ Show Sketch Pad
+        </button>
+        <button onclick="openCustomModal()" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">
+          ➕ Custom String
+        </button>
+        <button onclick="toggleProjectorMode()" id="projectorBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
+          ⛶ Large Font
+        </button>
+      </div>
+    </header>
+
+    <!-- Topic & String Selector -->
+    <section class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3">
+      <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2" id="stringSelectorGrid"></div>
+    </section>
+
+    <!-- Main Presenter + Optional Sketch Pad -->
+    <div id="mainWorkspace" class="grid grid-cols-1 gap-4">
+      <!-- Problem String Stage -->
+      <section class="bg-white rounded-xl comic-border p-4 sm:p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
+          <div>
+            <span id="activeStringUnit" class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800">Unit</span>
+            <h2 id="activeStringTitle" class="text-lg sm:text-2xl font-black text-slate-900 mt-1">String Title</h2>
+            <p id="activeStringGoal" class="text-xs font-bold text-slate-600 mt-0.5"></p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="revealNextStep()" id="revealNextBtn" class="px-4 py-2 text-xs sm:text-sm font-black rounded-lg bg-emerald-600 text-white comic-btn">
+              ➕ Reveal Next (<span id="stepCounter">1/5</span>)
+            </button>
+            <button onclick="revealAllSteps()" class="px-3 py-2 text-xs font-black rounded-lg bg-blue-100 text-blue-900 comic-btn">
+              👁️ Reveal All
+            </button>
+            <button onclick="resetStringSteps()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-100 text-slate-800 comic-btn">
+              🔄 Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Revealed Steps List -->
+        <div id="stepsContainer" class="space-y-3"></div>
+
+        <!-- Teacher Consolidation Prompt -->
+        <div id="consolidationBox" class="hidden p-3.5 rounded-xl bg-amber-50 border-2 border-slate-800">
+          <div class="text-xs font-black uppercase text-amber-900">💡 Consolidation / Connection Question</div>
+          <div id="consolidationText" class="text-sm font-bold text-slate-800 mt-1"></div>
+        </div>
+      </section>
+
+      <!-- Live Sketch Pad (for iPad Apple Pencil / Projector Annotation) -->
+      <section id="sketchPadSection" class="hidden bg-white rounded-xl comic-border p-3.5 sm:p-4 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="text-xs font-black uppercase text-slate-700">✏️ Teacher Sketch Pad (Area Models / Number Lines / Steps)</div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="setPenColor('#0f172a')" class="w-6 h-6 rounded-full bg-slate-900 border-2 border-slate-800" title="Black"></button>
+            <button onclick="setPenColor('#2563eb')" class="w-6 h-6 rounded-full bg-blue-600 border-2 border-slate-800" title="Blue"></button>
+            <button onclick="setPenColor('#dc2626')" class="w-6 h-6 rounded-full bg-red-600 border-2 border-slate-800" title="Red"></button>
+            <button onclick="setPenColor('#16a34a')" class="w-6 h-6 rounded-full bg-emerald-600 border-2 border-slate-800" title="Green"></button>
+            <button onclick="clearSketchPad()" class="px-2.5 py-1 text-xs font-black rounded-lg bg-red-100 text-red-900 border-2 border-slate-800 ml-2">🧹 Clear Pad</button>
+          </div>
+        </div>
+        <canvas id="sketchCanvas" class="w-full h-72 sm:h-96 bg-slate-50 rounded-xl border-2 border-slate-800 touch-none cursor-crosshair"></canvas>
+      </section>
+    </div>
+  </div>
+
+  <!-- Custom String Modal -->
+  <div id="customStringModal" onclick="if(event.target===this) closeCustomModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-white max-w-lg w-full rounded-2xl comic-border p-4 sm:p-5 space-y-3">
+      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2">
+        <h3 class="text-lg font-black">➕ Add Custom Problem String</h3>
+        <button onclick="closeCustomModal()" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-800 text-white">✕</button>
+      </div>
+      <input type="text" id="customTitle" placeholder="Title (e.g., Factoring Difference of Squares)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+      <input type="text" id="customGoal" placeholder="Goal / Big Idea (optional)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+      <div>
+        <label class="text-[11px] font-black text-slate-600">Problems (one per line; optionally add `| answer` after each):</label>
+        <textarea id="customSteps" rows="6" placeholder="19 × 21 | 399&#10;(x - 1)(x + 1) | x² - 1&#10;(x - 5)(x + 5) | x² - 25&#10;(2x - 3)(2x + 3) | 4x² - 9" class="w-full mt-1 px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800"></textarea>
+      </div>
+      <input type="text" id="customConsolidation" placeholder="Consolidation question (e.g., What pattern do you notice?)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+      <button onclick="saveCustomString()" class="w-full py-2.5 text-xs font-black rounded-xl bg-emerald-600 text-white comic-btn">💾 Save &amp; Present</button>
+    </div>
+  </div>
+
+  <script>
+    const BUILTIN_STRINGS = [
+      {
+        id: 'exp-area',
+        unit: 'Expanding',
+        title: 'From Numbers to Binomials (Area Model)',
+        goal: 'Connect mental multiplication (partial products) to expanding (x + a)(x + b).',
+        consolidation: 'How is multiplying (x + 2)(x + 5) identical to multiplying 12 × 15?',
+        steps: [
+          { prompt: '10 × 14', hint: 'Think 10 × 10 + 10 × 4', answer: '140' },
+          { prompt: '12 × 15', hint: 'Break into (10 + 2)(10 + 5)', answer: '100 + 50 + 20 + 10 = 180' },
+          { prompt: '(x + 2)(10 + 5)', hint: 'Distribute (x + 2) across 10 and 5', answer: '15x + 30' },
+          { prompt: '(x + 2)(x + 5)', hint: '4 partial products in the area model', answer: 'x² + 7x + 10' },
+          { prompt: '(x − 3)(x + 5)', hint: 'Watch the negative sign on −3', answer: 'x² + 2x − 15' },
+          { prompt: '(2x + 1)(x + 4)', hint: '2x · x + 2x · 4 + 1 · x + 1 · 4', answer: '2x² + 9x + 4' }
+        ]
+      },
+      {
+        id: 'exp-special',
+        unit: 'Expanding',
+        title: 'Special Products & Difference of Squares',
+        goal: 'Notice when the middle term cancels out vs. doubles.',
+        consolidation: 'Why does the middle term disappear in (2x − 3)(2x + 3) but NOT in (x + 4)²?',
+        steps: [
+          { prompt: '20² − 1²', hint: '400 − 1', answer: '399' },
+          { prompt: '19 × 21', hint: 'Write as (20 − 1)(20 + 1)', answer: '400 − 1 = 399' },
+          { prompt: '(x − 1)(x + 1)', hint: 'Middle terms: +x and −x', answer: 'x² − 1' },
+          { prompt: '(x − 5)(x + 5)', hint: 'Difference of squares', answer: 'x² − 25' },
+          { prompt: '(2x − 3)(2x + 3)', hint: '(2x)² − 3²', answer: '4x² − 9' },
+          { prompt: '(x + 4)²', hint: 'Careful! (x + 4)(x + 4)', answer: 'x² + 8x + 16' }
+        ]
+      },
+      {
+        id: 'fac-sumprod',
+        unit: 'Factoring',
+        title: 'Sum-Product Factoring Intuition',
+        goal: 'Reverse expansion by tracking how signs affect factors.',
+        consolidation: 'How do the signs of b and c tell you the signs inside the two brackets?',
+        steps: [
+          { prompt: 'Expand: (x + 2)(x + 3)', hint: 'Sum is 5, product is 6', answer: 'x² + 5x + 6' },
+          { prompt: 'Factor: x² + 5x + 6', hint: 'Multiply to 6, add to 5', answer: '(x + 2)(x + 3)' },
+          { prompt: 'Factor: x² + 7x + 6', hint: 'Multiply to 6, add to 7', answer: '(x + 1)(x + 6)' },
+          { prompt: 'Factor: x² − 5x + 6', hint: 'Positive product, negative sum → both negative', answer: '(x − 2)(x − 3)' },
+          { prompt: 'Factor: x² − x − 6', hint: 'Negative product → opposite signs', answer: '(x − 3)(x + 2)' },
+          { prompt: 'Factor: 2x² − 2x − 12', hint: 'Always check for a GCF first!', answer: '2(x − 3)(x + 2)' }
+        ]
+      },
+      {
+        id: 'quad-forms',
+        unit: 'Quadratics',
+        title: 'Vertex & Roots from Equations',
+        goal: 'Read key features directly without expanding unnecessarily.',
+        consolidation: 'How can you find the vertex from factored form y = (x − 1)(x − 5) without completing the square?',
+        steps: [
+          { prompt: 'Vertex of y = x²', hint: 'Parent parabola', answer: '(0, 0)' },
+          { prompt: 'Vertex of y = (x − 3)²', hint: 'Horizontal shift right 3', answer: '(3, 0)' },
+          { prompt: 'Vertex of y = (x − 3)² + 2', hint: 'Shift right 3, up 2', answer: '(3, 2)' },
+          { prompt: 'Vertex & Direction of y = −2(x − 3)² + 2', hint: 'a = −2 opens down', answer: 'Vertex (3, 2), opens down' },
+          { prompt: 'x-intercepts of y = (x − 1)(x − 5)', hint: 'Set y = 0', answer: 'x = 1 and x = 5' },
+          { prompt: 'Vertex of y = (x − 1)(x − 5)', hint: 'Axis of symmetry is halfway between 1 and 5', answer: 'x = 3 → y = (2)(−2) = −4 → (3, −4)' }
+        ]
+      },
+      {
+        id: 'lin-sub',
+        unit: 'Linear Systems',
+        title: 'Mental Substitution & Balancing',
+        goal: 'Build algebraic substitution from simple number puzzles.',
+        consolidation: 'In the last two systems, what did we replace y with, and why?',
+        steps: [
+          { prompt: 'x + 5 = 12', hint: 'What number plus 5 gives 12?', answer: 'x = 7' },
+          { prompt: '2x + 5 = 17', hint: '2x must equal 12', answer: 'x = 6' },
+          { prompt: 'x + y = 10  and  y = 4', hint: 'Substitute 4 for y', answer: '(6, 4)' },
+          { prompt: 'x + y = 10  and  y = x + 2', hint: 'Replace y with (x + 2)', answer: '2x + 2 = 10 → (4, 6)' },
+          { prompt: '2x + y = 14  and  y = 3x − 1', hint: '2x + (3x − 1) = 14', answer: '5x = 15 → (3, 8)' }
+        ]
+      },
+      {
+        id: 'lin-elim',
+        unit: 'Linear Systems',
+        title: 'Elimination by Adding or Subtracting',
+        goal: 'Spot matching or opposite coefficients before multiplying.',
+        consolidation: 'When should we ADD the two equations, and when should we SUBTRACT?',
+        steps: [
+          { prompt: '2a + b = 10  and  2a − b = 6', hint: 'Add equations to eliminate b', answer: '4a = 16 → a = 4, b = 2' },
+          { prompt: '3x + 2y = 16  and  3x − 2y = 8', hint: 'Add to eliminate y', answer: '6x = 24 → (4, 2)' },
+          { prompt: 'x + 2y = 11  and  2x + 2y = 14', hint: 'Subtract to eliminate 2y', answer: 'x = 3, y = 4' },
+          { prompt: '2x + 3y = 13  and  4x − 3y = 5', hint: 'Opposite signs on 3y → add!', answer: '6x = 18 → (3, 7/3)' }
+        ]
+      },
+      {
+        id: 'trig-soh',
+        unit: 'Trigonometry',
+        title: 'Similar Triangles & SOHCAHTOA',
+        goal: 'Understand trig ratios as constant side ratios for a given angle.',
+        consolidation: 'Why does sin(30°) stay 0.5 even when the triangle doubles in size?',
+        steps: [
+          { prompt: 'Right triangle sides 3, 4, 5: find Opp/Hyp for ∠ opposite 3', hint: 'Opposite = 3, Hypotenuse = 5', answer: '3/5 = 0.6' },
+          { prompt: 'Double the triangle (6, 8, 10): find Opp/Hyp for the same angle', hint: '6/10 simplifies to...', answer: '6/10 = 0.6 (unchanged!)' },
+          { prompt: 'If sin(30°) = 0.5 and Hyp = 10, find Opp', hint: 'Opp / 10 = 0.5', answer: 'Opp = 5' },
+          { prompt: 'If sin(30°) = 0.5 and Hyp = 14, find Opp', hint: 'Half of 14', answer: 'Opp = 7' },
+          { prompt: 'If tan(45°) = 1 and Adj = 9, find Opp', hint: 'Opp / Adj = 1', answer: 'Opp = 9' }
+        ]
+      }
+    ];
+
+    const CUSTOM_KEY = 'mpm2d_custom_problem_strings_v1';
+    let customStrings = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+    let activeUnit = 'All';
+    let activeStringId = BUILTIN_STRINGS[0].id;
+    let revealedCount = 1;
+    let largeFont = false;
+    let showAnswersMap = {};
+
+    function getAllStrings() {
+      return [...BUILTIN_STRINGS, ...customStrings];
+    }
+
+    function getActiveString() {
+      return getAllStrings().find(s => s.id === activeStringId) || BUILTIN_STRINGS[0];
+    }
+
+    function renderUnitFilters() {
+      const units = ['All', ...new Set(getAllStrings().map(s => s.unit))];
+      document.getElementById('unitFilterBar').innerHTML = units.map(u => `
+        <button onclick="setUnitFilter('${u}')" class="px-3 py-1 text-xs font-black rounded-lg border-2 border-slate-800 transition ${activeUnit === u ? 'tab-active' : 'bg-slate-50 hover:bg-slate-100'}">${u}</button>
+      `).join('');
+    }
+
+    function setUnitFilter(u) {
+      activeUnit = u;
+      renderUnitFilters();
+      renderStringSelector();
+    }
+
+    function renderStringSelector() {
+      const list = getAllStrings().filter(s => activeUnit === 'All' || s.unit === activeUnit);
+      document.getElementById('stringSelectorGrid').innerHTML = list.map(s => `
+        <button onclick="selectString('${s.id}')" class="text-left p-2.5 rounded-xl border-2 border-slate-800 transition ${s.id === activeStringId ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-yellow-50'}">
+          <div class="text-[10px] font-black uppercase text-blue-700">${s.unit}</div>
+          <div class="text-xs font-black text-slate-900 mt-0.5">${s.title}</div>
+          <div class="text-[10px] font-bold text-slate-500 mt-0.5">${s.steps.length} problems</div>
+        </button>
+      `).join('');
+    }
+
+    function selectString(id) {
+      activeStringId = id;
+      revealedCount = 1;
+      showAnswersMap = {};
+      renderStringSelector();
+      renderStage();
+    }
+
+    function revealNextStep() {
+      const str = getActiveString();
+      if (revealedCount < str.steps.length) {
+        revealedCount++;
+        renderStage();
+      }
+    }
+
+    function revealAllSteps() {
+      const str = getActiveString();
+      revealedCount = str.steps.length;
+      renderStage();
+    }
+
+    function resetStringSteps() {
+      revealedCount = 1;
+      showAnswersMap = {};
+      renderStage();
+    }
+
+    function toggleStepAnswer(idx) {
+      showAnswersMap[idx] = !showAnswersMap[idx];
+      renderStage();
+    }
+
+    function renderStage() {
+      const str = getActiveString();
+      document.getElementById('activeStringUnit').textContent = str.unit;
+      document.getElementById('activeStringTitle').textContent = str.title;
+      document.getElementById('activeStringGoal').textContent = str.goal || '';
+      document.getElementById('stepCounter').textContent = `${revealedCount}/${str.steps.length}`;
+      document.getElementById('revealNextBtn').disabled = revealedCount >= str.steps.length;
+      document.getElementById('revealNextBtn').classList.toggle('opacity-50', revealedCount >= str.steps.length);
+
+      const promptSize = largeFont ? 'text-2xl sm:text-4xl' : 'text-lg sm:text-2xl';
+      const visible = str.steps.slice(0, revealedCount);
+
+      document.getElementById('stepsContainer').innerHTML = visible.map((st, idx) => {
+        const isLatest = idx === visible.length - 1;
+        const ansShown = !!showAnswersMap[idx];
+        return `
+          <div class="p-3.5 sm:p-4 rounded-xl border-2 border-slate-800 ${isLatest ? 'bg-yellow-50 ring-2 ring-amber-400' : 'bg-slate-50'} flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="flex items-start sm:items-center gap-3">
+              <span class="w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-black flex items-center justify-center shrink-0">${idx + 1}</span>
+              <div>
+                <div class="${promptSize} font-black font-mono text-slate-900">${st.prompt}</div>
+                ${st.hint ? `<div class="text-xs font-bold text-slate-500 mt-0.5">💬 ${st.hint}</div>` : ''}
+              </div>
+            </div>
+            ${st.answer ? `
+              <div class="flex items-center gap-2 self-end sm:self-center">
+                ${ansShown ? `<span class="px-3 py-1.5 rounded-lg bg-emerald-100 border-2 border-emerald-700 text-emerald-950 font-mono font-black text-sm sm:text-base">${st.answer}</span>` : ''}
+                <button onclick="toggleStepAnswer(${idx})" class="px-2.5 py-1.5 text-xs font-black rounded-lg bg-white border-2 border-slate-800 hover:bg-slate-100">
+                  ${ansShown ? '🙈 Hide' : '👁️ Answer'}
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      const conBox = document.getElementById('consolidationBox');
+      if (revealedCount >= str.steps.length && str.consolidation) {
+        conBox.classList.remove('hidden');
+        document.getElementById('consolidationText').textContent = str.consolidation;
+      } else {
+        conBox.classList.add('hidden');
+      }
+    }
+
+    function toggleProjectorMode() {
+      largeFont = !largeFont;
+      document.getElementById('projectorBtn').textContent = largeFont ? '⛶ Normal Font' : '⛶ Large Font';
+      renderStage();
+    }
+
+    // Sketch Pad
+    let sketchVisible = false;
+    let penColor = '#0f172a';
+    let drawing = false;
+    let canvasInitialized = false;
+
+    function toggleSketchPad() {
+      sketchVisible = !sketchVisible;
+      const sec = document.getElementById('sketchPadSection');
+      sec.classList.toggle('hidden', !sketchVisible);
+      document.getElementById('sketchToggleBtn').textContent = sketchVisible ? '✏️ Hide Sketch Pad' : '✏️ Show Sketch Pad';
+      if (sketchVisible && !canvasInitialized) initSketchCanvas();
+    }
+
+    function setPenColor(c) { penColor = c; }
+
+    function initSketchCanvas() {
+      const canvas = document.getElementById('sketchCanvas');
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * (window.devicePixelRatio || 1);
+      canvas.height = rect.height * (window.devicePixelRatio || 1);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 3;
+
+      const getPos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - r.left, y: clientY - r.top };
+      };
+
+      const start = (e) => {
+        e.preventDefault();
+        drawing = true;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      };
+      const move = (e) => {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = getPos(e);
+        ctx.strokeStyle = penColor;
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      };
+      const end = () => { drawing = false; };
+
+      canvas.addEventListener('pointerdown', start);
+      canvas.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', end);
+      canvasInitialized = true;
+    }
+
+    function clearSketchPad() {
+      const canvas = document.getElementById('sketchCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Custom String Modal
+    function openCustomModal() { document.getElementById('customStringModal').classList.remove('hidden'); }
+    function closeCustomModal() { document.getElementById('customStringModal').classList.add('hidden'); }
+    function saveCustomString() {
+      const title = document.getElementById('customTitle').value.trim();
+      const raw = document.getElementById('customSteps').value.trim();
+      if (!title || !raw) { alert('Please enter a title and at least one problem.'); return; }
+      const steps = raw.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+        const parts = line.split('|');
+        return { prompt: parts[0].trim(), answer: (parts[1] || '').trim(), hint: '' };
+      });
+      const newStr = {
+        id: 'custom-' + Date.now(),
+        unit: 'Custom',
+        title,
+        goal: document.getElementById('customGoal').value.trim(),
+        consolidation: document.getElementById('customConsolidation').value.trim(),
+        steps
+      };
+      customStrings.push(newStr);
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(customStrings));
+      closeCustomModal();
+      activeUnit = 'All';
+      renderUnitFilters();
+      selectString(newStr.id);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.code === 'Space' || e.code === 'ArrowRight') {
+        e.preventDefault();
+        revealNextStep();
+      }
+    });
+
+    renderUnitFilters();
+    renderStringSelector();
+    renderStage();
+  </script>
+</body>
+</html>
