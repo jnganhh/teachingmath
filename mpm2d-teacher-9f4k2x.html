@@ -222,6 +222,18 @@
 
   <!-- VIEW 1: DAILY ATTENDANCE, HOMEWORK, TALLY & OBJECTIVE GROWING SUCCESS DROPDOWNS -->
   <main id="view-daily" class="max-w-7xl mx-auto">
+    <!-- Day Type & Optional Daily Comment Bar -->
+    <div class="mb-3 bg-white rounded-xl comic-border p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+      <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+        <span class="text-[11px] font-black uppercase text-slate-600 mr-1">Day Type:</span>
+        <button onclick="setDayType('lesson')" id="dayTypeBtn-lesson" class="px-2.5 py-1 text-[11px] font-black rounded-lg border-2 border-slate-800 transition tab-active">📘 Lesson</button>
+        <button onclick="setDayType('review')" id="dayTypeBtn-review" class="px-2.5 py-1 text-[11px] font-black rounded-lg border-2 border-slate-800 transition bg-slate-50">🔁 Review</button>
+        <button onclick="setDayType('assessment')" id="dayTypeBtn-assessment" class="px-2.5 py-1 text-[11px] font-black rounded-lg border-2 border-slate-800 transition bg-slate-50">📝 Assessment</button>
+        <button onclick="setDayType('other')" id="dayTypeBtn-other" class="px-2.5 py-1 text-[11px] font-black rounded-lg border-2 border-slate-800 transition bg-slate-50">✨ Other</button>
+      </div>
+      <input type="text" id="dayNoteInput" oninput="saveDayNote(this.value)" placeholder="Optional note/comment for today (e.g., Unit 3 Quiz, Quadratics Review)..." class="flex-1 w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none focus:bg-white" />
+    </div>
+
     <!-- Compact Grid Layout (2 cols on Phone, 3 on small tablet, 4x8 on iPad/Desktop) -->
     <div id="dailyGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5"></div>
 
@@ -1258,6 +1270,7 @@
       }
 
       if (state.currentView === 'daily') {
+        renderDayMetaBar();
         const gridEl = document.getElementById('dailyGridContainer');
         const tableEl = document.getElementById('dailyTableContainer');
         if (dailyLayout === 'grid') {
@@ -1821,6 +1834,49 @@
       }).join('');
     }
 
+    const DAY_TYPE_LABELS = {
+      lesson: '📘 Lesson',
+      review: '🔁 Review Day',
+      assessment: '📝 Assessment Day',
+      other: '✨ Other'
+    };
+
+    function getDayMeta(date, periodKey) {
+      if (!state.dayMeta) state.dayMeta = {};
+      const key = `${date}::${periodKey}`;
+      if (!state.dayMeta[key]) {
+        state.dayMeta[key] = { type: 'lesson', note: '' };
+      }
+      return state.dayMeta[key];
+    }
+
+    function setDayType(type) {
+      const meta = getDayMeta(state.activeDate, state.currentPeriod);
+      meta.type = type;
+      saveState();
+      renderDayMetaBar();
+    }
+
+    function saveDayNote(val) {
+      const meta = getDayMeta(state.activeDate, state.currentPeriod);
+      meta.note = val;
+      saveState();
+    }
+
+    function renderDayMetaBar() {
+      const meta = getDayMeta(state.activeDate, state.currentPeriod);
+      ['lesson', 'review', 'assessment', 'other'].forEach(t => {
+        const btn = document.getElementById(`dayTypeBtn-${t}`);
+        if (!btn) return;
+        btn.classList.toggle('tab-active', meta.type === t);
+        btn.classList.toggle('bg-slate-50', meta.type !== t);
+      });
+      const noteEl = document.getElementById('dayNoteInput');
+      if (noteEl && noteEl.value !== (meta.note || '')) {
+        noteEl.value = meta.note || '';
+      }
+    }
+
     function renderHistoryView(students) {
       document.getElementById('historyPeriodTitle').textContent = state.periods[state.currentPeriod].name;
       document.getElementById('historyEditDateBtnLabel').textContent = state.activeDate;
@@ -1838,6 +1894,8 @@
       const bar = document.getElementById('recordedDatesBar');
       bar.innerHTML = recordedDates.map(d => {
         const isCurrent = d === state.activeDate;
+        const meta = (state.dayMeta && state.dayMeta[`${d}::${state.currentPeriod}`]) || { type: 'lesson', note: '' };
+        const typeTag = meta.type && meta.type !== 'lesson' ? ` • ${DAY_TYPE_LABELS[meta.type] || meta.type}` : '';
         let dayTallies = 0, dayHW = 0, dayPhone = 0, dayObs = 0;
         state.periods[state.currentPeriod].students.forEach(s => {
           const r = state.records[d]?.[s.id];
@@ -1852,7 +1910,7 @@
           : 'bg-slate-100 text-slate-800 border-slate-800 hover:bg-blue-50';
         return `
           <button onclick="changeDate('${d}')" class="px-3 py-1.5 rounded-lg border-2 text-xs font-black transition ${btnStyle}">
-            📅 ${d} <span class="font-mono opacity-85 ml-1">(T:${dayTallies} • HW:${dayHW} • 📵:${dayPhone})</span>
+            📅 ${d}${typeTag} <span class="font-mono opacity-85 ml-1">(T:${dayTallies} • HW:${dayHW} • 📵:${dayPhone})</span>
           </button>
         `;
       }).join('');
@@ -1870,10 +1928,14 @@
         oSum += (r.observations || []).length;
       });
 
+      const activeMeta = getDayMeta(state.activeDate, state.currentPeriod);
+      const dayTypeLabel = DAY_TYPE_LABELS[activeMeta.type] || '📘 Lesson';
+
       document.getElementById('historyDaySummaryCards').innerHTML = `
         <div class="p-3 rounded-lg bg-slate-50 border-2 border-slate-800">
-          <div class="text-xs font-bold text-slate-500">Selected Date</div>
+          <div class="text-xs font-bold text-slate-500">Selected Date (${dayTypeLabel})</div>
           <div class="text-sm font-black font-mono mt-0.5">${state.activeDate}</div>
+          ${activeMeta.note ? `<div class="text-xs font-bold text-purple-800 mt-1">📝 ${activeMeta.note}</div>` : ''}
         </div>
         <div class="p-3 rounded-lg bg-emerald-50 border-2 border-slate-800">
           <div class="text-xs font-bold text-slate-600">Attendance (P / L / A)</div>
