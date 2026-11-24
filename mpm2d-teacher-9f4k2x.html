@@ -201,6 +201,9 @@
       <button onclick="openRandomGroupsModal()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn" title="Building Thinking Classrooms: Randomize groups avoiding recent pairs">
         👥 Random Groups
       </button>
+      <button onclick="openTimerModal()" id="timerQuickBtn" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-teal-100 text-teal-950 comic-btn" title="Classroom Minutes Timer">
+        ⏱️ Timer
+      </button>
       <input type="text" id="studentSearch" oninput="renderCurrentView()" placeholder="Search student..." class="w-full sm:w-auto px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none" />
     </div>
   </section>
@@ -341,6 +344,49 @@
       </div>
     </div>
   </section>
+
+  <!-- CLASSROOM MINUTES TIMER MODAL -->
+  <div id="timerModal" onclick="if(event.target===this) closeTimerModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-white max-w-md w-full rounded-2xl comic-border p-4 sm:p-6 space-y-4 my-auto text-center">
+      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-3">
+        <h2 class="text-lg sm:text-xl font-black text-slate-900">⏱️ Classroom Timer</h2>
+        <button onclick="closeTimerModal()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">✓ Close</button>
+      </div>
+
+      <div id="timerDisplay" class="text-5xl sm:text-6xl font-black font-mono tracking-wider py-4 rounded-xl bg-slate-50 border-2 border-slate-800 text-slate-900">
+        05:00
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="setTimerMinutes(1)" class="py-2 text-xs font-black rounded-lg bg-teal-50 text-teal-900 border-2 border-slate-800 hover:bg-teal-100">1 min</button>
+        <button onclick="setTimerMinutes(2)" class="py-2 text-xs font-black rounded-lg bg-teal-50 text-teal-900 border-2 border-slate-800 hover:bg-teal-100">2 min</button>
+        <button onclick="setTimerMinutes(3)" class="py-2 text-xs font-black rounded-lg bg-teal-50 text-teal-900 border-2 border-slate-800 hover:bg-teal-100">3 min</button>
+        <button onclick="setTimerMinutes(5)" class="py-2 text-xs font-black rounded-lg bg-teal-50 text-teal-900 border-2 border-slate-800 hover:bg-teal-100">5 min</button>
+        <button onclick="setTimerMinutes(10)" class="py-2 text-xs font-black rounded-lg bg-teal-50 text-teal-900 border-2 border-slate-800 hover:bg-teal-100">10 min</button>
+        <button onclick="setTimerMinutes(15)" class="py-2 text-xs font-black rounded-lg bg-teal-50 text-teal-900 border-2 border-slate-800 hover:bg-teal-100">15 min</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="number" id="customTimerMinutes" min="1" max="120" value="5" class="w-24 px-3 py-2 text-sm font-mono font-black rounded-lg bg-slate-50 border-2 border-slate-800 text-center" />
+        <span class="text-xs font-black text-slate-600">minutes</span>
+        <button onclick="applyCustomTimerMinutes()" class="ml-auto px-3 py-2 text-xs font-black rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200">Set</button>
+      </div>
+
+      <div class="flex items-center gap-2 pt-1">
+        <button onclick="toggleTimerStartPause()" id="timerStartPauseBtn" class="flex-1 py-2.5 text-sm font-black rounded-xl bg-emerald-600 text-white comic-btn">
+          ▶ Start
+        </button>
+        <button onclick="resetTimer()" class="px-4 py-2.5 text-sm font-black rounded-xl bg-amber-300 text-slate-900 comic-btn">
+          🔄 Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Timer Pill (visible when timer is running or finished) -->
+  <button onclick="openTimerModal()" id="floatingTimerPill" class="hidden fixed bottom-4 left-4 z-30 px-3.5 py-2 text-xs font-black font-mono rounded-full bg-teal-600 text-white comic-btn shadow-lg">
+    ⏱️ 05:00
+  </button>
 
   <!-- Floating Scroll-to-Top Button (helpful on phone) -->
   <button onclick="window.scrollTo({top:0, behavior:'smooth'})" id="scrollTopBtn" class="fixed bottom-4 right-4 z-30 px-3 py-2 text-xs font-black rounded-full bg-slate-900 text-white comic-btn shadow-lg opacity-85 hover:opacity-100" title="Scroll to top">
@@ -1581,6 +1627,136 @@
 
     function closeRandomGroupsModal() {
       document.getElementById('randomGroupsModal').classList.add('hidden');
+    }
+
+    let timerDurationSec = 300;
+    let timerRemainingSec = 300;
+    let timerRunning = false;
+    let timerEndMs = null;
+    let timerInterval = null;
+
+    function openTimerModal() {
+      document.getElementById('timerModal').classList.remove('hidden');
+      updateTimerUI();
+    }
+
+    function closeTimerModal() {
+      document.getElementById('timerModal').classList.add('hidden');
+    }
+
+    function formatTimer(sec) {
+      const s = Math.max(0, Math.ceil(sec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    }
+
+    function setTimerMinutes(mins) {
+      const m = Math.max(1, Math.min(120, parseInt(mins, 10) || 1));
+      const input = document.getElementById('customTimerMinutes');
+      if (input) input.value = m;
+      timerRunning = false;
+      clearInterval(timerInterval);
+      timerDurationSec = m * 60;
+      timerRemainingSec = m * 60;
+      timerEndMs = null;
+      updateTimerUI();
+    }
+
+    function applyCustomTimerMinutes() {
+      const val = document.getElementById('customTimerMinutes')?.value;
+      setTimerMinutes(val);
+    }
+
+    function toggleTimerStartPause() {
+      if (timerRunning) {
+        timerRemainingSec = Math.max(0, Math.ceil((timerEndMs - Date.now()) / 1000));
+        timerRunning = false;
+        clearInterval(timerInterval);
+        updateTimerUI();
+      } else {
+        if (timerRemainingSec <= 0) timerRemainingSec = timerDurationSec;
+        timerRunning = true;
+        timerEndMs = Date.now() + timerRemainingSec * 1000;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(tickTimer, 250);
+        updateTimerUI();
+      }
+    }
+
+    function resetTimer() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      timerRemainingSec = timerDurationSec;
+      timerEndMs = null;
+      updateTimerUI();
+    }
+
+    function tickTimer() {
+      if (!timerRunning || !timerEndMs) return;
+      const left = Math.max(0, Math.ceil((timerEndMs - Date.now()) / 1000));
+      if (left !== timerRemainingSec) {
+        timerRemainingSec = left;
+        updateTimerUI();
+      }
+      if (left <= 0) {
+        timerRunning = false;
+        clearInterval(timerInterval);
+        timerEndMs = null;
+        playTimerChime();
+        updateTimerUI();
+      }
+    }
+
+    function playTimerChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [0, 0.25, 0.5].forEach((delay, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = idx === 2 ? 880 : 660;
+          gain.gain.setValueAtTime(0.25, ctx.currentTime + delay);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + delay);
+          osc.stop(ctx.currentTime + delay + 0.35);
+        });
+      } catch (e) {}
+    }
+
+    function updateTimerUI() {
+      const formatted = formatTimer(timerRemainingSec);
+      const display = document.getElementById('timerDisplay');
+      const startBtn = document.getElementById('timerStartPauseBtn');
+      const quickBtn = document.getElementById('timerQuickBtn');
+      const pill = document.getElementById('floatingTimerPill');
+
+      const isFinished = !timerRunning && timerRemainingSec === 0;
+      if (display) {
+        display.textContent = formatted;
+        display.classList.toggle('bg-red-100', isFinished);
+        display.classList.toggle('text-red-700', isFinished);
+        display.classList.toggle('bg-slate-50', !isFinished);
+        display.classList.toggle('text-slate-900', !isFinished);
+      }
+      if (startBtn) {
+        startBtn.textContent = timerRunning ? '⏸ Pause' : '▶ Start';
+        startBtn.classList.toggle('bg-amber-500', timerRunning);
+        startBtn.classList.toggle('bg-emerald-600', !timerRunning);
+      }
+      if (quickBtn) {
+        quickBtn.textContent = timerRunning ? `⏱️ ${formatted}` : (isFinished ? '⏰ 00:00!' : '⏱️ Timer');
+        quickBtn.classList.toggle('bg-red-200', isFinished);
+        quickBtn.classList.toggle('bg-teal-100', !isFinished);
+      }
+      if (pill) {
+        pill.classList.toggle('hidden', !timerRunning && !isFinished);
+        pill.textContent = isFinished ? '⏰ Time Up!' : `⏱️ ${formatted}`;
+        pill.classList.toggle('bg-red-600', isFinished);
+        pill.classList.toggle('bg-teal-600', !isFinished);
+      }
     }
 
     function getPastPairCounts(periodKey) {
