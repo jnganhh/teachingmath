@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Math Skills Practice | MPM2D</title>
-  <link rel="stylesheet" href="practice.css?v=figures-progress">
-  <script src="questions.js?v=figures-progress" defer></script>
-  <script src="progress.js?v=figures-progress" defer></script>
-  <script src="figures.js?v=figures-progress" defer></script>
-  <script src="practice.js?v=figures-progress" defer></script>
+  <link rel="stylesheet" href="practice.css?v=green-review">
+  <script src="questions.js?v=green-review" defer></script>
+  <script src="progress.js?v=green-review" defer></script>
+  <script src="figures.js?v=green-review" defer></script>
+  <script src="practice.js?v=green-review" defer></script>
 </head>
 <body>
 <header><div class="wrap hero"><div><p class="course">MPM2D · Grade 10 Mathematics</p><h1>Math Skills Practice</h1><p>Choose a skill. Work through eight questions at your level.</p></div><a class="progress-link" href="#progress-title">My progress</a></div></header>
@@ -47,6 +47,11 @@
       <div id="complete" hidden>
         <h3 id="complete-title" tabindex="-1">Set complete</h3>
         <p id="result"></p>
+        <section id="set-review" aria-labelledby="set-review-title" hidden>
+          <h4 id="set-review-title">Review and try again</h4>
+          <p id="set-review-intro">Work through these questions again before opening their solutions.</p>
+          <div id="review-questions"></div>
+        </section>
         <div class="actions"><button class="primary" id="restart">Retry this level</button><button id="advance">Next level</button></div>
       </div>
     </section>

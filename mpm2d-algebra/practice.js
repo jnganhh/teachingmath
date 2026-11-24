@@ -12,6 +12,7 @@ let finishedQuestion = false;
 let revealed = false;
 let currentOptions = [];
 let recorded = false;
+let reviewQuestions = [];
 
 function element(tag, text) {
   const node = document.createElement(tag);
@@ -59,7 +60,9 @@ function saveCurrentSet() {
     recorded = true;
   }
   activeAlgebraSet = {topic:name, level};
-  algebraDrafts[algebraSetKey(name, level)] = {total, questionIndex, firstTry, attempted, finishedQuestion, revealed, recorded, reviewed};
+  algebraDrafts[algebraSetKey(name, level)] = {
+    total, questionIndex, firstTry, attempted, finishedQuestion, revealed, recorded, reviewed, reviewQuestions
+  };
   saveAlgebraProgress();
   renderAlgebraProgress();
 }
@@ -70,6 +73,33 @@ function clearQuestionState() {
   finishedQuestion = false;
 }
 
+function renderSetReview(questions) {
+  const target = get("review-questions");
+  target.replaceChildren();
+  get("set-review").hidden = reviewQuestions.length === 0;
+  for (const index of reviewQuestions) {
+    const question = questions[index];
+    if (!question) continue;
+    const card = element("article");
+    card.className = "review-question";
+    const math = element("p", question.math);
+    math.className = "review-math";
+    const details = element("details");
+    const solution = element("p", question.solution);
+    details.append(element("summary", "Show solution"), solution);
+    const figure = element("figure");
+    figure.className = "math-figure";
+    renderPracticeFigure(figure, algebraTopics[topicIndex].name, question.diagram,
+      `${question.math} ${question.prompt}`);
+    card.append(element("h5", `Question ${index + 1} · ${question.prompt}`), math, figure, details);
+    target.append(card);
+  }
+}
+
+function flagForReview() {
+  if (!reviewQuestions.includes(questionIndex)) reviewQuestions.push(questionIndex);
+}
+
 function renderQuestion() {
   const questions = questionSet();
   const complete = questionIndex === questions.length;
@@ -78,6 +108,7 @@ function renderQuestion() {
   updateSetProgress();
   if (complete) {
     get("result").textContent = `${firstTry} of ${questions.length} correct on the first attempt before viewing the solution.`;
+    renderSetReview(questions);
     get("advance").hidden = levelSelect.selectedIndex === levels.length - 1;
     get("complete-title").focus();
     return;
@@ -117,6 +148,7 @@ function restart() {
   questionIndex = 0;
   firstTry = 0;
   recorded = false;
+  reviewQuestions = [];
   clearQuestionState();
   renderQuestion();
   saveCurrentSet();
@@ -131,6 +163,7 @@ function resume() {
     return;
   }
   ({questionIndex, firstTry, attempted, finishedQuestion, revealed, recorded} = draft);
+  reviewQuestions = Array.isArray(draft.reviewQuestions) ? draft.reviewQuestions : [];
   renderQuestion();
   saveCurrentSet();
 }
@@ -173,7 +206,10 @@ algebraTopics.forEach(({name}, index) => {
   motif.setAttribute("aria-hidden", "true");
   const detail = element("span", description);
   detail.className = "topic-detail";
-  button.append(motif, element("strong", name), detail);
+  const progress = element("span");
+  progress.className = "topic-completion";
+  progress.dataset.topic = name;
+  button.append(motif, element("strong", name), detail, progress);
   button.addEventListener("click", () => selectTopic(index));
   get("topics").append(button);
 });
@@ -189,6 +225,7 @@ answerForm.addEventListener("submit", (event) => {
     feedback.dataset.kind = "retry";
     feedback.textContent = reasoning + " Try again.";
     attempted = true;
+    flagForReview();
     saveCurrentSet();
     return;
   }
@@ -206,6 +243,7 @@ get("hint-button").addEventListener("click", () => setReveal("hint", get("hint")
 get("solution-button").addEventListener("click", () => {
   if (get("solution").hidden && !finishedQuestion) {
     revealed = true;
+    flagForReview();
     get("next").hidden = false;
     saveCurrentSet();
   }

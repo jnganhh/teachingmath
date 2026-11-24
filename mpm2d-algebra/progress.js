@@ -34,6 +34,12 @@ function renderAlgebraProgress() {
       for (const value of [name, level, attempts.length, score(latest), score(best), current]) row.insertCell().textContent = value;
     }
   }
+  for (const badge of document.querySelectorAll(".topic-completion")) {
+    const completed = new Set(algebraAttempts.filter((attempt) => attempt.topic === badge.dataset.topic)
+      .map((attempt) => attempt.level)).size;
+    badge.textContent = `${completed}/3 levels complete`;
+    badge.classList.toggle("has-completion", completed > 0);
+  }
   document.getElementById("download-report").disabled = !algebraAttempts.length;
 }
 
