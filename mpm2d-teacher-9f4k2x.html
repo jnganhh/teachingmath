@@ -1027,6 +1027,38 @@
       document.getElementById('statTallies').textContent = tallySum;
       document.getElementById('statLogs').textContent = obsSum;
 
+      // Ensure active view section & button always match state.currentView
+      const validViews = ['daily', 'history', 'participation', 'summary', 'roster'];
+      if (!validViews.includes(state.currentView)) state.currentView = 'daily';
+      validViews.forEach(v => {
+        const sec = document.getElementById(`view-${v}`);
+        const btn = document.getElementById(`viewBtn-${v}`);
+        if (sec) sec.classList.toggle('hidden', v !== state.currentView);
+        if (btn) {
+          btn.classList.toggle('tab-active', v === state.currentView);
+          btn.classList.toggle('bg-slate-50', v !== state.currentView);
+        }
+      });
+
+      // Ensure active period button always matches state.currentPeriod
+      ['P1', 'P2', 'P3'].forEach(k => {
+        const btn = document.getElementById(`periodBtn-${k}`);
+        if (btn) {
+          btn.classList.toggle('tab-active', k === state.currentPeriod);
+          btn.classList.toggle('bg-slate-50', k !== state.currentPeriod);
+        }
+      });
+
+      // Ensure 4x8 Grid / Table toggle buttons match dailyLayout
+      const gridBtn = document.getElementById('layoutBtn-grid');
+      const tableBtn = document.getElementById('layoutBtn-table');
+      if (gridBtn && tableBtn) {
+        gridBtn.classList.toggle('tab-active', dailyLayout === 'grid');
+        gridBtn.classList.toggle('text-slate-700', dailyLayout !== 'grid');
+        tableBtn.classList.toggle('tab-active', dailyLayout === 'table');
+        tableBtn.classList.toggle('text-slate-700', dailyLayout !== 'table');
+      }
+
       if (state.currentView === 'daily') {
         const gridEl = document.getElementById('dailyGridContainer');
         const tableEl = document.getElementById('dailyTableContainer');
