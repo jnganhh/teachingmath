@@ -430,6 +430,8 @@ function record(id, correct, hintsUsed, input) {
   if (correct) checkMilestone();
 }
 
+const $ = id => document.getElementById(id);
+
 /* ================= Student identity & teacher email ================= */
 // Paste your Google Apps Script Web App URL here (see google-apps-script.gs in this repo)
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/gapps.yrdsb.ca/s/AKfycbxqBtV5pWjvNGX0xod_u0yOE-kB1GSmKdeji_TXg153UblqDkKa6zt3T8OR0C3ex_U/exec';
@@ -492,7 +494,6 @@ function renderProgress() {
 
 /* ================= UI state ================= */
 let mode = 'expand', selected = new Set(Object.keys(SKILLS)), q = null, qId = null, hintsShown = 0, attemptedWrong = false, done = false;
-const $ = id => document.getElementById(id);
 
 function renderChips() {
   $('skillChips').innerHTML = Object.entries(SKILLS).filter(([, S]) => mode === 'mixed' || S.mode === mode)
