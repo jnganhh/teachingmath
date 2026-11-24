@@ -415,40 +415,83 @@
     </div>
   </section>
 
-  <!-- VIEW 4: GROWING SUCCESS 6 LEARNING SKILLS REPORT MATRIX -->
+  <!-- VIEW 4: GROWING SUCCESS 6 LEARNING SKILLS & 6 Cs REPORT MATRIX -->
   <section id="view-summary" class="hidden max-w-7xl mx-auto space-y-4">
-    <div class="bg-white rounded-xl comic-border p-4">
-      <div class="mb-3">
-        <h2 class="text-base font-black text-slate-900">Ontario Growing Success — 6 Learning Skills & Work Habits Matrix</h2>
-        <p class="text-xs font-bold text-slate-600 mt-1">
+    <div class="bg-white rounded-xl comic-border p-4 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-slate-200 pb-3">
+        <div>
+          <h2 class="text-base font-black text-slate-900">Learning Skills &amp; Global Competencies Matrix</h2>
+          <p class="text-xs font-bold text-slate-600 mt-1">Switch between Ontario <strong>Growing Success (6 Skills)</strong> and <strong>Deep Learning 6 Cs</strong>.</p>
+        </div>
+        <div class="inline-flex rounded-lg border-2 border-slate-800 bg-slate-100 p-0.5 self-start sm:self-auto">
+          <button onclick="setSummarySubTab('gs')" id="subTabBtn-gs" class="px-3 py-1.5 text-xs font-black rounded-md transition tab-active">
+            🎓 Growing Success
+          </button>
+          <button onclick="setSummarySubTab('6c')" id="subTabBtn-6c" class="px-3 py-1.5 text-xs font-black rounded-md transition text-slate-700">
+            🌟 6 Cs (Global Competencies)
+          </button>
+        </div>
+      </div>
+
+      <!-- Growing Success Panel -->
+      <div id="summaryPanel-gs">
+        <p class="text-xs font-bold text-slate-600 mb-3">
           Calculated objectively from accumulated positive vs. coaching look-fors, homework completion, mobile device self-regulation, attendance punctuality, and participation tallies:
           <span class="badge-E px-2 py-0.5 rounded font-mono font-black ml-1">E</span> Excellent (≥85%)
           <span class="badge-G px-2 py-0.5 rounded font-mono font-black ml-1">G</span> Good (70–84%)
           <span class="badge-S px-2 py-0.5 rounded font-mono font-black ml-1">S</span> Satisfactory (50–69%)
           <span class="badge-N px-2 py-0.5 rounded font-mono font-black ml-1">N</span> Needs Improvement (&lt;50%)
         </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b-2 border-slate-800 bg-slate-100 font-black text-slate-700">
+                <th class="py-3 px-3">Student</th>
+                <th class="py-3 px-2 text-center">Att. (P/L/A)</th>
+                <th class="py-3 px-2 text-center">HW (✓/~/✗)</th>
+                <th class="py-3 px-2 text-center" title="Total Mobile Device Infractions in Class">📵 Phone</th>
+                <th class="py-3 px-2 text-center">Total Tallies</th>
+                <th class="py-3 px-2 text-center">Responsibility</th>
+                <th class="py-3 px-2 text-center">Organization</th>
+                <th class="py-3 px-2 text-center">Independent Work</th>
+                <th class="py-3 px-2 text-center">Collaboration</th>
+                <th class="py-3 px-2 text-center">Initiative</th>
+                <th class="py-3 px-2 text-center">Self-Regulation</th>
+                <th class="py-3 px-3">Auto-Generated Report Card Comment Stem</th>
+              </tr>
+            </thead>
+            <tbody id="summaryTableBody" class="divide-y-2 divide-slate-200"></tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b-2 border-slate-800 bg-slate-100 font-black text-slate-700">
-              <th class="py-3 px-3">Student</th>
-              <th class="py-3 px-2 text-center">Att. (P/L/A)</th>
-              <th class="py-3 px-2 text-center">HW (✓/~/✗)</th>
-              <th class="py-3 px-2 text-center" title="Total Mobile Device Infractions in Class">📵 Phone</th>
-              <th class="py-3 px-2 text-center">Total Tallies</th>
-              <th class="py-3 px-2 text-center">Responsibility</th>
-              <th class="py-3 px-2 text-center">Organization</th>
-              <th class="py-3 px-2 text-center">Independent Work</th>
-              <th class="py-3 px-2 text-center">Collaboration</th>
-              <th class="py-3 px-2 text-center">Initiative</th>
-              <th class="py-3 px-2 text-center">Self-Regulation</th>
-              <th class="py-3 px-3">Auto-Generated Report Card Comment Stem</th>
-            </tr>
-          </thead>
-          <tbody id="summaryTableBody" class="divide-y-2 divide-slate-200"></tbody>
-        </table>
+      <!-- 6 Cs Global Competencies Panel -->
+      <div id="summaryPanel-6c" class="hidden">
+        <p class="text-xs font-bold text-slate-600 mb-3">
+          Ontario / NPDL <strong>6 Cs</strong> accumulated from daily 6-C check-ins, Building Thinking Classrooms (VNPS), peer help, self-checks, and digital citizenship:
+          <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-mono font-black ml-1">Exemplary (6+)</span>
+          <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-mono font-black ml-1">Proficient (3–5)</span>
+          <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-mono font-black ml-1">Developing (1–2)</span>
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b-2 border-slate-800 bg-purple-50 font-black text-slate-800">
+                <th class="py-3 px-3">Student</th>
+                <th class="py-3 px-2 text-center">💪 Character</th>
+                <th class="py-3 px-2 text-center">🤝 Citizenship</th>
+                <th class="py-3 px-2 text-center">🧑‍🤝‍🧑 Collaboration</th>
+                <th class="py-3 px-2 text-center">💬 Communication</th>
+                <th class="py-3 px-2 text-center">🎨 Creativity</th>
+                <th class="py-3 px-2 text-center">🧠 Critical Thinking</th>
+                <th class="py-3 px-3">6 Cs Strength Profile</th>
+              </tr>
+            </thead>
+            <tbody id="sixCsTableBody" class="divide-y-2 divide-slate-200"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -621,6 +664,15 @@
       { key: 'brd', label: '✏️ Board/VNPS', desc: 'Showed work on whiteboard / vertical surface', defaultSkill: 'CO' },
       { key: 'hlp', label: '🤝 Peer Help', desc: 'Explained concept to a classmate', defaultSkill: 'CO' },
       { key: 'chk', label: '🔍 Self-Check', desc: 'Verified math solution independently', defaultSkill: 'SR' }
+    ];
+
+    const SIX_C_SKILLS = [
+      { code: 'CH', name: 'Character', icon: '💪', desc: 'Persisted after getting stuck / learned from mistakes' },
+      { code: 'CI', name: 'Citizenship', icon: '🤝', desc: 'Inclusive teammate / responsible device use' },
+      { code: 'CL', name: 'Collaboration', icon: '🧑‍🤝‍🧑', desc: 'Shared marker & built on partner ideas at VNPS' },
+      { code: 'CM', name: 'Communication', icon: '💬', desc: 'Explained math reasoning using terms/graphs' },
+      { code: 'CR', name: 'Creativity', icon: '🎨', desc: 'Tried alternative strategy / asked "what if?"' },
+      { code: 'CT', name: 'Critical Thinking', icon: '🧠', desc: 'Checked reasonableness / analyzed errors' }
     ];
 
     // Building Thinking Classrooms (VNPS) & Algebra Problem String Checkbox Items
@@ -1338,6 +1390,21 @@
         `;
       }).join('');
 
+      const sixCsSet = new Set(rec.sixCs || []);
+      const sixCsControls = `
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          ${SIX_C_SKILLS.map(c => {
+            const active = sixCsSet.has(c.code);
+            return `
+              <button onclick="toggleSixC('${studentId}', '${c.code}')" title="${c.desc}" class="px-2.5 py-2 rounded-lg border-2 text-xs text-left flex items-center gap-1.5 transition ${active ? 'bg-purple-100 border-purple-700 text-purple-950 font-black' : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100 font-bold'}">
+                <span>${c.icon}</span>
+                <span>${c.name}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+
       container.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border-2 border-slate-200">
           <div>
@@ -1356,6 +1423,10 @@
         <div>
           <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">Building Thinking Classrooms &amp; Algebra Problem String</div>
           ${btcCheckboxes}
+        </div>
+        <div>
+          <div class="text-[10px] font-black uppercase text-purple-700 mb-1.5">Ontario 6 Cs (Global Competencies)</div>
+          ${sixCsControls}
         </div>
         <div>
           <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">Quick Participation Tallies</div>
@@ -1950,6 +2021,97 @@
             <td class="py-3 px-2 text-center font-mono font-black text-blue-700">${sum.totalTallies}</td>
             ${skillCells}
             <td class="py-3 px-3 text-xs font-medium text-slate-700 max-w-xs">${comment}</td>
+          </tr>
+        `;
+      }).join('');
+
+      renderSixCsTable(students);
+    }
+
+    function toggleSixC(studentId, code) {
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      if (!Array.isArray(rec.sixCs)) rec.sixCs = [];
+      const idx = rec.sixCs.indexOf(code);
+      if (idx !== -1) rec.sixCs.splice(idx, 1);
+      else rec.sixCs.push(code);
+      saveState();
+      renderCurrentView();
+    }
+
+    let activeSummarySubTab = 'gs';
+    function setSummarySubTab(tab) {
+      activeSummarySubTab = tab;
+      const gsPanel = document.getElementById('summaryPanel-gs');
+      const cPanel = document.getElementById('summaryPanel-6c');
+      const gsBtn = document.getElementById('subTabBtn-gs');
+      const cBtn = document.getElementById('subTabBtn-6c');
+      if (gsPanel && cPanel) {
+        gsPanel.classList.toggle('hidden', tab !== 'gs');
+        cPanel.classList.toggle('hidden', tab !== '6c');
+      }
+      if (gsBtn && cBtn) {
+        gsBtn.classList.toggle('tab-active', tab === 'gs');
+        gsBtn.classList.toggle('text-slate-700', tab !== 'gs');
+        cBtn.classList.toggle('tab-active', tab === '6c');
+        cBtn.classList.toggle('text-slate-700', tab !== '6c');
+      }
+    }
+
+    function renderSixCsTable(students) {
+      const tbody = document.getElementById('sixCsTableBody');
+      if (!tbody) return;
+      const dates = Object.keys(state.logs || {});
+
+      tbody.innerHTML = students.map(s => {
+        const counts = { CH: 0, CI: 0, CL: 0, CM: 0, CR: 0, CT: 0 };
+        let phoneFlags = 0;
+
+        dates.forEach(d => {
+          const rec = state.logs[d]?.[s.id];
+          if (!rec) return;
+          (rec.sixCs || []).forEach(c => {
+            if (counts[c] !== undefined) counts[c]++;
+          });
+          // Map existing BTC/tally evidence into 6 Cs
+          const t = rec.tallies || {};
+          if (t.brd > 0 || t.hlp > 0) counts.CL += 1;
+          if (t.ans > 0) counts.CM += 1;
+          if (t.chk > 0) counts.CT += 1;
+          (rec.observations || []).forEach(obs => {
+            if (obs.lookForId === 'CHK_ASK_Q' || obs.lookForId === 'CHK_ALG_STRING') counts.CR += 1;
+            if (obs.lookForId === 'CHK_WB_COLLAB' || obs.lookForId === 'CHK_PEER_MOB') counts.CL += 1;
+          });
+          phoneFlags += (rec.phoneCount || 0);
+        });
+
+        const badgeFor = (val) => {
+          if (val >= 6) return `<span class="px-2 py-0.5 rounded font-mono font-black bg-emerald-100 text-emerald-900">${val} (Exemplary)</span>`;
+          if (val >= 3) return `<span class="px-2 py-0.5 rounded font-mono font-black bg-blue-100 text-blue-900">${val} (Proficient)</span>`;
+          if (val >= 1) return `<span class="px-2 py-0.5 rounded font-mono font-black bg-amber-100 text-amber-900">${val} (Developing)</span>`;
+          return `<span class="font-mono text-slate-400">0</span>`;
+        };
+
+        const topC = SIX_C_SKILLS
+          .slice()
+          .sort((a, b) => counts[b.code] - counts[a.code])
+          .filter(c => counts[c.code] > 0)
+          .slice(0, 2)
+          .map(c => `${c.icon} ${c.name}`);
+
+        const profileText = topC.length > 0
+          ? `Strengths: ${topC.join(', ')}${phoneFlags >= 2 ? ' • Coaching needed on digital Citizenship' : ''}`
+          : (phoneFlags >= 2 ? 'Coaching needed on digital Citizenship' : 'No 6 Cs evidence logged yet');
+
+        return `
+          <tr class="hover:bg-purple-50/50">
+            <td class="py-3 px-3 font-black whitespace-nowrap">${s.name}</td>
+            <td class="py-3 px-2 text-center">${badgeFor(counts.CH)}</td>
+            <td class="py-3 px-2 text-center">${badgeFor(counts.CI)}</td>
+            <td class="py-3 px-2 text-center">${badgeFor(counts.CL)}</td>
+            <td class="py-3 px-2 text-center">${badgeFor(counts.CM)}</td>
+            <td class="py-3 px-2 text-center">${badgeFor(counts.CR)}</td>
+            <td class="py-3 px-2 text-center">${badgeFor(counts.CT)}</td>
+            <td class="py-3 px-3 text-xs font-semibold text-slate-700">${profileText}</td>
           </tr>
         `;
       }).join('');
