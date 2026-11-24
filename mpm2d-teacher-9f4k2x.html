@@ -110,6 +110,9 @@
       <button onclick="exportReportCSV()" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-blue-600 text-white comic-btn flex items-center justify-center gap-1 sm:gap-1.5">
         <span>📊</span> CSV
       </button>
+      <button onclick="hardRefreshApp()" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-cyan-100 text-cyan-950 comic-btn flex items-center justify-center gap-1" title="Reload latest version of this page (useful on iPad Home Screen)">
+        <span>🔄</span> Refresh
+      </button>
       <button onclick="lockTeacherTracker()" class="px-2 sm:px-3 py-2 text-[11px] sm:text-xs font-black rounded-lg bg-slate-800 text-white comic-btn flex items-center justify-center gap-1" title="Lock screen if leaving device on desk">
         <span>🔒</span> Lock
       </button>
@@ -2541,6 +2544,12 @@
       document.getElementById('lockPinInput').value = '';
       document.getElementById('teacherLockOverlay').classList.add('hidden');
       initCloudSyncControls();
+    }
+
+    function hardRefreshApp() {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_r', Date.now());
+      window.location.replace(url.toString());
     }
 
     function lockTeacherTracker() {
