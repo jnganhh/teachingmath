@@ -150,6 +150,9 @@
       <button onclick="switchView('summary')" id="viewBtn-summary" class="sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50">
         🎓 6 Skills
       </button>
+      <button onclick="switchView('weekly')" id="viewBtn-weekly" class="sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50">
+        📊 Weekly
+      </button>
       <button onclick="switchView('roster')" id="viewBtn-roster" class="col-span-2 sm:col-span-1 sm:flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-black border-2 border-slate-800 transition bg-slate-50">
         👥 Roster
       </button>
@@ -186,8 +189,14 @@
       <button onclick="clearCurrentDayInputs()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-red-100 text-red-900 comic-btn" title="Reset all attendance, homework, phone flags, tallies, and observations for this period on the selected date">
         🧹 Clear Day
       </button>
+      <button onclick="undoLastAction()" id="undoBtn" disabled class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-slate-100 text-slate-500 comic-btn disabled:opacity-50" title="Undo last change">
+        ↩️ Undo
+      </button>
       <button onclick="pickRandomStudent()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
         🎲 Equitable Random Call
+      </button>
+      <button onclick="openRandomGroupsModal()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn" title="Building Thinking Classrooms: Randomize groups avoiding recent pairs">
+        👥 Random Groups
       </button>
       <input type="text" id="studentSearch" oninput="renderCurrentView()" placeholder="Search student..." class="w-full sm:w-auto px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none" />
     </div>
@@ -244,6 +253,84 @@
       <div id="modalStudentBody" class="space-y-4 text-xs"></div>
     </div>
   </div>
+
+  <!-- RANDOM GROUPING MODAL (Building Thinking Classrooms) -->
+  <div id="randomGroupsModal" onclick="if(event.target===this) closeRandomGroupsModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
+    <div class="bg-white max-w-4xl w-full rounded-2xl comic-border p-3.5 sm:p-5 space-y-4 my-auto max-h-[92vh] overflow-y-auto overflow-x-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
+        <div>
+          <span class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-purple-100 text-purple-900 border border-slate-800">Building Thinking Classrooms</span>
+          <h2 class="text-lg sm:text-xl font-black text-slate-900 mt-1">👥 Smart Random Grouping — <span id="groupsPeriodLabel" class="text-purple-700">Period 1</span></h2>
+          <p class="text-[11px] font-bold text-slate-600">Automatically avoids pairing students who worked together on previous saved days.</p>
+        </div>
+        <button onclick="closeRandomGroupsModal()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">✓ Close</button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 bg-slate-50 p-2.5 rounded-xl border-2 border-slate-800">
+        <label class="text-xs font-black text-slate-700">Group Size:</label>
+        <select id="groupSizeSelect" class="px-2.5 py-1.5 text-xs font-black rounded-lg bg-white border-2 border-slate-800">
+          <option value="2">2 per group (Pairs)</option>
+          <option value="3" selected>3 per group (BTC Standard)</option>
+          <option value="4">4 per group</option>
+        </select>
+        <label class="flex items-center gap-1.5 text-xs font-bold text-slate-700 ml-1 cursor-pointer">
+          <input type="checkbox" id="groupIncludeLate" checked class="w-4 h-4 accent-purple-600" />
+          Include Late
+        </label>
+        <button onclick="generateSmartGroups()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-purple-600 text-white comic-btn ml-auto">
+          🎲 Reshuffle
+        </button>
+        <button onclick="saveTodayGroups()" id="saveGroupsBtn" class="px-3 py-1.5 text-xs font-black rounded-lg bg-emerald-600 text-white comic-btn">
+          💾 Save Today's Groups
+        </button>
+        <button onclick="copyGroupsToClipboard()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-amber-300 text-slate-900 comic-btn">
+          📋 Copy
+        </button>
+      </div>
+
+      <div id="groupsRepeatInfo" class="text-xs font-bold text-slate-600"></div>
+      <div id="randomGroupsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: WEEKLY / TERM ATTENDANCE, HOMEWORK & PHONE SUMMARY -->
+  <section id="view-weekly" class="hidden max-w-7xl mx-auto space-y-4">
+    <div class="bg-white rounded-xl comic-border p-3.5 sm:p-4 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
+        <div>
+          <h2 class="text-base font-black text-slate-900">📊 Weekly &amp; Term Attendance / Homework / Phone Summary — <span id="weeklyPeriodTitle" class="text-blue-600">Period 1</span></h2>
+          <p class="text-xs font-bold text-slate-600">Spot patterns at a glance: repeated absences/lates, missing homework, and 📵 mobile device flags.</p>
+        </div>
+        <select id="weeklyRangeSelect" onchange="renderWeeklyView()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-50 border-2 border-slate-800 self-start sm:self-auto">
+          <option value="7">Last 7 Days</option>
+          <option value="14">Last 14 Days</option>
+          <option value="all" selected>All Recorded Dates</option>
+        </select>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b-2 border-slate-800 bg-slate-100 font-black text-slate-700">
+              <th class="py-2.5 px-3">Student</th>
+              <th class="py-2.5 px-2 text-center">Present</th>
+              <th class="py-2.5 px-2 text-center">Late</th>
+              <th class="py-2.5 px-2 text-center">Absent</th>
+              <th class="py-2.5 px-2 text-center">HW Done</th>
+              <th class="py-2.5 px-2 text-center">HW Part</th>
+              <th class="py-2.5 px-2 text-center">HW Miss</th>
+              <th class="py-2.5 px-2 text-center">📵 Phone Flags</th>
+            </tr>
+          </thead>
+          <tbody id="weeklyTableBody" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Floating Scroll-to-Top Button (helpful on phone) -->
+  <button onclick="window.scrollTo({top:0, behavior:'smooth'})" id="scrollTopBtn" class="fixed bottom-4 right-4 z-30 px-3 py-2 text-xs font-black rounded-full bg-slate-900 text-white comic-btn shadow-lg opacity-85 hover:opacity-100" title="Scroll to top">
+    ⬆ Top
+  </button>
 
   <!-- VIEW 2: REVIEW INPUT BASED ON DATE (HISTORY & DATE LOG) -->
   <section id="view-history" class="hidden max-w-7xl mx-auto space-y-4">
@@ -640,9 +727,20 @@
       return JSON.parse(JSON.stringify(DEFAULT_STATE));
     }
 
+    const undoStack = [];
+    let isUndoing = false;
+    let lastSavedSnapshot = localStorage.getItem(STORAGE_KEY) || '';
+
     async function saveState() {
       try {
         const serialized = JSON.stringify(state, null, 2);
+        if (!isUndoing && lastSavedSnapshot && lastSavedSnapshot !== serialized) {
+          undoStack.push(lastSavedSnapshot);
+          if (undoStack.length > 15) undoStack.shift();
+        }
+        lastSavedSnapshot = serialized;
+        updateUndoButton();
+
         localStorage.setItem(STORAGE_KEY, serialized);
         saveToIndexedDB(serialized);
 
@@ -657,6 +755,33 @@
         scheduleAutoCloudSync();
       } catch (err) {
         console.error('Save error:', err);
+      }
+    }
+
+    function updateUndoButton() {
+      const btn = document.getElementById('undoBtn');
+      if (!btn) return;
+      btn.disabled = undoStack.length === 0;
+      if (undoStack.length > 0) {
+        btn.classList.remove('text-slate-500');
+        btn.classList.add('text-slate-900', 'bg-amber-100');
+      } else {
+        btn.classList.add('text-slate-500');
+        btn.classList.remove('text-slate-900', 'bg-amber-100');
+      }
+    }
+
+    function undoLastAction() {
+      if (undoStack.length === 0) return;
+      const prev = undoStack.pop();
+      try {
+        isUndoing = true;
+        state = { ...DEFAULT_STATE, ...JSON.parse(prev) };
+        saveState();
+        renderCurrentView();
+      } finally {
+        isUndoing = false;
+        updateUndoButton();
       }
     }
 
@@ -723,7 +848,7 @@
 
     function switchView(view) {
       state.currentView = view;
-      ['daily', 'history', 'participation', 'summary', 'roster'].forEach(v => {
+      ['daily', 'history', 'participation', 'summary', 'weekly', 'roster'].forEach(v => {
         const section = document.getElementById(`view-${v}`);
         const btn = document.getElementById(`viewBtn-${v}`);
         if (!section || !btn) return;
@@ -1046,7 +1171,7 @@
       document.getElementById('statLogs').textContent = obsSum;
 
       // Ensure active view section & button always match state.currentView
-      const validViews = ['daily', 'history', 'participation', 'summary', 'roster'];
+      const validViews = ['daily', 'history', 'participation', 'summary', 'weekly', 'roster'];
       if (!validViews.includes(state.currentView)) state.currentView = 'daily';
       validViews.forEach(v => {
         const sec = document.getElementById(`view-${v}`);
@@ -1093,6 +1218,7 @@
       else if (state.currentView === 'history') renderHistoryView(students);
       else if (state.currentView === 'participation') renderParticipationView(students);
       else if (state.currentView === 'summary') renderSummaryTable(students);
+      else if (state.currentView === 'weekly') renderWeeklyView(students);
       else if (state.currentView === 'roster') renderRosterView(allStudents);
 
       if (activeModalStudentId) {
@@ -1269,7 +1395,7 @@
           : '';
 
         return `
-          <button onclick="openStudentModal('${s.id}')" class="text-left bg-white hover:bg-yellow-50 p-2 sm:p-3 rounded-xl comic-btn flex flex-col justify-between gap-1.5 sm:gap-2 transition min-w-0">
+          <div onclick="openStudentModal('${s.id}')" class="cursor-pointer text-left bg-white hover:bg-yellow-50 p-2 sm:p-3 rounded-xl comic-btn flex flex-col justify-between gap-1.5 sm:gap-2 transition min-w-0">
             <div class="flex items-start justify-between gap-1 sm:gap-1.5 w-full min-w-0">
               <span class="font-black text-xs sm:text-sm text-slate-900 leading-tight break-words min-w-0">${s.name}</span>
               <span class="px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-black rounded border shrink-0 ${attColor}">${attText}</span>
@@ -1280,9 +1406,200 @@
               ${hwBadge}
               ${pVal > 0 ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-black">📵 ${pVal}</span>` : ''}
             </div>
-          </button>
+            <div class="flex items-center gap-1 pt-1 border-t border-slate-200" onclick="event.stopPropagation()">
+              <button onclick="cycleAttendance('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-slate-50 hover:bg-slate-200" title="Cycle Present / Late / Absent">${rec.attendance}</button>
+              <button onclick="addTally('${s.id}', 'answered', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-blue-50 text-blue-900 hover:bg-blue-100" title="+1 Answered Question">+1</button>
+              <button onclick="addPhoneFlag('${s.id}', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-red-50 text-red-900 hover:bg-red-100" title="+1 Mobile Device Flag">📵</button>
+            </div>
+          </div>
         `;
       }).join('');
+    }
+
+    function cycleAttendance(studentId) {
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      const order = ['P', 'L', 'A', 'E'];
+      const next = order[(order.indexOf(rec.attendance) + 1) % order.length];
+      setAttendance(studentId, next);
+    }
+
+    function renderWeeklyView(students) {
+      const titleEl = document.getElementById('weeklyPeriodTitle');
+      if (titleEl) titleEl.textContent = state.periods[state.currentPeriod].label;
+      const tbody = document.getElementById('weeklyTableBody');
+      if (!tbody) return;
+
+      const rangeVal = document.getElementById('weeklyRangeSelect')?.value || 'all';
+      let dates = Object.keys(state.logs || {}).sort();
+      if (rangeVal !== 'all') {
+        const days = parseInt(rangeVal, 10);
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const cutoffStr = cutoff.toISOString().slice(0, 10);
+        dates = dates.filter(d => d >= cutoffStr);
+      }
+
+      if (students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center font-bold text-slate-500">No students in this period.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = students.map(s => {
+        let p = 0, l = 0, a = 0, hwDone = 0, hwPart = 0, hwMiss = 0, phones = 0;
+        dates.forEach(d => {
+          const rec = state.logs[d]?.[s.id];
+          if (!rec) return;
+          if (rec.attendance === 'P') p++;
+          else if (rec.attendance === 'L') l++;
+          else if (rec.attendance === 'A') a++;
+          if (rec.homework === 'Done') hwDone++;
+          else if (rec.homework === 'Part') hwPart++;
+          else if (rec.homework === 'Miss') hwMiss++;
+          phones += (rec.phoneCount || 0);
+        });
+
+        const alertClass = (a >= 2 || hwMiss >= 2 || phones >= 2) ? 'bg-red-50/60' : '';
+        return `
+          <tr class="hover:bg-slate-50 ${alertClass}">
+            <td class="py-2.5 px-3 font-black text-slate-900">${s.name}</td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold text-emerald-700">${p}</td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold ${l >= 2 ? 'text-amber-700 bg-amber-100 rounded' : 'text-amber-600'}">${l}</td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold ${a >= 2 ? 'text-red-700 bg-red-100 rounded' : 'text-red-600'}">${a}</td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold text-emerald-700">${hwDone}</td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold text-amber-600">${hwPart}</td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold ${hwMiss >= 2 ? 'text-red-700 bg-red-100 rounded' : 'text-red-600'}">${hwMiss}</td>
+            <td class="py-2.5 px-2 text-center font-mono font-black ${phones >= 2 ? 'text-red-700 bg-red-100 rounded' : 'text-slate-700'}">${phones}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    let currentGeneratedGroups = [];
+
+    function openRandomGroupsModal() {
+      const labelEl = document.getElementById('groupsPeriodLabel');
+      if (labelEl) labelEl.textContent = state.periods[state.currentPeriod].label;
+      document.getElementById('randomGroupsModal').classList.remove('hidden');
+      generateSmartGroups();
+    }
+
+    function closeRandomGroupsModal() {
+      document.getElementById('randomGroupsModal').classList.add('hidden');
+    }
+
+    function getPastPairCounts(periodKey) {
+      const counts = {};
+      const history = (state.groupHistory && state.groupHistory[periodKey]) || {};
+      Object.entries(history).forEach(([date, groups]) => {
+        if (date === state.activeDate) return;
+        (groups || []).forEach(g => {
+          for (let i = 0; i < g.length; i++) {
+            for (let j = i + 1; j < g.length; j++) {
+              const pair = [g[i], g[j]].sort().join('|');
+              counts[pair] = (counts[pair] || 0) + 1;
+            }
+          }
+        });
+      });
+      return counts;
+    }
+
+    function generateSmartGroups() {
+      const size = parseInt(document.getElementById('groupSizeSelect')?.value || '3', 10);
+      const includeLate = document.getElementById('groupIncludeLate')?.checked ?? true;
+      const allStudents = state.periods[state.currentPeriod].students;
+
+      const eligible = allStudents.filter(s => {
+        const rec = getStudentDayRecord(state.activeDate, s.id);
+        return rec.attendance === 'P' || (includeLate && rec.attendance === 'L');
+      });
+
+      const grid = document.getElementById('randomGroupsGrid');
+      const infoEl = document.getElementById('groupsRepeatInfo');
+      if (eligible.length === 0) {
+        currentGeneratedGroups = [];
+        grid.innerHTML = `<div class="col-span-full p-6 text-center font-bold text-slate-500">No present students found for today. Mark attendance first!</div>`;
+        if (infoEl) infoEl.textContent = '';
+        return;
+      }
+
+      const pairCounts = getPastPairCounts(state.currentPeriod);
+      let bestGroups = null;
+      let bestScore = Infinity;
+
+      for (let attempt = 0; attempt < 150; attempt++) {
+        const shuffled = [...eligible];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        const groups = [];
+        for (let i = 0; i < shuffled.length; i += size) {
+          groups.push(shuffled.slice(i, i + size));
+        }
+        // Balance last group if it has only 1 student and there's more than 1 group
+        if (groups.length > 1 && groups[groups.length - 1].length === 1) {
+          const lone = groups.pop()[0];
+          groups[groups.length - 1].push(lone);
+        }
+
+        let score = 0;
+        groups.forEach(g => {
+          for (let i = 0; i < g.length; i++) {
+            for (let j = i + 1; j < g.length; j++) {
+              const pair = [g[i].id, g[j].id].sort().join('|');
+              score += (pairCounts[pair] || 0);
+            }
+          }
+        });
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestGroups = groups;
+          if (score === 0) break;
+        }
+      }
+
+      currentGeneratedGroups = bestGroups;
+      if (infoEl) {
+        infoEl.innerHTML = bestScore === 0
+          ? `<span class="text-emerald-700">✓ Fresh pairings! 0 repeated pairs from previous saved days.</span>`
+          : `<span class="text-amber-700">⚡ Minimized repeats: ${bestScore} repeated pair(s) from previous saved days.</span>`;
+      }
+
+      grid.innerHTML = bestGroups.map((g, idx) => `
+        <div class="bg-purple-50 border-2 border-slate-800 rounded-xl p-3 space-y-1.5">
+          <div class="text-xs font-black text-purple-900 uppercase border-b border-purple-200 pb-1">Group ${idx + 1}</div>
+          <ul class="space-y-1 text-xs font-bold text-slate-900">
+            ${g.map(s => `<li>• ${s.name}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+    }
+
+    function saveTodayGroups() {
+      if (!currentGeneratedGroups || currentGeneratedGroups.length === 0) return;
+      if (!state.groupHistory) state.groupHistory = {};
+      if (!state.groupHistory[state.currentPeriod]) state.groupHistory[state.currentPeriod] = {};
+      state.groupHistory[state.currentPeriod][state.activeDate] = currentGeneratedGroups.map(g => g.map(s => s.id));
+      saveState();
+      const btn = document.getElementById('saveGroupsBtn');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Saved!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      }
+    }
+
+    function copyGroupsToClipboard() {
+      if (!currentGeneratedGroups || currentGeneratedGroups.length === 0) return;
+      const text = currentGeneratedGroups.map((g, idx) =>
+        `Group ${idx + 1}: ${g.map(s => s.name).join(', ')}`
+      ).join('\n');
+      navigator.clipboard?.writeText(text).then(() => {
+        alert('Groups copied to clipboard!');
+      });
     }
 
     function toggleLessonCheck(studentId, checkId) {
