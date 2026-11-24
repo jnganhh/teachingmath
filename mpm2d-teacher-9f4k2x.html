@@ -1465,6 +1465,8 @@
           : rec.homework === 'Miss' ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-bold">✗ HW</span>`
           : '';
 
+        const brdVal = (rec.tallies && rec.tallies.brd) || 0;
+
         return `
           <div onclick="openStudentModal('${s.id}')" class="cursor-pointer text-left bg-white hover:bg-yellow-50 p-2 sm:p-3 rounded-xl comic-btn flex flex-col justify-between gap-1.5 sm:gap-2 transition min-w-0">
             <div class="flex items-start justify-between gap-1 sm:gap-1.5 w-full min-w-0">
@@ -1477,10 +1479,17 @@
               ${hwBadge}
               ${pVal > 0 ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-black">📵 ${pVal}</span>` : ''}
             </div>
-            <div class="flex items-center gap-1 pt-1 border-t border-slate-200" onclick="event.stopPropagation()">
-              <button onclick="cycleAttendance('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-slate-50 hover:bg-slate-200" title="Cycle Present / Late / Absent">${rec.attendance}</button>
-              <button onclick="addTally('${s.id}', 'answered', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-blue-50 text-blue-900 hover:bg-blue-100" title="+1 Answered Question">+1</button>
-              <button onclick="addPhoneFlag('${s.id}', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-red-50 text-red-900 hover:bg-red-100" title="+1 Mobile Device Flag">📵</button>
+            <div class="space-y-1 pt-1 border-t border-slate-200" onclick="event.stopPropagation()">
+              <div class="flex items-center justify-between rounded border border-slate-800 ${brdVal > 0 ? 'bg-emerald-100 text-emerald-950' : 'bg-slate-50 text-slate-700'}">
+                <button onclick="adjustTally('${s.id}', 'brd', -1)" class="px-2 py-0.5 text-xs font-black hover:bg-slate-200 rounded-l" title="Remove 1 Whiteboard Task">−</button>
+                <button onclick="adjustTally('${s.id}', 'brd', 1)" class="flex-1 py-0.5 text-[10px] sm:text-[11px] font-black text-center hover:opacity-80" title="+1 Whiteboard Task (VNPS)">✏️ WB: <span class="font-mono">${brdVal}</span></button>
+                <button onclick="adjustTally('${s.id}', 'brd', 1)" class="px-2 py-0.5 text-xs font-black text-emerald-800 hover:bg-emerald-200 rounded-r" title="+1 Whiteboard Task (VNPS)">+</button>
+              </div>
+              <div class="flex items-center gap-1">
+                <button onclick="cycleAttendance('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-slate-50 hover:bg-slate-200" title="Cycle Present / Late / Absent">${rec.attendance}</button>
+                <button onclick="adjustTally('${s.id}', 'ans', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-blue-50 text-blue-900 hover:bg-blue-100" title="+1 Answered Question">+1</button>
+                <button onclick="adjustPhoneCount('${s.id}', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-red-50 text-red-900 hover:bg-red-100" title="+1 Mobile Device Flag">📵</button>
+              </div>
             </div>
           </div>
         `;
@@ -1501,7 +1510,7 @@
       if (!tbody) return;
 
       const rangeVal = document.getElementById('weeklyRangeSelect')?.value || 'all';
-      let dates = Object.keys(state.logs || {}).sort();
+      let dates = Object.keys(state.records || {}).sort();
       if (rangeVal !== 'all') {
         const days = parseInt(rangeVal, 10);
         const cutoff = new Date();
@@ -1518,7 +1527,7 @@
       tbody.innerHTML = students.map(s => {
         let p = 0, l = 0, a = 0, hwDone = 0, hwPart = 0, hwMiss = 0, phones = 0;
         dates.forEach(d => {
-          const rec = state.logs[d]?.[s.id];
+          const rec = state.records[d]?.[s.id];
           if (!rec) return;
           if (rec.attendance === 'P') p++;
           else if (rec.attendance === 'L') l++;
@@ -2060,14 +2069,14 @@
     function renderSixCsTable(students) {
       const tbody = document.getElementById('sixCsTableBody');
       if (!tbody) return;
-      const dates = Object.keys(state.logs || {});
+      const dates = Object.keys(state.records || {});
 
       tbody.innerHTML = students.map(s => {
         const counts = { CH: 0, CI: 0, CL: 0, CM: 0, CR: 0, CT: 0 };
         let phoneFlags = 0;
 
         dates.forEach(d => {
-          const rec = state.logs[d]?.[s.id];
+          const rec = state.records[d]?.[s.id];
           if (!rec) return;
           (rec.sixCs || []).forEach(c => {
             if (counts[c] !== undefined) counts[c]++;
