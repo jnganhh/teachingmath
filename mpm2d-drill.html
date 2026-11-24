@@ -25,6 +25,7 @@
       <h1 class="text-3xl font-black text-blue-600">MPM2D Factoring & Expansion Drill</h1>
     </div>
     <div class="comic bg-white px-4 py-2 text-sm font-bold flex gap-4 items-center">
+      <span title="Student">👤 <span id="studentLabel"></span> <button id="changeStudent" class="text-xs text-blue-600 underline">change</button></span>
       <span title="Active work time this session">⏱️ <span id="sessTime">0:00</span></span>
       <span title="Current streak">🔥 <span id="streak">0</span></span>
       <span title="Today correct">✅ <span id="todayCorrect">0</span></span>
@@ -97,6 +98,19 @@
       </section>
     </aside>
   </div>
+</div>
+
+<!-- Student sign-in modal -->
+<div id="studentModal" class="fixed inset-0 bg-slate-900/70 hidden items-center justify-center p-4 z-50">
+  <form id="studentForm" class="comic bg-white p-6 max-w-sm w-full space-y-3">
+    <h2 class="text-2xl font-black">👋 Who's practising?</h2>
+    <p class="text-sm text-slate-600">Your teacher uses this to recognize your work.</p>
+    <label class="block font-bold text-sm">First name &amp; last initial
+      <input id="stuName" required maxlength="40" class="w-full p-2 border-4 border-slate-800 rounded-lg mt-1" placeholder="e.g. Alex C."></label>
+    <label class="block font-bold text-sm">Class / Period
+      <input id="stuClass" required maxlength="30" class="w-full p-2 border-4 border-slate-800 rounded-lg mt-1" placeholder="e.g. MPM2D P3"></label>
+    <button class="btn bg-green-400 px-4 py-2 w-full">Start practising</button>
+  </form>
 </div>
 
 <!-- Break modal -->
@@ -413,6 +427,51 @@ function record(id, correct, hintsUsed, input) {
   store.history.unshift({ t: Date.now(), id, expr: q.expr, input, correct, hints: hintsUsed });
   store.history = store.history.slice(0, 100);
   save(); renderProgress();
+  if (correct) checkMilestone();
+}
+
+/* ================= Student identity & teacher email ================= */
+const TEACHER_EMAIL = 'hokhei.ngan@gapps.yrdsb.ca';
+const MILESTONE = 20;
+const totalCorrect = () => Object.values(store.skills).reduce((a, s) => a + s.correct, 0);
+function askStudent() {
+  $('stuName').value = store.student?.name || ''; $('stuClass').value = store.student?.cls || '';
+  $('studentModal').classList.replace('hidden', 'flex'); $('stuName').focus();
+}
+$('studentForm').onsubmit = e => {
+  e.preventDefault();
+  store.student = { name: $('stuName').value.trim(), cls: $('stuClass').value.trim() };
+  save(); $('studentLabel').textContent = `${store.student.name} (${store.student.cls})`;
+  $('studentModal').classList.replace('flex', 'hidden'); $('answer').focus();
+};
+$('changeStudent').onclick = askStudent;
+
+function checkMilestone() {
+  store.milestonesSent ||= []; store.pendingEmails ||= [];
+  const m = Math.floor(totalCorrect() / MILESTONE) * MILESTONE;
+  if (m >= MILESTONE && !store.milestonesSent.includes(m) && !store.pendingEmails.some(p => p.milestone === m)) {
+    const summary = Object.entries(SKILLS).map(([id, S]) => { const k = store.skills[id]; return k ? `${S.name}: ${k.correct}/${k.attempts} correct, mastery ${masteryOf(id)}%` : null; }).filter(Boolean).join('\n');
+    store.pendingEmails.push({ milestone: m, data: {
+      _subject: `MPM2D Drill: ${store.student?.name} (${store.student?.cls}) reached ${m} correct`,
+      Student: store.student?.name, Class: store.student?.cls, 'Correct answers': m,
+      'Total attempts': Object.values(store.skills).reduce((a, s) => a + s.attempts, 0),
+      'Best streak': store.best, 'Total active minutes': Math.round(store.totalSec / 60),
+      'Skill breakdown': summary, 'Completed at': new Date().toLocaleString(), _template: 'box', _captcha: 'false' } });
+    save();
+    showFeedback({ ok: true, msg: `🏆 Amazing! You reached ${m} correct answers. Sending a report to your teacher…` });
+  }
+  flushEmails();
+}
+async function flushEmails() {
+  for (const p of [...(store.pendingEmails || [])]) {
+    try {
+      const r = await fetch(`https://formsubmit.co/ajax/${TEACHER_EMAIL}`, { method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(p.data) });
+      if (!r.ok) throw new Error(r.status);
+      store.pendingEmails = store.pendingEmails.filter(x => x !== p); store.milestonesSent.push(p.milestone); save();
+      $('feedback').insertAdjacentHTML('beforeend', `<div class="text-sm mt-1">📧 Report for ${p.milestone} correct answers sent to your teacher.</div>`);
+    } catch (e) { /* offline or blocked: keep in queue and retry later */ }
+  }
 }
 function masteryOf(id) { const s = store.skills[id]; if (!s || !s.recent.length) return 0; return Math.round(100 * s.recent.reduce((a, b) => a + b, 0) / 10); }
 
@@ -551,6 +610,8 @@ function endBreak(addSec) {
 
 /* ================= Init ================= */
 renderChips(); renderProgress(); newQuestion();
+if (store.student) $('studentLabel').textContent = `${store.student.name} (${store.student.cls})`; else askStudent();
+flushEmails(); // retry any reports that failed to send earlier
 </script>
 </body>
 </html>
