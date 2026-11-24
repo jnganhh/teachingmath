@@ -342,51 +342,71 @@
           <button onclick="downloadSampleRosterCSV()" class="text-xs font-black text-blue-700 underline hover:text-blue-900">Download Sample CSV Template</button>
         </div>
         <p class="text-xs font-bold text-slate-700">
-          Directly upload a CSV exported from <strong>TeachAssist, Trillium, Maplewood, PowerSchool, or Google Classroom</strong>:
+          Upload a CSV exported from <strong>TeachAssist, Trillium, Maplewood, PowerSchool, or Google Classroom</strong>:
         </p>
-        <ul class="text-xs font-medium text-slate-700 list-disc pl-4 space-y-0.5">
-          <li>Auto-detects <code>Student Name</code>, <code>Last Name</code> + <code>First Name</code>, and optional <code>Period</code> / <code>Section</code> (<code>P1</code>, <code>P2</code>, <code>P3</code> or <code>1</code>, <code>2</code>, <code>3</code>).</li>
-          <li>If your CSV has a Period column, it populates <strong>all 3 periods at once</strong>; otherwise it imports into the active period.</li>
-        </ul>
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <label class="text-xs font-black text-slate-700">Import into Period:</label>
+          <select id="csvTargetPeriodSelect" class="px-2.5 py-1.5 text-xs font-black rounded-lg bg-white border-2 border-slate-800">
+            <option value="ACTIVE">Currently Selected Period Tab</option>
+            <option value="P1">Force All into Period 1</option>
+            <option value="P2">Force All into Period 2</option>
+            <option value="P3">Force All into Period 3</option>
+            <option value="AUTO">Auto-Detect from CSV "Period" Column</option>
+          </select>
+        </div>
         <div class="flex flex-wrap items-center gap-3 pt-1">
           <label class="px-3.5 py-2 text-xs font-black rounded-lg bg-blue-600 text-white comic-btn cursor-pointer inline-flex items-center gap-1.5">
             <span>📄</span> Choose CSV File...
             <input type="file" id="csvRosterInput" accept=".csv,text/csv" class="hidden" onchange="handleRosterCSVUpload(event)" />
           </label>
           <label class="text-xs font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" id="csvReplaceMode" class="w-4 h-4 accent-blue-600" />
-            Replace existing roster in target period(s)
+            <input type="checkbox" id="csvReplaceMode" checked class="w-4 h-4 accent-blue-600" />
+            Replace existing students in target period
           </label>
         </div>
         <div id="csvImportStatus" class="hidden text-xs font-black p-2.5 rounded-lg bg-emerald-100 text-emerald-900 border-2 border-slate-800"></div>
       </div>
 
-      <!-- Manual Bulk Paste Fallback -->
+      <!-- Customize Period Label / Number & Bulk Paste -->
+      <div class="p-3.5 rounded-xl bg-slate-50 border-2 border-slate-800 space-y-2">
+        <label class="block text-xs font-black text-slate-700">Rename Active Period Tab Label (e.g., "Period 1", "Period 2 — MPM2D-02", "Period 4"):</label>
+        <div class="flex items-center gap-2">
+          <input type="text" id="periodCustomLabelInput" placeholder="e.g. Period 1 — MPM2D" class="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-white border-2 border-slate-800 focus:outline-none" />
+          <button onclick="saveCustomPeriodLabel()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-blue-600 text-white comic-btn">Save Period Name</button>
+        </div>
+      </div>
+
       <div class="space-y-2">
         <h3 class="text-sm font-black">Or Paste Students for <span id="rosterPeriodTitle" class="text-blue-600">Period 1</span></h3>
         <p class="text-xs font-bold text-slate-600">Paste one student per line (e.g. <code>Last, First</code>):</p>
-        <textarea id="bulkRosterInput" rows="5" placeholder="Last, First&#10;Chen, Maya&#10;Patel, Aarav" class="w-full p-3 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none"></textarea>
+        <textarea id="bulkRosterInput" rows="4" placeholder="Last, First&#10;Chen, Maya&#10;Patel, Aarav" class="w-full p-3 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none"></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button onclick="addBulkStudents()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
             + Append Pasted Names
           </button>
           <button onclick="clearCurrentPeriodRoster()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-red-100 text-red-900 comic-btn">
-            Clear Current Period
+            🗑️ Clear Current Period
           </button>
-          <button onclick="loadSampleOntarioRoster()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 text-slate-800 comic-btn">
-            Reset to Sample MPM2D Roster
+          <button onclick="clearAllPeriodsRoster()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-red-600 text-white comic-btn">
+            🗑️ Clear ALL 3 Periods
           </button>
         </div>
       </div>
     </div>
 
     <div class="bg-white rounded-xl comic-border p-5 space-y-4">
+      <!-- Current Period Roster Management (Move Period + Remove Button) -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-black">Manage Students in Current Period (<span id="rosterListCount">0</span>)</h3>
+          <span class="text-[11px] font-bold text-slate-500">Change Period or Remove Student</span>
+        </div>
+        <div id="rosterManageList" class="max-h-72 overflow-y-auto divide-y divide-slate-200 text-xs border-2 border-slate-800 rounded-lg bg-slate-50"></div>
+      </div>
+
       <!-- iPad & Google Cloud Sync Card -->
       <div class="p-4 rounded-xl bg-purple-50 border-2 border-slate-800 space-y-2.5">
         <h2 class="text-base font-black text-slate-900 flex items-center gap-1.5"><span>☁️</span> iPad & GitHub Pages Cloud Sync (Google Drive)</h2>
-        <p class="text-xs font-medium text-slate-700">
-          When hosted on your GitHub Pages (<code>jnganhh.github.io/teachingmath</code>), paste your <strong>Google Apps Script Web App URL</strong> (from <code>mpm2d-tracker-sync.gs</code>) below so your iPad and desktop computer stay in sync and back up automatically to a Google Sheet in your Drive:
-        </p>
         <div class="flex flex-col sm:flex-row gap-2">
           <input type="url" id="cloudSyncUrlInput" oninput="saveCloudSyncUrl(this.value)" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-3 py-2 text-xs font-mono font-bold rounded-lg bg-white border-2 border-slate-800 focus:outline-none" />
         </div>
@@ -403,19 +423,6 @@
           </label>
         </div>
         <div id="cloudSyncStatus" class="hidden text-xs font-bold p-2 rounded bg-white border-2 border-slate-800"></div>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-amber-50 border-2 border-slate-800 space-y-1.5">
-        <h3 class="text-xs font-black text-slate-900">📱 Using on iPad in the Classroom</h3>
-        <ul class="text-xs font-medium text-slate-700 list-disc pl-4 space-y-1">
-          <li><strong>Install as Full-Screen iPad App:</strong> Open your GitHub Pages link in Safari on iPad, tap <strong>Share (square with arrow) → Add to Home Screen</strong>. It launches full-screen like a native iPad app and saves locally on the iPad!</li>
-          <li><strong>iPad Save / AirDrop / iCloud Files:</strong> Tap <strong>"📱 iPad Save / Backup"</strong> in the top bar to open the native iPad Share Sheet and save straight to the iPad <em>Files</em> app, iCloud Drive, or Google Drive.</li>
-        </ul>
-      </div>
-
-      <div class="pt-2 border-t-2 border-slate-200">
-        <h3 class="text-xs font-black mb-2">Current Period Roster (<span id="rosterListCount">0</span> students)</h3>
-        <div id="rosterManageList" class="max-h-52 overflow-y-auto divide-y divide-slate-200 text-xs"></div>
       </div>
     </div>
   </section>
@@ -932,9 +939,12 @@
     }
 
     function renderCurrentView() {
-      ['P1', 'P2', 'P3'].forEach(k => {
-        const cEl = document.getElementById(`count-${k}`);
-        if (cEl) cEl.textContent = `(${state.periods[k].students.length})`;
+      ['P1', 'P2', 'P3'].forEach((k, idx) => {
+        const btn = document.getElementById(`periodBtn-${k}`);
+        if (btn) {
+          const shortName = state.periods[k].shortLabel || `Period ${idx + 1}`;
+          btn.innerHTML = `${shortName} <span id="count-${k}" class="ml-1 font-mono">(${state.periods[k].students.length})</span>`;
+        }
       });
       document.getElementById('activeDate').value = state.activeDate;
 
@@ -990,7 +1000,7 @@
     function renderDailyTable(students) {
       const tbody = document.getElementById('dailyTableBody');
       if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center font-bold text-slate-500">No students match filter. Switch to the Roster tab to add students.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center font-bold text-slate-500">No students in this period yet. Switch to the 👥 Roster tab to import a CSV or add students.</td></tr>`;
         return;
       }
 
@@ -1057,7 +1067,12 @@
 
         return `
           <tr class="hover:bg-yellow-50/60 transition">
-            <td class="py-3 px-3 font-black text-slate-900 whitespace-nowrap">${s.name}</td>
+            <td class="py-3 px-3 font-black text-slate-900 whitespace-nowrap">
+              <div class="flex items-center justify-between gap-2">
+                <span>${s.name}</span>
+                <button onclick="removeStudent('${s.id}')" title="Remove student from this period" class="px-1.5 py-0.5 text-[10px] font-black rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition">✕</button>
+              </div>
+            </td>
             <td class="py-3 px-3 whitespace-nowrap"><div class="flex items-center gap-1">${attButtons}</div></td>
             <td class="py-3 px-3 whitespace-nowrap"><div class="flex items-center gap-1">${hwButtons}</div></td>
             <td class="py-3 px-3">${btcCheckboxes}</td>
@@ -1265,15 +1280,56 @@
     }
 
     function renderRosterView(students) {
-      document.getElementById('rosterPeriodTitle').textContent = state.periods[state.currentPeriod].name;
+      const curPeriodObj = state.periods[state.currentPeriod];
+      document.getElementById('rosterPeriodTitle').textContent = curPeriodObj.name;
       document.getElementById('rosterListCount').textContent = students.length;
+      const customInput = document.getElementById('periodCustomLabelInput');
+      if (customInput) customInput.value = curPeriodObj.shortLabel || curPeriodObj.name;
+
       const container = document.getElementById('rosterManageList');
+      if (students.length === 0) {
+        container.innerHTML = `<div class="py-6 text-center text-slate-400 font-bold">No students in this period. Import a CSV or paste names on the left.</div>`;
+        return;
+      }
+
       container.innerHTML = students.map(s => `
-        <div class="py-2 px-2 flex items-center justify-between">
-          <span class="font-bold">${s.name}</span>
-          <button onclick="removeStudent('${s.id}')" class="text-xs font-black text-red-600 hover:underline">Remove</button>
+        <div class="py-2 px-3 flex items-center justify-between gap-2 hover:bg-white">
+          <span class="font-black text-slate-900">${s.name}</span>
+          <div class="flex items-center gap-2">
+            <select onchange="moveStudentPeriod('${s.id}', this.value)" class="px-2 py-1 text-xs font-black rounded bg-white border-2 border-slate-800">
+              <option value="P1" ${state.currentPeriod === 'P1' ? 'selected' : ''}>${state.periods.P1.shortLabel || 'Period 1'}</option>
+              <option value="P2" ${state.currentPeriod === 'P2' ? 'selected' : ''}>${state.periods.P2.shortLabel || 'Period 2'}</option>
+              <option value="P3" ${state.currentPeriod === 'P3' ? 'selected' : ''}>${state.periods.P3.shortLabel || 'Period 3'}</option>
+            </select>
+            <button onclick="removeStudent('${s.id}')" class="px-2 py-1 text-xs font-black rounded bg-red-100 text-red-800 border border-red-800 hover:bg-red-600 hover:text-white transition">
+              🗑️ Remove
+            </button>
+          </div>
         </div>
       `).join('');
+    }
+
+    function saveCustomPeriodLabel() {
+      const val = (document.getElementById('periodCustomLabelInput')?.value || '').trim();
+      if (!val) return;
+      state.periods[state.currentPeriod].shortLabel = val;
+      state.periods[state.currentPeriod].name = val;
+      saveState();
+      renderCurrentView();
+    }
+
+    function moveStudentPeriod(studentId, targetPeriodKey) {
+      if (!targetPeriodKey || targetPeriodKey === state.currentPeriod) return;
+      const curList = state.periods[state.currentPeriod].students;
+      const stu = curList.find(s => s.id === studentId);
+      if (!stu) return;
+
+      // Remove from current period and add to target period (preserving studentId so all attendance/tallies carry over)
+      state.periods[state.currentPeriod].students = curList.filter(s => s.id !== studentId);
+      state.periods[targetPeriodKey].students.push(stu);
+      state.periods[targetPeriodKey].students.sort((a, b) => a.name.localeCompare(b.name));
+      saveState();
+      renderCurrentView();
     }
 
     function addBulkStudents() {
@@ -1300,6 +1356,14 @@
 
     function clearCurrentPeriodRoster() {
       state.periods[state.currentPeriod].students = [];
+      saveState();
+      renderCurrentView();
+    }
+
+    function clearAllPeriodsRoster() {
+      ['P1', 'P2', 'P3'].forEach(k => {
+        state.periods[k].students = [];
+      });
       saveState();
       renderCurrentView();
     }
@@ -1341,6 +1405,7 @@
       const file = event.target.files?.[0];
       if (!file) return;
       const replaceMode = document.getElementById('csvReplaceMode')?.checked;
+      const targetMode = document.getElementById('csvTargetPeriodSelect')?.value || 'ACTIVE';
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -1377,10 +1442,12 @@
           if (cols.every(c => !c)) continue;
 
           let studentName = '';
-          let targetPeriod = state.currentPeriod;
+          let targetPeriod = (targetMode === 'P1' || targetMode === 'P2' || targetMode === 'P3')
+            ? targetMode
+            : state.currentPeriod;
 
           if (hasHeader) {
-            if (periodIdx !== -1 && cols[periodIdx]) {
+            if (targetMode === 'AUTO' && periodIdx !== -1 && cols[periodIdx]) {
               const p = normalizePeriodCode(cols[periodIdx]);
               if (p) targetPeriod = p;
             }
@@ -1395,9 +1462,11 @@
             }
           } else {
             const maybeP = normalizePeriodCode(cols[0]);
-            if (maybeP && cols.length >= 2 && cols[0].length <= 8) {
+            if (targetMode === 'AUTO' && maybeP && cols.length >= 2 && cols[0].length <= 8) {
               targetPeriod = maybeP;
               studentName = cols.length >= 3 ? `${cols[1]}, ${cols[2]}` : cols[1];
+            } else if (maybeP && cols.length >= 3 && cols[0].length <= 8) {
+              studentName = `${cols[1]}, ${cols[2]}`;
             } else if (cols.length >= 2) {
               studentName = `${cols[0]}, ${cols[1]}`;
             } else {
@@ -1416,7 +1485,7 @@
         ['P1', 'P2', 'P3'].forEach(pKey => {
           const names = importedByPeriod[pKey];
           if (names.length > 0) {
-            touchedPeriods.push(`${pKey} (+${names.length})`);
+            touchedPeriods.push(`${state.periods[pKey].shortLabel || pKey} (+${names.length})`);
             if (replaceMode) {
               state.periods[pKey].students = [];
             }
@@ -1438,7 +1507,7 @@
         if (statusEl) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = totalAdded > 0
-            ? `✓ Imported ${totalAdded} student(s) across ${touchedPeriods.join(', ')}`
+            ? `✓ Imported ${totalAdded} student(s) into ${touchedPeriods.join(', ')}`
             : `No student names found in CSV. Please check the file format.`;
         }
 
