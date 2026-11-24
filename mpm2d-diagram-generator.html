@@ -604,9 +604,11 @@
         tickB: false,
         tickC: false,
         // Similar triangles
-        simScale: 1.45,
+        simScale: 1.5,
         simLabel1: '4 cm, 6 cm, x',
         simLabel2: '6 cm, 9 cm, 12 cm',
+        simVerts1: 'A, B, C',
+        simVerts2: 'D, E, F',
       },
       // Lines state
       lines: {
@@ -868,10 +870,12 @@
         `;
       } else {
         html += `
+          <div id="simScaleReadout" class="info-box">Scale Factor: auto</div>
           <div class="form-grid">
-            <div class="field full"><label>Scale Factor (${t.simScale}×)</label><input type="range" min="1.1" max="2.0" step="0.05" value="${t.simScale}" oninput="state.tri.simScale=+this.value; this.previousElementSibling.textContent='Scale Factor ('+this.value+'×)'; render()"></div>
-            <div class="field full"><label>Small △ Sides (base, left, right)</label><input type="text" value="${esc(t.simLabel1)}" oninput="state.tri.simLabel1=this.value; render()"></div>
-            <div class="field full"><label>Large △ Sides (base, left, right)</label><input type="text" value="${esc(t.simLabel2)}" oninput="state.tri.simLabel2=this.value; render()"></div>
+            <div class="field full"><label>Triangle 1 Sides (base, left, right)</label><input type="text" value="${esc(t.simLabel1)}" placeholder="e.g. 4 cm, 6 cm, x" oninput="state.tri.simLabel1=this.value; render()"></div>
+            <div class="field full"><label>Triangle 2 Sides (base, left, right)</label><input type="text" value="${esc(t.simLabel2)}" placeholder="e.g. 6 cm, 9 cm, 12 cm" oninput="state.tri.simLabel2=this.value; render()"></div>
+            <div class="field"><label>Triangle 1 Vertices (top, right, left)</label><input type="text" value="${esc(t.simVerts1)}" placeholder="A, B, C" oninput="state.tri.simVerts1=this.value; render()"></div>
+            <div class="field"><label>Triangle 2 Vertices (top, right, left)</label><input type="text" value="${esc(t.simVerts2)}" placeholder="D, E, F" oninput="state.tri.simVerts2=this.value; render()"></div>
           </div>
         `;
       }
@@ -1397,24 +1401,87 @@
         });
 
       } else {
-        // Similar triangles side-by-side (also auto-scales if 3 numbers are given in small triangle)
+        // Similar triangles: auto-match side lengths, shape, scale factor k, and vertex names
         const s1 = t.simLabel1.split(',').map(x => x.trim());
         const s2 = t.simLabel2.split(',').map(x => x.trim());
-        const sa = extractNum(s1[0]), sb = extractNum(s1[1]), sc = extractNum(s1[2]);
-        let smallRaw = [{ x: 0.4, y: -1 }, { x: 1.4, y: 0 }, { x: 0, y: 0 }];
-        if (sa && sb && sc && sa + sb > sc && sa + sc > sb && sb + sc > sa) {
-          const cosC = (sa * sa + sb * sb - sc * sc) / (2 * sa * sb);
-          const radC = Math.acos(Math.max(-0.99, Math.min(0.99, cosC)));
-          smallRaw = [{ x: sb * Math.cos(radC), y: -sb * Math.sin(radC) }, { x: sa, y: 0 }, { x: 0, y: 0 }];
+        const n1 = [extractNum(s1[0]), extractNum(s1[1]), extractNum(s1[2])];
+        const n2 = [extractNum(s2[0]), extractNum(s2[1]), extractNum(s2[2])];
+
+        // 1. Auto-compute scale factor k = tri2 / tri1 from matching numeric sides
+        const ratios = [];
+        for (let i = 0; i < 3; i++) {
+          if (n1[i] && n2[i]) ratios.push({ k: n2[i] / n1[i], a: n1[i], b: n2[i] });
         }
-        const s = t.simScale;
-        const bigRaw = smallRaw.map(p => ({ x: p.x * s, y: p.y * s }));
+        let k = ratios.length > 0 ? ratios[0].k : 1.5;
+        if (ratios.length > 1) {
+          const mismatch = ratios.some(r => Math.abs(r.k - k) / k > 0.02);
+          if (mismatch) setAlert('Note: Corresponding side ratios are not equal (not strictly similar).');
+        }
+        const kVisual = Math.max(0.2, Math.min(5, k));
 
-        const leftW = cfg.w * 0.42;
-        const rightW = cfg.w * 0.54;
-        const f1 = fitPolygonToCanvas(smallRaw, leftW, cfg.h, 42, 0, 0);
-        const f2 = fitPolygonToCanvas(bigRaw, rightW, cfg.h, 42, leftW + 10, 0);
+        const readout = document.getElementById('simScaleReadout');
+        if (readout) {
+          readout.textContent = ratios.length > 0
+            ? `Auto Scale Factor: k = ${fmtNum(k)}× (${fmtNum(ratios[0].b)} ÷ ${fmtNum(ratios[0].a)})`
+            : `Scale Factor: k = ${fmtNum(k)}× (default)`;
+        }
 
+        // 2. Determine true SSS shape from whichever triangle has 3 valid sides
+        const makeSSS = (a, b, c) => {
+          const cosC = (a * a + b * b - c * c) / (2 * a * b);
+          const radC = Math.acos(Math.max(-0.99, Math.min(0.99, cosC)));
+          return [{ x: b * Math.cos(radC), y: -b * Math.sin(radC) }, { x: a, y: 0 }, { x: 0, y: 0 }];
+        };
+        const isValidTri = (a, b, c) => a && b && c && a + b > c && a + c > b && b + c > a;
+
+        let tri1Raw = null;
+        if (isValidTri(n1[0], n1[1], n1[2])) {
+          tri1Raw = makeSSS(n1[0], n1[1], n1[2]);
+        } else if (isValidTri(n2[0], n2[1], n2[2])) {
+          const tri2Tmp = makeSSS(n2[0], n2[1], n2[2]);
+          tri1Raw = tri2Tmp.map(p => ({ x: p.x / kVisual, y: p.y / kVisual }));
+        } else {
+          // Use available 2 sides (base, left) at 65° or fallback
+          const base1 = n1[0] || (n2[0] ? n2[0] / kVisual : 4);
+          const left1 = n1[1] || (n2[1] ? n2[1] / kVisual : 5);
+          const radC = (65 * Math.PI) / 180;
+          tri1Raw = [{ x: left1 * Math.cos(radC), y: -left1 * Math.sin(radC) }, { x: base1, y: 0 }, { x: 0, y: 0 }];
+        }
+
+        const tri2Raw = tri1Raw.map(p => ({ x: p.x * kVisual, y: p.y * kVisual }));
+
+        // 3. Fit BOTH triangles together with ONE shared scale so size visually matches k!
+        const bounds = pts => {
+          const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+          return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+        };
+        const b1 = bounds(tri1Raw), b2 = bounds(tri2Raw);
+        const w1 = b1.maxX - b1.minX, w2 = b2.maxX - b2.minX;
+        const h1 = b1.maxY - b1.minY, h2 = b2.maxY - b2.minY;
+        const gap = Math.max(w1, w2) * 0.35;
+
+        const tri1Shifted = tri1Raw.map(p => ({ x: p.x - b1.minX, y: p.y }));
+        const tri2Shifted = tri2Raw.map(p => ({ x: p.x - b2.minX + w1 + gap, y: p.y }));
+
+        const totalW = w1 + gap + w2;
+        const totalH = Math.max(h1, h2);
+        const pad = 44;
+        const sharedScale = Math.min((cfg.w - pad * 2) / Math.max(0.01, totalW), (cfg.h - pad * 2) / Math.max(0.01, totalH));
+
+        const offsetX = (cfg.w - totalW * sharedScale) / 2;
+        const baseY = cfg.h - pad - ((cfg.h - pad * 2 - totalH * sharedScale) / 2);
+
+        const toCanvas = pts => {
+          const cPts = pts.map(p => ({ x: offsetX + p.x * sharedScale, y: baseY + p.y * sharedScale }));
+          return {
+            pts: cPts,
+            cx: cPts.reduce((s, p) => s + p.x, 0) / 3,
+            cy: cPts.reduce((s, p) => s + p.y, 0) / 3
+          };
+        };
+
+        const f1 = toCanvas(tri1Shifted);
+        const f2 = toCanvas(tri2Shifted);
         const [A1, B1, C1] = f1.pts;
         const [A2, B2, C2] = f2.pts;
 
@@ -1429,10 +1496,10 @@
         if (s2[1]) inner += drawEdgeLabel(C2, A2, { x: f2.cx, y: f2.cy }, s2[1], cfg);
         if (s2[2]) inner += drawEdgeLabel(A2, B2, { x: f2.cx, y: f2.cy }, s2[2], cfg);
 
-        const vLabels1 = ['A', 'B', 'C'];
-        const vLabels2 = ['D', 'E', 'F'];
-        f1.pts.forEach((p, i) => inner += drawVertexLabel(p, { x: f1.cx, y: f1.cy }, vLabels1[i], cfg));
-        f2.pts.forEach((p, i) => inner += drawVertexLabel(p, { x: f2.cx, y: f2.cy }, vLabels2[i], cfg));
+        const vLabels1 = (t.simVerts1 || 'A,B,C').split(',').map(x => x.trim());
+        const vLabels2 = (t.simVerts2 || 'D,E,F').split(',').map(x => x.trim());
+        f1.pts.forEach((p, i) => { if (vLabels1[i]) inner += drawVertexLabel(p, { x: f1.cx, y: f1.cy }, vLabels1[i], cfg); });
+        f2.pts.forEach((p, i) => { if (vLabels2[i]) inner += drawVertexLabel(p, { x: f2.cx, y: f2.cy }, vLabels2[i], cfg); });
 
         inner += drawAngleArcAndLabel(C1, B1, A1, '', cfg);
         inner += drawAngleArcAndLabel(C2, B2, A2, '', cfg);
