@@ -149,3 +149,159 @@ const systemsLevels = algebraTopics.find(({name}) => name === "Linear systems").
 systemsLevels[0].push(item("Which point satisfies both equations?", "x + y = 7\n2x − y = 2", "(3, 4)", [["(4, 3)","That satisfies the first equation only."],["(2, 5)","Check the second equation as well as the first."]], "Substitute each ordered pair into both equations.", "3 + 4 = 7 and 2(3) − 4 = 2, so (3, 4) satisfies both."));
 systemsLevels[1].push(item("How many solutions does this system have?", "y = 2x − 3\n4x − 2y = 6", "Infinitely many", [["No solution","Rearrange the second equation and compare intercepts."],["Exactly one","Check whether the equations describe different lines."]], "Isolate y in the second equation.", "The second equation rearranges to y = 2x − 3. Both equations describe the same line."));
 systemsLevels[2].push(item("Plan A charges $18 plus $3 per visit. Plan B charges $6 plus $5 per visit. When do they cost the same?", "A = 18 + 3v\nB = 6 + 5v", "6 visits, $36", [["6 visits, $30","Substitute 6 into the full cost of either plan."],["12 visits, $54","The costs differ by $2 per visit."]], "Set the two cost expressions equal.", "18 + 3v = 6 + 5v gives 12 = 2v, so v = 6. Both plans cost $36."));
+
+const signed = (n) => String(n).replace("-", "−");
+const term = (n, variable = "") => `${n < 0 ? " − " : " + "}${Math.abs(n)}${variable}`;
+const bracket = (n) => `(x${term(n)})`;
+const degrees = (radians) => Math.round(radians * 180 / Math.PI);
+const tenth = (n) => n.toFixed(1);
+
+function identityPractice(level, i) {
+  const n = i + 6;
+  if (level === 0) {
+    return item("Simplify.", `x${term(n)} + ${n}x`, `${n + 1}x${term(n)}`,
+      [[`${n}x${term(n)}`,"The first x contributes a coefficient of 1."],[`${n + 1}x`,"The constant stays separate from the x-terms."]],
+      "Combine the x-terms and keep the constant.", `x + ${n}x = ${n + 1}x, and the constant is ${n}.`);
+  }
+  if (level === 1) {
+    return item("Expand.", `${bracket(n)}²`, `x²${term(2*n, "x")}${term(n*n)}`,
+      [[`x²${term(n*n)}`,"Include the middle term from the two cross products."],[`x²${term(n, "x")}${term(n*n)}`,"Both cross products contribute to the x-term."]],
+      "Use (a + b)² = a² + 2ab + b².", `Each cross product is ${n}x. The constant is ${n}² = ${n*n}.`);
+  }
+  return item("Simplify the difference of squares.", `${bracket(n)}² − ${bracket(-n)}²`, `${4*n}x`,
+    [[`${2*n}x`,"The sum of the two brackets is 2x."],[`${4*n*n}`,"The sum of the two brackets still contains x."]],
+    "Use A² − B² = (A − B)(A + B).", `The difference is ${2*n} and the sum is 2x, so their product is ${4*n}x.`);
+}
+
+function factoringPractice(level, i) {
+  const n = i + 6;
+  if (level === 0) {
+    return item("Factor completely.", `${2*n}x²${term(3*n, "x")}`, `${n}x(2x + 3)`,
+      [[`${n}(2x² + 3x)`,"Both terms inside the bracket still share x."],[`${n}x(2x − 3)`,"The original linear term is positive."]],
+      "Look for the greatest common factor of the coefficients and variables.", `The greatest common factor is ${n}x. The two quotients are 2x and 3.`);
+  }
+  const b = n + 2;
+  if (level === 1) {
+    return item("Factor completely.", `x²${term(n-b, "x")}${term(-n*b)}`, `${bracket(n)}${bracket(-b)}`,
+      [[`${bracket(-n)}${bracket(b)}`,"These constants add to a positive number."],[`${bracket(-n)}${bracket(-b)}`,"The constants must multiply to a negative number."]],
+      "Find two numbers with negative product and sum −2.", `${n} and ${signed(-b)} multiply to ${signed(-n*b)} and add to −2.`);
+  }
+  return item("Factor completely.", `${n}x³${term(-n*b*b, "x")}`, `${n}x${bracket(-b)}${bracket(b)}`,
+    [[`${n}x(x²${term(-b*b)})`,"The bracket can still be factored as a difference of squares."],[`${n}x${bracket(-b)}²`,"A square creates a middle term in the bracket."]],
+    "Take out the greatest common factor and check the resulting binomial.", `Taking out ${n}x leaves x² − ${b*b}, which factors as ${bracket(-b)}${bracket(b)}.`);
+}
+
+function systemPractice(level, i) {
+  const x = i + 2;
+  const y = -(i + 1);
+  const pair = (a, b) => `(${signed(a)}, ${signed(b)})`;
+  const correct = pair(x, y);
+  if (level === 0) {
+    return item("Which ordered pair satisfies both equations?", `x + y = ${x+y}\n2x − y = ${2*x-y}`, correct,
+      [[pair(x+1,y-1),"This satisfies the first equation. Check the second one too."],[pair(y,x),"The order is (x, y). Check both equations with these coordinates."]],
+      "Substitute each candidate into both equations.", `Substitute x = ${x} and y = ${signed(y)}. The two left sides equal ${x+y} and ${2*x-y}.`);
+  }
+  if (level === 1) {
+    const intercept = y - 2*x;
+    return item("Solve by substitution.", `y = 2x${term(intercept)}\nx − y = ${x-y}`, correct,
+      [[pair(y,x),"The ordered pair lists x before y."],[pair(x,-y),"Substitute into the first equation and check the sign of y."]],
+      "Replace y in the second equation with the expression from the first.", `Substitution gives x − (2x${term(intercept)}) = ${x-y}. Solving gives x = ${x}, then y = ${signed(y)}.`);
+  }
+  const a = 2*x + 3*y;
+  const b = 3*x - 2*y;
+  return item("Solve by elimination.", `2x + 3y = ${signed(a)}\n3x − 2y = ${b}`, correct,
+    [[pair(y,x),"Keep x and y in coordinate order."],[pair(x,-y),"Substitute x back into either equation to check the sign of y."]],
+    "Double the first equation and triple the second, then add.", `Adding the scaled equations gives 13x = ${13*x}. Then x = ${x} and y = ${signed(y)}.`);
+}
+
+function trigPractice(level, i) {
+  const n = i + 2;
+  if (level === 0) {
+    const ratios = ["sin", "cos", "tan"];
+    const sides = ["opposite over hypotenuse", "adjacent over hypotenuse", "opposite over adjacent"];
+    const values = ["3/5", "4/5", "3/4"];
+    const chosen = i % ratios.length;
+    const wrong = values.flatMap((value, index) => index === chosen ? [] : [[value, `That ratio uses ${sides[index]}.`]]);
+    return item(`Find ${ratios[chosen]} θ.`, `Opposite = ${3*n}, adjacent = ${4*n}, hypotenuse = ${5*n}`, values[chosen],
+      wrong, `Use ${sides[chosen]}.`, `${ratios[chosen]} θ is ${sides[chosen]}, which reduces to ${values[chosen]}.`);
+  }
+  if (level === 1) {
+    const theta = 24 + 4*i;
+    const h = 10 + i;
+    const angle = theta * Math.PI / 180;
+    return item("Find the adjacent leg to the nearest tenth.", `θ = ${theta}°, hypotenuse = ${h} cm`, `${tenth(h*Math.cos(angle))} cm`,
+      [[`${tenth(h*Math.sin(angle))} cm`,"Sine gives the opposite leg."],[`${tenth(h/Math.cos(angle))} cm`,"The hypotenuse must be longer than either leg."]],
+      "Cosine relates the adjacent side and hypotenuse.", `Adjacent = ${h} cos ${theta}° ≈ ${tenth(h*Math.cos(angle))} cm.`);
+  }
+  const rise = n;
+  const run = n + 7;
+  const angle = degrees(Math.atan(rise/run));
+  return item("Find the angle of elevation to the nearest degree.", `Vertical rise = ${rise} m, horizontal run = ${run} m`, `${angle}°`,
+    [[`${90-angle}°`,"That comes from reversing opposite and adjacent."],[`${angle + 5}°`,"Use the inverse tangent on the calculator in degree mode."]],
+    "Use inverse tangent of rise divided by run.", `θ = tan⁻¹(${rise}/${run}) ≈ ${angle}°.`);
+}
+
+function geometryPractice(level, i) {
+  const x = i - 3;
+  const y = i + 2;
+  if (level === 0) {
+    const m = i % 2 ? -i-2 : i+2;
+    return item("Find the slope of the line through these points.", `A(${signed(x)}, ${y}), B(${x+4}, ${signed(y+4*m)})`, signed(m),
+      [[`${signed(Math.sign(m))}/${Math.abs(m)}`,"The rise goes on top."],[signed(4*m),"Divide the vertical change by the horizontal change."]],
+      "Find the changes in y and x in the same direction.", `The slope is (${signed(4*m)})/4 = ${signed(m)}.`);
+  }
+  if (level === 1) {
+    const k = i + 2;
+    return item("Find the distance between A and B.", `A(${signed(x)}, ${y}), B(${x+3*k}, ${y+4*k})`, String(5*k),
+      [[String(7*k),"The two coordinate changes are perpendicular. Use the Pythagorean theorem."],[String(25*k*k),"Take the square root of the sum of the squares."]],
+      "Square the horizontal and vertical changes, add, then take the square root.", `Distance = √(${3*k}² + ${4*k}²) = ${5*k}.`);
+  }
+  const m = i + 2;
+  const b = y + m*x;
+  return item("Find the line through the point perpendicular to the given line.", `Point (${signed(x)}, ${y}), given line y = x/${m} + 5`, `y = −${m}x${term(b)}`,
+    [[`y = ${m}x${term(y-m*x)}`,"A perpendicular slope is the negative reciprocal."],[`y = −${m}x${term(b+1)}`,"Substitute the point to determine the intercept."]],
+    "The perpendicular slope is the negative reciprocal of the given slope.", `Use m = −${m}. Substituting the point gives an intercept of ${signed(b)}.`);
+}
+
+function exponentPractice(level, i) {
+  const n = i + 2;
+  if (level === 0) {
+    return item("Simplify using exponent notation.", `x^${n} · x^3`, `x^${n+3}`,
+      [[`x^${3*n}`,"Multiply exponents for a power of a power."],[`x^${n+1}`,"Add both exponents in the product."]],
+      "Add exponents when multiplying powers with the same base.", `The new exponent is ${n} + 3 = ${n+3}.`);
+  }
+  if (level === 1) {
+    return item("Simplify using positive exponents.", `x^${n} ÷ x^${2*n}, x ≠ 0`, `1/x^${n}`,
+      [[`x^${n}`,"Subtract the denominator exponent from the numerator exponent."],[`1/x^${3*n}`,"A quotient uses subtraction of exponents."]],
+      "Subtract exponents first. Rewrite any negative power as a reciprocal.", `${n} − ${2*n} = ${signed(-n)}, so the result is 1/x^${n}.`);
+  }
+  return item("Simplify using positive exponents.", `(2x^${n}y^(−2))² ÷ (xy), x ≠ 0, y ≠ 0`, `4x^${2*n-1}/y^5`,
+    [[`2x^${2*n-1}/y^5`,"Square the coefficient 2 too."],[`4x^${2*n-1}/y^3`,"After squaring, subtract the denominator's exponent on y."]],
+    "Square each factor, then subtract exponents for each quotient.", `The numerator is 4x^${2*n}y^(−4). Dividing by xy gives 4x^${2*n-1}y^(−5).`);
+}
+
+function equationPractice(level, i) {
+  const x = i + 3;
+  const answer = (value) => `x = ${signed(value)}`;
+  const distractors = [[answer(x+1),"Check by substituting this value into the original equation."],[answer(-x),"Check the signs while isolating the variable."]];
+  if (level === 0) return item("Solve for x.", `4x − 5 = ${4*x-5}`, answer(x), distractors,
+    "Add 5 to both sides, then divide by 4.", `Adding 5 gives 4x = ${4*x}. Divide by 4 to get x = ${x}.`);
+  if (level === 1) return item("Solve for x.", `5(x − 2) = 2x${term(3*x-10)}`, answer(x), distractors,
+    "Distribute 5 on the left, then collect the x-terms.", `Expanding gives 5x − 10 = 2x${term(3*x-10)}. Rearrange to get 3x = ${3*x}.`);
+  return item("Solve for x.", `(x + 1)/2 + (x − 1)/3 = ${5*x+1}/6`, answer(x), distractors,
+    "Multiply every term by 6 to clear denominators.", `The equation becomes 3(x + 1) + 2(x − 1) = ${5*x+1}. Simplify to 5x + 1 = ${5*x+1}, so x = ${x}.`);
+}
+
+const practiceBuilders = new Map([
+  ["Identities", identityPractice], ["Factoring", factoringPractice], ["Linear systems", systemPractice],
+  ["Trigonometry", trigPractice], ["Analytic geometry", geometryPractice], ["Exponent laws", exponentPractice],
+  ["Linear equations", equationPractice]
+]);
+
+for (const {name, levels} of algebraTopics) {
+  for (const [level, questions] of levels.entries()) {
+    const remaining = 8 - questions.length;
+    const build = practiceBuilders.get(name);
+    for (let i = 0; i < remaining; i++) questions.push(build(level, i));
+  }
+}

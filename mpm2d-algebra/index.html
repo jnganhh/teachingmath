@@ -4,25 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Math Skills Practice | MPM2D</title>
-  <link rel="stylesheet" href="practice.css">
-  <script src="questions.js" defer></script>
-  <script src="progress.js" defer></script>
-  <script src="practice.js" defer></script>
+  <link rel="stylesheet" href="practice.css?v=sets8">
+  <script src="questions.js?v=sets8" defer></script>
+  <script src="progress.js?v=sets8" defer></script>
+  <script src="practice.js?v=sets8" defer></script>
 </head>
 <body>
-<header><div class="wrap"><p class="course">MPM2D · Grade 10 Mathematics</p><h1>Math Skills Practice</h1><p>Practise algebra, analytic geometry, and trigonometry.</p></div></header>
+<header><div class="wrap hero"><div><p class="course">MPM2D · Grade 10 Mathematics</p><h1>Math Skills Practice</h1><p>Choose a skill. Work through eight questions at your level.</p></div><a class="progress-link" href="#progress-title">My progress</a></div></header>
 <main class="wrap">
-  <div class="practice-navigation">
+  <section class="topic-picker" aria-labelledby="topics-title">
+    <h2 id="topics-title">Choose a topic</h2>
     <nav aria-label="Practice topics" id="topics"></nav>
-    <a href="#progress-title">My progress</a>
-  </div>
+  </section>
   <div class="layout">
     <section class="practice" aria-labelledby="topic-title">
       <div class="practice-head">
         <h2 id="topic-title"></h2>
         <label>Level <select id="level"><option>Warm-up</option><option>Core</option><option>Stretch</option></select></label>
       </div>
-      <p id="progress"></p>
+      <div class="set-progress">
+        <p id="progress"></p>
+        <progress id="progress-meter" aria-label="Questions completed in this set"></progress>
+      </div>
       <div id="question-area">
         <p id="prompt"></p>
         <p id="math"></p>

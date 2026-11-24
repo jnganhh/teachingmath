@@ -44,6 +44,8 @@ function renderQuestion() {
   get("progress").textContent = complete
     ? `${questions.length} questions reviewed`
     : `Question ${questionIndex + 1} of ${questions.length}`;
+  get("progress-meter").max = questions.length;
+  get("progress-meter").value = questionIndex;
   if (complete) {
     get("result").textContent = `${firstTry} of ${questions.length} correct on the first attempt before viewing the solution.`;
     get("advance").hidden = levelSelect.selectedIndex === levels.length - 1;
@@ -101,9 +103,28 @@ function selectTopic(index) {
   restart();
 }
 
+const topicDetails = {
+  Identities: ["(a + b)²", "Expand and simplify"],
+  Factoring: ["(x + a)(x + b)", "Write expressions as products"],
+  "Linear systems": ["(x, y)", "Find where two lines meet"],
+  Trigonometry: ["sin θ", "Solve right triangles"],
+  "Analytic geometry": ["Δy / Δx", "Slope, distance, and midpoint"],
+  "Exponent laws": ["xᵃ · xᵇ", "Simplify powers"],
+  "Linear equations": ["x = ?", "Find the unknown"]
+};
+
 algebraTopics.forEach(({name}, index) => {
-  const button = element("button", name);
+  const [symbol, description] = topicDetails[name];
+  const button = element("button");
   button.type = "button";
+  button.className = "topic-card";
+  button.setAttribute("aria-label", name);
+  const motif = element("span", symbol);
+  motif.className = "topic-symbol";
+  motif.setAttribute("aria-hidden", "true");
+  const detail = element("span", description);
+  detail.className = "topic-detail";
+  button.append(motif, element("strong", name), detail);
   button.addEventListener("click", () => selectTopic(index));
   get("topics").append(button);
 });
