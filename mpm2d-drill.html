@@ -431,7 +431,8 @@ function record(id, correct, hintsUsed, input) {
 }
 
 /* ================= Student identity & teacher email ================= */
-const TEACHER_EMAIL = 'hokhei.ngan@gapps.yrdsb.ca';
+// Paste your Google Apps Script Web App URL here (see google-apps-script.gs in this repo)
+const APPS_SCRIPT_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
 const MILESTONE = 20;
 const totalCorrect = () => Object.values(store.skills).reduce((a, s) => a + s.correct, 0);
 function askStudent() {
@@ -456,7 +457,7 @@ function checkMilestone() {
       Student: store.student?.name, Class: store.student?.cls, 'Correct answers': m,
       'Total attempts': Object.values(store.skills).reduce((a, s) => a + s.attempts, 0),
       'Best streak': store.best, 'Total active minutes': Math.round(store.totalSec / 60),
-      'Skill breakdown': summary, 'Completed at': new Date().toLocaleString(), _template: 'box', _captcha: 'false' } });
+      'Skill breakdown': summary, 'Completed at': new Date().toLocaleString() } });
     save();
     showFeedback({ ok: true, msg: `🏆 Amazing! You reached ${m} correct answers. Sending a report to your teacher…` });
   }
@@ -465,9 +466,10 @@ function checkMilestone() {
 async function flushEmails() {
   for (const p of [...(store.pendingEmails || [])]) {
     try {
-      const r = await fetch(`https://formsubmit.co/ajax/${TEACHER_EMAIL}`, { method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(p.data) });
-      if (!r.ok) throw new Error(r.status);
+      if (!APPS_SCRIPT_URL.startsWith('https://script.google.com/')) return; // not configured yet
+      // text/plain + no-cors avoids a CORS preflight, which Apps Script does not support
+      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(p.data) });
       store.pendingEmails = store.pendingEmails.filter(x => x !== p); store.milestonesSent.push(p.milestone); save();
       $('feedback').insertAdjacentHTML('beforeend', `<div class="text-sm mt-1">📧 Report for ${p.milestone} correct answers sent to your teacher.</div>`);
     } catch (e) { /* offline or blocked: keep in queue and retry later */ }
