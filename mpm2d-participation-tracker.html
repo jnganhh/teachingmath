@@ -1527,17 +1527,37 @@
     // ============================================================================
     // iPAD NATIVE SHARE SHEET & GOOGLE APPS SCRIPT CLOUD SYNC
     // ============================================================================
+    const DEFAULT_CLOUD_SYNC_URL = 'https://script.google.com/macros/s/AKfycbz5T6FQ02SXtk83R0UTTpLUNEuq3MTRNAoIQUPgoTLN2BU6cIL9ZemqUsWjRNhDDRuv/exec';
     const CLOUD_URL_KEY = 'mpm2d_tracker_cloud_sync_url';
     const CLOUD_AUTO_KEY = 'mpm2d_tracker_cloud_auto_sync';
     let cloudSyncTimer = null;
 
+    function getActiveCloudUrl() {
+      return (localStorage.getItem(CLOUD_URL_KEY) || DEFAULT_CLOUD_SYNC_URL).trim();
+    }
+
+    function isAutoCloudSyncEnabled() {
+      const val = localStorage.getItem(CLOUD_AUTO_KEY);
+      // Default to true when DEFAULT_CLOUD_SYNC_URL is configured
+      return val === null ? true : val === 'true';
+    }
+
     function initCloudSyncControls() {
-      const savedUrl = localStorage.getItem(CLOUD_URL_KEY) || '';
-      const autoSync = localStorage.getItem(CLOUD_AUTO_KEY) === 'true';
+      if (!localStorage.getItem(CLOUD_URL_KEY)) {
+        localStorage.setItem(CLOUD_URL_KEY, DEFAULT_CLOUD_SYNC_URL);
+      }
+      if (localStorage.getItem(CLOUD_AUTO_KEY) === null) {
+        localStorage.setItem(CLOUD_AUTO_KEY, 'true');
+      }
+      const savedUrl = getActiveCloudUrl();
+      const autoSync = isAutoCloudSyncEnabled();
       const urlInput = document.getElementById('cloudSyncUrlInput');
       const autoCheck = document.getElementById('autoCloudSyncToggle');
       if (urlInput) urlInput.value = savedUrl;
       if (autoCheck) autoCheck.checked = autoSync;
+
+      // Automatically pull latest state from Google Cloud on page load so iPad & MacBook stay in sync
+      pullFromGoogleCloud(true);
     }
 
     function saveCloudSyncUrl(val) {
@@ -1550,13 +1570,13 @@
     }
 
     function scheduleAutoCloudSync() {
-      const autoSync = localStorage.getItem(CLOUD_AUTO_KEY) === 'true';
-      const url = (localStorage.getItem(CLOUD_URL_KEY) || '').trim();
+      const autoSync = isAutoCloudSyncEnabled();
+      const url = getActiveCloudUrl();
       if (!autoSync || !url) return;
       clearTimeout(cloudSyncTimer);
       cloudSyncTimer = setTimeout(() => {
         pushToGoogleCloud(false);
-      }, 2500);
+      }, 2000);
     }
 
     function buildSummaryRowsForCloud() {
@@ -1577,7 +1597,7 @@
     }
 
     async function pushToGoogleCloud(manualClick) {
-      const url = (localStorage.getItem(CLOUD_URL_KEY) || '').trim();
+      const url = getActiveCloudUrl();
       const statusEl = document.getElementById('cloudSyncStatus');
       const btnLabel = document.getElementById('cloudBtnLabel');
 
@@ -1628,11 +1648,12 @@
       }
     }
 
-    async function pullFromGoogleCloud() {
-      const url = (localStorage.getItem(CLOUD_URL_KEY) || '').trim();
+    async function pullFromGoogleCloud(silentOnLoad) {
+      const url = getActiveCloudUrl();
       const statusEl = document.getElementById('cloudSyncStatus');
+      const btnLabel = document.getElementById('cloudBtnLabel');
       if (!url) {
-        if (statusEl) {
+        if (!silentOnLoad && statusEl) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = '⚠️ Paste your Google Apps Script Web App URL above first.';
         }
@@ -1640,7 +1661,7 @@
       }
 
       try {
-        if (statusEl) {
+        if (!silentOnLoad && statusEl) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = '⏳ Pulling latest state from Google Drive...';
         }
@@ -1648,16 +1669,25 @@
         const data = await res.json();
         if (data && data.ok && data.state && data.state.periods) {
           state = data.state;
-          await saveState();
+          const serialized = JSON.stringify(state, null, 2);
+          localStorage.setItem(STORAGE_KEY, serialized);
+          saveToIndexedDB(serialized);
           renderCurrentView();
+          if (btnLabel) btnLabel.textContent = 'Cloud Synced ✓';
+          updateSaveIndicator('Synced with Google Cloud');
           if (statusEl) {
+            statusEl.classList.remove('hidden');
             statusEl.textContent = `✓ Pulled latest data from Google Cloud (last updated ${data.lastUpdated ? new Date(data.lastUpdated).toLocaleString() : 'recently'})`;
           }
-        } else {
-          if (statusEl) statusEl.textContent = 'ℹ️ No cloud backup found yet. Click "Push to Google Drive Now" first.';
+        } else if (!silentOnLoad && statusEl) {
+          statusEl.classList.remove('hidden');
+          statusEl.textContent = 'ℹ️ No cloud backup found yet. Click "Push to Google Drive Now" first.';
         }
       } catch (err) {
-        if (statusEl) statusEl.textContent = `❌ Could not pull from Google Cloud: ${err.message}`;
+        if (!silentOnLoad && statusEl) {
+          statusEl.classList.remove('hidden');
+          statusEl.textContent = `❌ Could not pull from Google Cloud: ${err.message}`;
+        }
       }
     }
 
