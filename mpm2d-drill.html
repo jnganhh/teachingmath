@@ -546,10 +546,13 @@ function setInputMode(rich) {
   focusAnswer();
 }
 function getAnswer() {
-  return (useMathField ? ($('mathAnswer').value || '') : $('answer').value).trim();
+  const mf = $('mathAnswer');
+  return (useMathField ? (typeof mf.getValue === 'function' ? mf.getValue('latex') : (mf.value || '')) : $('answer').value).trim();
 }
 function setAnswer(v) {
-  $('mathAnswer').value = v;
+  const mf = $('mathAnswer');
+  if (typeof mf.setValue === 'function') mf.setValue(v);
+  else if (!v) mf.textContent = '';
   $('answer').value = v;
   $('preview').textContent = !useMathField && v ? 'Preview: ' + pretty(normalizeLatex(v).replace(/\*/g, '·')) : '';
 }
