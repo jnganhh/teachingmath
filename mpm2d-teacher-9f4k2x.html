@@ -169,6 +169,14 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
+      <div class="inline-flex rounded-lg border-2 border-slate-800 bg-slate-100 p-0.5">
+        <button onclick="setDailyLayout('grid')" id="layoutBtn-grid" class="px-2.5 py-1 text-xs font-black rounded-md transition tab-active" title="Compact 4x8 Seating/Name Grid — click any student to log">
+          ⊞ 4×8 Grid
+        </button>
+        <button onclick="setDailyLayout('table')" id="layoutBtn-table" class="px-2.5 py-1 text-xs font-black rounded-md transition text-slate-700" title="Full Detailed Table">
+          ☰ Table
+        </button>
+      </div>
       <button onclick="markAllPresent()" class="px-3 py-1.5 text-xs font-black rounded-lg bg-emerald-100 text-emerald-900 comic-btn">
         ✓ All Present
       </button>
@@ -199,7 +207,11 @@
 
   <!-- VIEW 1: DAILY ATTENDANCE, HOMEWORK, TALLY & OBJECTIVE GROWING SUCCESS DROPDOWNS -->
   <main id="view-daily" class="max-w-7xl mx-auto">
-    <div class="bg-white rounded-xl comic-border overflow-hidden">
+    <!-- 4x8 Compact Grid Layout -->
+    <div id="dailyGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5"></div>
+
+    <!-- Full Table Layout -->
+    <div id="dailyTableContainer" class="hidden bg-white rounded-xl comic-border overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -215,6 +227,20 @@
       </div>
     </div>
   </main>
+
+  <!-- QUICK STUDENT ACTION MODAL (for 4x8 Grid clicks) -->
+  <div id="studentQuickModal" onclick="if(event.target===this) closeStudentModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+    <div class="bg-white max-w-3xl w-full rounded-2xl comic-border p-5 space-y-4 my-auto max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-3">
+        <div>
+          <span class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800" id="modalPeriodBadge">Period 1</span>
+          <h2 id="modalStudentName" class="text-xl font-black text-slate-900 mt-1">Student Name</h2>
+        </div>
+        <button onclick="closeStudentModal()" class="px-3.5 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">✓ Done / Close</button>
+      </div>
+      <div id="modalStudentBody" class="space-y-4 text-xs"></div>
+    </div>
+  </div>
 
   <!-- VIEW 2: REVIEW INPUT BASED ON DATE (HISTORY & DATE LOG) -->
   <section id="view-history" class="hidden max-w-7xl mx-auto space-y-4">
@@ -1001,11 +1027,212 @@
       document.getElementById('statTallies').textContent = tallySum;
       document.getElementById('statLogs').textContent = obsSum;
 
-      if (state.currentView === 'daily') renderDailyTable(students);
+      let dailyLayout = localStorage.getItem('mpm2d_daily_layout') || 'grid';
+      let activeModalStudentId = null;
+
+      function setDailyLayout(mode) {
+        dailyLayout = mode === 'table' ? 'table' : 'grid';
+        localStorage.setItem('mpm2d_daily_layout', dailyLayout);
+        const gridBtn = document.getElementById('layoutBtn-grid');
+        const tableBtn = document.getElementById('layoutBtn-table');
+        if (gridBtn && tableBtn) {
+          if (dailyLayout === 'grid') {
+            gridBtn.classList.add('tab-active');
+            gridBtn.classList.remove('text-slate-700');
+            tableBtn.classList.remove('tab-active');
+            tableBtn.classList.add('text-slate-700');
+          } else {
+            tableBtn.classList.add('tab-active');
+            tableBtn.classList.remove('text-slate-700');
+            gridBtn.classList.remove('tab-active');
+            gridBtn.classList.add('text-slate-700');
+          }
+        }
+        renderCurrentView();
+      }
+
+      if (state.currentView === 'daily') {
+        const gridEl = document.getElementById('dailyGridContainer');
+        const tableEl = document.getElementById('dailyTableContainer');
+        if (dailyLayout === 'grid') {
+          if (gridEl) gridEl.classList.remove('hidden');
+          if (tableEl) tableEl.classList.add('hidden');
+          renderDailyGrid(students);
+        } else {
+          if (gridEl) gridEl.classList.add('hidden');
+          if (tableEl) tableEl.classList.remove('hidden');
+          renderDailyTable(students);
+        }
+      }
       else if (state.currentView === 'history') renderHistoryView(students);
       else if (state.currentView === 'participation') renderParticipationView(students);
       else if (state.currentView === 'summary') renderSummaryTable(students);
       else if (state.currentView === 'roster') renderRosterView(allStudents);
+
+      if (activeModalStudentId) {
+        renderStudentModalBody(activeModalStudentId);
+      }
+    }
+
+    function openStudentModal(studentId) {
+      activeModalStudentId = studentId;
+      const stu = state.periods[state.currentPeriod].students.find(s => s.id === studentId);
+      if (!stu) return;
+      document.getElementById('modalPeriodBadge').textContent = state.periods[state.currentPeriod].name;
+      document.getElementById('modalStudentName').textContent = stu.name;
+      renderStudentModalBody(studentId);
+      document.getElementById('studentQuickModal').classList.remove('hidden');
+    }
+
+    function closeStudentModal() {
+      activeModalStudentId = null;
+      document.getElementById('studentQuickModal').classList.add('hidden');
+    }
+
+    function renderStudentModalBody(studentId) {
+      const container = document.getElementById('modalStudentBody');
+      if (!container) return;
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+
+      const attButtons = [
+        { code: 'P', label: 'Present' },
+        { code: 'L', label: 'Late' },
+        { code: 'A', label: 'Absent' },
+        { code: 'E', label: 'Excused' }
+      ].map(btn => {
+        const activeClass = rec.attendance === btn.code ? `att-${btn.code} font-black` : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200 font-bold';
+        return `<button onclick="setAttendance('${studentId}', '${btn.code}')" class="px-3 py-1.5 rounded-md border-2 text-xs transition ${activeClass}">${btn.label}</button>`;
+      }).join('');
+
+      const hwButtons = [
+        { code: 'Done', label: '✓ HW Done' },
+        { code: 'Part', label: '~ Partial HW' },
+        { code: 'Miss', label: '✗ No HW' }
+      ].map(btn => {
+        const activeClass = rec.homework === btn.code ? `hw-${btn.code} font-black` : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200 font-bold';
+        return `<button onclick="setHomework('${studentId}', '${btn.code}')" class="px-3 py-1.5 rounded-md border-2 text-xs transition ${activeClass}">${btn.label}</button>`;
+      }).join('');
+
+      const pVal = rec.phoneCount || 0;
+      const phoneActiveStyle = pVal > 0 ? 'bg-red-100 border-red-700 text-red-900 font-black' : 'bg-slate-50 border-slate-300 text-slate-700 font-bold';
+      const phoneControl = `
+        <div class="inline-flex items-center rounded-lg border-2 ${phoneActiveStyle}">
+          <button onclick="adjustPhoneCount('${studentId}', -1)" class="px-2.5 py-1.5 font-black hover:opacity-75">−</button>
+          <span class="px-2.5 py-1.5 text-xs whitespace-nowrap">📵 Mobile Device in Class: <strong class="font-mono ${pVal > 0 ? 'text-red-700' : 'text-slate-600'}">${pVal}</strong></span>
+          <button onclick="adjustPhoneCount('${studentId}', 1)" class="px-2.5 py-1.5 text-red-700 font-black hover:bg-red-200 rounded-r">+1</button>
+        </div>
+      `;
+
+      const checkedIds = new Set((rec.observations || []).map(o => o.lookForId));
+      const btcCheckboxes = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          ${BTC_PROBLEM_STRING_CHECKS.map(chk => {
+            const isChecked = checkedIds.has(chk.id);
+            const skillName = GROWING_SUCCESS_SKILLS[chk.skill]?.name || chk.skill;
+            const activeBox = isChecked ? 'bg-emerald-100 border-emerald-700 text-emerald-950 font-black shadow-sm' : 'bg-slate-50 border-slate-300 text-slate-800 hover:bg-slate-100 font-semibold';
+            return `
+              <label class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 text-xs cursor-pointer select-none transition ${activeBox}">
+                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleLessonCheck('${studentId}', '${chk.id}')" class="mt-0.5 w-4 h-4 accent-emerald-600 rounded cursor-pointer shrink-0" />
+                <span class="leading-snug">${chk.shortLabel} <span class="text-[10px] font-mono opacity-75">(${skillName})</span></span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      const tallyControls = TALLY_TYPES.map(t => {
+        const val = rec.tallies[t.key] || 0;
+        return `
+          <div class="inline-flex items-center rounded-lg border-2 border-slate-800 bg-slate-50 mr-2 mb-2">
+            <button onclick="adjustTally('${studentId}', '${t.key}', -1)" class="px-2.5 py-1.5 font-black text-slate-500 hover:text-slate-900">−</button>
+            <span class="px-2 py-1.5 font-bold text-xs whitespace-nowrap">${t.label} <strong class="font-mono text-blue-700 ml-0.5">${val}</strong></span>
+            <button onclick="adjustTally('${studentId}', '${t.key}', 1)" class="px-2.5 py-1.5 text-blue-700 font-black hover:bg-blue-100 rounded-r">+</button>
+          </div>
+        `;
+      }).join('');
+
+      const chips = (rec.observations || []).map((obs, idx) => {
+        const chipColor = obs.weight > 0 ? 'badge-E' : 'badge-N';
+        const skillFull = GROWING_SUCCESS_SKILLS[obs.skill]?.name || obs.skill;
+        return `
+          <div class="inline-flex items-start gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold mr-1 mb-1 leading-snug ${chipColor}">
+            <span><strong>[${skillFull}]</strong> ${obs.text}</span>
+            <button onclick="removeObservation('${studentId}', ${idx})" class="ml-1 font-black hover:opacity-75 shrink-0">✕</button>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border-2 border-slate-200">
+          <div>
+            <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">Attendance</div>
+            <div class="flex flex-wrap gap-1">${attButtons}</div>
+          </div>
+          <div>
+            <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">Homework</div>
+            <div class="flex flex-wrap gap-1">${hwButtons}</div>
+          </div>
+          <div>
+            <div class="text-[10px] font-black uppercase text-red-600 mb-1.5">Negative Behaviour</div>
+            ${phoneControl}
+          </div>
+        </div>
+        <div>
+          <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">Building Thinking Classrooms &amp; Algebra Problem String</div>
+          ${btcCheckboxes}
+        </div>
+        <div>
+          <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">Quick Participation Tallies</div>
+          <div>${tallyControls}</div>
+        </div>
+        <div>
+          <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">All 6 Growing Success Skills</div>
+          <div class="mb-2">${buildLookForDropdownHTML(studentId)}</div>
+          ${chips ? `<div>${chips}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderDailyGrid(students) {
+      const grid = document.getElementById('dailyGridContainer');
+      if (!grid) return;
+      if (students.length === 0) {
+        grid.innerHTML = `<div class="col-span-full bg-white rounded-xl comic-border p-8 text-center font-bold text-slate-500">No students in this period yet. Switch to the 👥 Roster tab to import a CSV or add students.</div>`;
+        return;
+      }
+
+      grid.innerHTML = students.map(s => {
+        const rec = getStudentDayRecord(state.activeDate, s.id);
+        const totalTallies = Object.values(rec.tallies || {}).reduce((a, b) => a + b, 0);
+        const obsCount = (rec.observations || []).length;
+        const pVal = rec.phoneCount || 0;
+
+        const attColor = rec.attendance === 'P' ? 'bg-emerald-100 text-emerald-900 border-emerald-700'
+          : rec.attendance === 'L' ? 'bg-amber-100 text-amber-900 border-amber-700'
+          : rec.attendance === 'A' ? 'bg-red-100 text-red-900 border-red-700'
+          : 'bg-slate-200 text-slate-800 border-slate-500';
+        const attText = rec.attendance === 'P' ? 'Present' : rec.attendance === 'L' ? 'Late' : rec.attendance === 'A' ? 'Absent' : 'Excused';
+
+        const hwBadge = rec.homework === 'Done' ? `<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold">✓ HW</span>`
+          : rec.homework === 'Part' ? `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">~ HW</span>`
+          : rec.homework === 'Miss' ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-bold">✗ HW</span>`
+          : '';
+
+        return `
+          <button onclick="openStudentModal('${s.id}')" class="text-left bg-white hover:bg-yellow-50 p-3 rounded-xl comic-btn flex flex-col justify-between gap-2 transition">
+            <div class="flex items-start justify-between gap-1.5 w-full">
+              <span class="font-black text-sm text-slate-900 leading-tight">${s.name}</span>
+              <span class="px-1.5 py-0.5 text-[10px] font-black rounded border shrink-0 ${attColor}">${attText}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+              <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 font-black">Tally: ${totalTallies}</span>
+              ${obsCount > 0 ? `<span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 font-black">✓ ${obsCount}</span>` : ''}
+              ${hwBadge}
+              ${pVal > 0 ? `<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-black">📵 ${pVal}</span>` : ''}
+            </div>
+          </button>
+        `;
+      }).join('');
     }
 
     function toggleLessonCheck(studentId, checkId) {
