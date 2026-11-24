@@ -319,3 +319,100 @@ for (const {name, levels} of algebraTopics) {
     for (let i = 0; i < remaining; i++) questions.push(build(level, i));
   }
 }
+
+algebraTopics.push({
+  name: "Quadratic equations",
+  example: [
+    "Solve 2x² + 3x = 5.",
+    [
+      "Set one side to zero: 2x² + 3x − 5 = 0.",
+      "Factor: (2x + 5)(x − 1) = 0.",
+      "Set each factor to zero. The roots are x = −5/2 and x = 1.",
+      "On the graph of y = 2x² + 3x − 5, those roots are the x-coordinates of the intercepts."
+    ],
+    "When factoring is impractical, use x = (−b ± √(b² − 4ac))/(2a) for ax² + bx + c = 0."
+  ],
+  levels: [
+    [
+      item("Use the zero-product property.", "(x − 4)(x + 3) = 0", "x = 4 or x = −3",
+        [["x = −4 or x = 3","Check what value makes each factor equal zero."],["x = 4 only","Either factor can be zero."]],
+        "Set each bracket equal to zero.", "x − 4 = 0 gives x = 4. x + 3 = 0 gives x = −3."),
+      item("Solve by factoring.", "x² − 7x + 12 = 0", "x = 3 or x = 4",
+        [["x = −3 or x = −4","The factors are x − 3 and x − 4. Check their signs when solving."],["x = 2 or x = 6","These numbers multiply to 12 but add to 8, not 7."]],
+        "Find two numbers that multiply to 12 and add to −7.", "−3 and −4 give (x − 3)(x − 4) = 0, so x = 3 or x = 4."),
+      item("Find all real solutions.", "x² − 49 = 0", "x = 7 or x = −7",
+        [["x = 7 only","Both a positive and a negative number square to 49."],["x = 49 or x = −49","Take the square root of 49."]],
+        "Recognize a difference of squares.", "x² − 7² = (x − 7)(x + 7). The roots are 7 and −7."),
+      item("Solve by taking out a common factor.", "3x² − 15x = 0", "x = 0 or x = 5",
+        [["x = 5 only","Dividing both sides by x would lose the root x = 0."],["x = 0 or x = −5","Check the sign in x − 5."]],
+        "Factor out 3x before solving.", "3x(x − 5) = 0. Either 3x = 0 or x − 5 = 0."),
+      item("How many distinct real roots does the equation have?", "(x − 6)² = 0", "One distinct root",
+        [["Two distinct roots","Both identical factors give the same root."],["No real roots","A square can equal zero."]],
+        "Ask when the expression inside the square equals zero.", "x − 6 = 0 gives x = 6. It is a repeated root, so there is one distinct real root."),
+      item("Read the roots from the graph.", "y = (x + 2)(x − 3)", "x = −2 or x = 3",
+        [["x = 0 or x = −6","Look at where the curve crosses the horizontal axis."],["x = 2 or x = −3","Read the x-coordinate at each crossing, including its sign."]],
+        "The roots occur where the graph crosses the x-axis.", "The graph crosses at (−2, 0) and (3, 0). Therefore x = −2 or x = 3.",
+        {a:1,b:-1,c:-6,xMin:-4,xMax:5,yMin:-8,yMax:8}),
+      item("A square garden has an area of 81 m². What is its side length?", "Let s be the side length in metres.", "9 m",
+        [["−9 m","A negative root satisfies the equation, but a length must be positive."],["20.25 m","Area is side length squared. Dividing by 4 would be used for perimeter."]],
+        "Model the area with s² = 81.", "The roots of s² = 81 are 9 and −9. The garden’s side length is 9 m."),
+      item("A rectangular mural is 2 m longer than it is wide and has area 48 m². Find its width.", "Let w be the width in metres.", "6 m",
+        [["8 m","That is the length. The width is 2 m shorter."],["−8 m","This is an algebraic root, but a width cannot be negative."]],
+        "Write w(w + 2) = 48, then move 48 to the left.", "w² + 2w − 48 = (w + 8)(w − 6) = 0. Only w = 6 gives a positive width.")
+    ],
+    [
+      item("Solve by factoring after rearranging.", "2x² − x = 6", "x = 2 or x = −3/2",
+        [["x = −2 or x = 3/2","Expand your factors and check that the middle coefficient is −1."],["x = 2 or x = 3/2","The constant term in standard form is −6, so the roots here have opposite signs."]],
+        "Rewrite as 2x² − x − 6 = 0. Split the middle term into 3x − 4x.", "2x² + 3x − 4x − 6 = (2x + 3)(x − 2) = 0."),
+      item("Use the quadratic formula. Give the roots to the nearest hundredth.", "x² − 2x − 5 = 0", "x ≈ −1.45 or x ≈ 3.45",
+        [["x ≈ −3.45 or x ≈ 1.45","The numerator starts with −b, which is 2 here."],["x ≈ −2.90 or x ≈ 6.90","Divide the entire numerator by 2a."]],
+        "Use a = 1, b = −2, and c = −5. Calculate b² − 4ac first.", "The discriminant is 24. The roots are (2 − √24)/2 and (2 + √24)/2, about −1.45 and 3.45."),
+      item("Which equation has the roots shown by the graph?", "Use the shape and the x-intercepts.", "y = −x² + 2x + 3",
+        [["y = x² − 2x − 3","It has the correct roots but opens upward."],["y = −x² − 2x + 3","Its zeros are −3 and 1. Compare the intercepts on the graph."]],
+        "Read both x-intercepts and check whether the parabola opens up or down.", "The roots are −1 and 3 and the graph opens down. The equation y = −(x + 1)(x − 3) fits.",
+        {a:-1,b:2,c:3,xMin:-3,xMax:5,yMin:-5,yMax:6}),
+      item("A ball’s height is given in metres. When does the ball land?", "h(t) = −5t² + 20t + 25", "5 s",
+        [["−1 s","This root falls before the model starts at t = 0."],["2 s","That is the time of the maximum height. Landing means the height is zero."]],
+        "Set h(t) = 0. Divide the equation by −5 before factoring.", "t² − 4t − 5 = (t − 5)(t + 1) = 0. The positive root is t = 5."),
+      item("A garden is 4 m longer than it is wide. Its diagonal is 20 m. Find the width.", "Let w be the width in metres.", "12 m",
+        [["16 m","That is the length. The question asks for the width."],["−16 m","The width must be positive."]],
+        "Use the Pythagorean theorem: w² + (w + 4)² = 20².", "The equation simplifies to w² + 4w − 192 = 0. Factoring gives (w + 16)(w − 12) = 0. The width is 12 m."),
+      item("Two consecutive positive integers have a product of 156. What are they?", "Let n be the smaller integer.", "12 and 13",
+        [["11 and 12","They are consecutive, but their product is 132."],["−13 and −12","They give the right product, but the problem asks for positive integers."]],
+        "Write n(n + 1) = 156 and solve for n.", "(n − 12)(n + 13) = 0. Choose n = 12, so the next integer is 13."),
+      item("An arch curves above a level walkway. Its height h is in metres, with x measured horizontally in metres. How wide is the arch at walkway level?", "h = −x² + 8x", "8 m",
+        [["4 m","That is the location of the vertex. Find both walkway-level intercepts."],["16 m","That is the maximum height, not the width."]],
+        "Set h = 0, then find the horizontal distance between the two roots.", "x(8 − x) = 0, so the intercepts occur at x = 0 and x = 8. The arch is 8 m wide."),
+      item("A club sells x tickets at a price of 30 − x dollars each. What two ticket quantities give revenue of $200?", "R = x(30 − x)", "10 or 20 tickets",
+        [["15 tickets only","That maximizes revenue but does not give exactly $200."],["−10 or −20 tickets","Check the signs when solving the factored equation."]],
+        "Set R = 200 and move all terms to one side.", "x² − 30x + 200 = (x − 10)(x − 20) = 0. Both ticket counts are possible.")
+    ],
+    [
+      item("A ball’s height h is measured in metres, t seconds after launch. When does it reach 6 m?", "h = −5t² + 15t + 1", "About 0.38 s and 2.62 s",
+        [["About 0.07 s and 2.93 s","Those times use the wrong target height. Start by setting h = 6."],["About 2.62 s only","It can pass through the same height while rising and falling."]],
+        "Set h = 6. Divide by −5 and solve the resulting quadratic.", "t² − 3t + 1 = 0. The formula gives (3 − √5)/2 and (3 + √5)/2. Both are positive times."),
+      item("A pool measures 10 m by 6 m. A path of uniform width surrounds it on all four sides. The path alone covers 80 m². Find its width.", "Let x be the width of the path in metres.", "About 2.00 m",
+        [["About 1.00 m","Test the area when the length and width each increase by twice the path width."],["About 4.00 m","The increase in each outside dimension is twice the path width."]],
+        "Add 2x to each pool dimension and subtract the pool’s area.", "(10 + 2x)(6 + 2x) − 60 = 80 gives x² + 8x − 20 = 0. The roots are 2 and −10. The width is 2 m."),
+      item("A rectangular pen uses 40 m of fencing on three sides. A wall forms the fourth side. If the pen must enclose 192 m², what are the possible lengths of each side perpendicular to the wall?", "Let x be one side perpendicular to the wall.", "8 m or 12 m",
+        [["16 m or 24 m","Those are possible lengths parallel to the wall."],["10 m only","That gives the maximum area, which is 200 m²."]],
+        "The side parallel to the wall is 40 − 2x. Set x(40 − 2x) = 192.", "Rearrange to x² − 20x + 96 = 0, then factor: (x − 8)(x − 12) = 0. Both dimensions are possible."),
+      item("A sensor measures a parabola’s height y above a reference line. At which horizontal positions is the height 3?", "y = x² − 4x", "x ≈ −0.65 or x ≈ 4.65",
+        [["x = 0 or x = 4","Those are the intercepts at y = 0. The target height is 3."],["x ≈ 0.65 or x ≈ 4.65","The left intersection lies to the left of the y-axis."]],
+        "Find where the parabola crosses the horizontal line y = 3.", "The graph gives estimates. To confirm, solve x² − 4x − 3 = 0. The exact solutions are 2 − √7 and 2 + √7.",
+        {a:1,b:-4,c:0,xMin:-2,xMax:6,yMin:-5,yMax:8,target:3}),
+      item("A ball is launched from a 2 m platform. How long until it hits the ground? Round to the nearest hundredth.", "h(t) = −4.9t² + 7t + 2", "1.67 s",
+        [["1.43 s","That comes from ignoring the 2 m starting height."],["−0.24 s","That algebraic root is before the launch."]],
+        "Set h(t) = 0 and use the quadratic formula. Choose the positive time.", "The discriminant is 88.2. The positive time is (7 + √88.2)/9.8 ≈ 1.67 s. The other root is negative."),
+      item("A square courtyard gets a strip 3 m wide added along one side. The new rectangular area is 110 m². What was the original side length?", "Let s be the original side length.", "About 9.09 m",
+        [["About 10.49 m","That is the side length of a square with area 110 m². The new shape is a rectangle."],["About 12.09 m","That is the longer side of the new rectangle."]],
+        "Use s(s + 3) = 110 and take the positive root.", "s² + 3s − 110 = 0. The positive root is (−3 + √449)/2 ≈ 9.09 m."),
+      item("A store models daily profit in dollars as P(x), where x is the number of items sold. What sales quantities break even?", "P(x) = −2x² + 40x − 128", "4 or 16 items",
+        [["8 or 32 items","Divide the equation by −2 before factoring."],["10 items only","That is the vertex and gives the highest profit. Break-even means zero profit."]],
+        "Set P(x) = 0. Divide by −2.", "x² − 20x + 64 = (x − 4)(x − 16) = 0. Profit is zero at 4 and 16 items."),
+      item("A rectangular display has area 70 m². Its length is 3 m more than twice its width. Find the width to the nearest hundredth.", "Let w be the width in metres.", "5.21 m",
+        [["6.71 m","The length is 2w + 3. Make sure you set up that expression first."],["13.42 m","That is the length, not the width."]],
+        "Write w(2w + 3) = 70. Keep the positive root of the resulting quadratic.", "2w² + 3w − 70 = 0, so w = (−3 + √569)/4 ≈ 5.21 m.")
+    ]
+  ]
+});

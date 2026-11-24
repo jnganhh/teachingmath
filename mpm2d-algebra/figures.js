@@ -72,13 +72,54 @@ function coordinateFigure(text) {
   return svg;
 }
 
+function quadraticFigure({a, b, c, xMin, xMax, yMin, yMax, target}) {
+  const svg = svgElement("svg", {viewBox:"0 0 330 225", role:"img",
+    "aria-label":`Coordinate graph of the given parabola${target === undefined ? "." : ` and the horizontal line y = ${target}.`}`});
+  const left = 27, top = 13, width = 278, height = 188;
+  const xPos = (x) => (x - xMin) * width / (xMax - xMin);
+  const yPos = (y) => (yMax - y) * height / (yMax - yMin);
+  const graph = svgElement("svg", {x:left, y:top, width, height, overflow:"hidden"});
+
+  for (let x = xMin; x <= xMax; x++) {
+    const px = xPos(x);
+    graph.append(svgElement("line", {x1:px,x2:px,y1:0,y2:height,class:x ? "plot-grid" : "plot-axis"}));
+    if (x) svg.append(svgElement("text", {x:left+px,y:top+yPos(0)+15,"text-anchor":"middle",class:"plot-tick"}, String(x)));
+  }
+  for (let y = yMin; y <= yMax; y++) {
+    const py = yPos(y);
+    graph.append(svgElement("line", {x1:0,x2:width,y1:py,y2:py,class:y ? "plot-grid" : "plot-axis"}));
+    if (y && y % 2 === 0) svg.append(svgElement("text", {x:left+xPos(0)-5,y:top+py+4,"text-anchor":"end",class:"plot-tick"}, String(y)));
+  }
+
+  const curve = [];
+  for (let i = 0; i <= 100; i++) {
+    const x = xMin + (xMax-xMin)*i/100;
+    curve.push(`${xPos(x)},${yPos(a*x*x + b*x + c)}`);
+  }
+  graph.append(svgElement("polyline", {points:curve.join(" "),class:"quadratic-curve"}));
+  if (target !== undefined) {
+    const y = yPos(target);
+    graph.append(svgElement("line", {x1:0,x2:width,y1:y,y2:y,class:"target-line"}));
+    svg.append(svgElement("text", {x:left+width-5,y:top+y-6,"text-anchor":"end",class:"plot-tick"}, `y = ${target}`));
+  }
+  svg.prepend(graph);
+  svg.append(
+    svgElement("text", {x:left+width+8,y:top+yPos(0)+4}, "x"),
+    svgElement("text", {x:left+xPos(0)+6,y:top-1}, "y")
+  );
+  return svg;
+}
+
 function renderPracticeFigure(figure, topic, diagram, text) {
   const triangle = topic === "Trigonometry" && diagram;
-  const svg = triangle ? triangleFigure(diagram) : topic === "Analytic geometry" ? coordinateFigure(text) : null;
+  const quadratic = topic === "Quadratic equations" && diagram;
+  const svg = triangle ? triangleFigure(diagram)
+    : quadratic ? quadraticFigure(diagram)
+    : topic === "Analytic geometry" ? coordinateFigure(text) : null;
   figure.replaceChildren();
   figure.hidden = !svg;
   if (!svg) return;
   const caption = document.createElement("figcaption");
-  caption.textContent = triangle ? "Sketch not to scale" : "Given coordinates";
+  caption.textContent = triangle ? "Sketch not to scale" : quadratic ? "Quadratic relation" : "Given coordinates";
   figure.append(svg, caption);
 }

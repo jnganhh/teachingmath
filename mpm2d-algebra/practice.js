@@ -206,7 +206,8 @@ const topicDetails = {
   Trigonometry: ["sin θ", "Solve right triangles"],
   "Analytic geometry": ["Δy / Δx", "Slope, distance, and midpoint"],
   "Exponent laws": ["xᵃ · xᵇ", "Simplify powers"],
-  "Linear equations": ["x = ?", "Find the unknown"]
+  "Linear equations": ["x = ?", "Find the unknown"],
+  "Quadratic equations": ["ax² = ?", "Solve and interpret roots"]
 };
 
 algebraTopics.forEach(({name}, index) => {

@@ -4,7 +4,7 @@ const mathNamespace = "http://www.w3.org/1998/Math/MathML";
 const superscriptDigits = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 const operators = "+−-±=≠≈×·÷,()°?";
 const mathToken = /\d+(?:\.\d+)?|[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+|[A-Za-z]+|[θΔ√^/]|[+−±=≠≈×·÷,()°?-]|[^\S\n]+|./gu;
-const identifier = /^(?:[xyzabkmvsθΔABC]|AB|AC|BC|kx|xy|ab|sin|cos|tan)$/;
+const identifier = /^(?:[xyzabckmvshtwrnpθΔABC]|AB|AC|BC|kx|xy|ab|ac|ax|bx|sin|cos|tan)$/;
 const propertyName = /^(?:sin|cos|tan)$/;
 
 function mathNode(tag, value) {
@@ -51,7 +51,7 @@ function stackFractions(parts) {
 }
 
 function parseMath(tokens) {
-  tokens = tokens.flatMap((token) => /^(?:kx|xy|ab)$/.test(token) ? Array.from(token) : [token]);
+  tokens = tokens.flatMap((token) => /^(?:kx|xy|ab|ac|ax|bx)$/.test(token) ? Array.from(token) : [token]);
   let index = 0;
 
   function readRow(inGroup = false) {
@@ -114,7 +114,7 @@ function appendMathLine(parent, line) {
     const trimmed = raw.trim();
     let expression = trimmed;
     if (expression.endsWith(",")) expression = expression.slice(0, -1).trimEnd();
-    const isMath = /[=≠≈×÷·√^/°⁰¹²³⁴⁵⁶⁷⁸⁹]|\d[xyzabkmvs]|\([−-]?\d+\s*,|[+−-]\s*\d|\b(?:sin|cos|tan)\b/.test(expression);
+    const isMath = /[=≠≈×÷·√^/°⁰¹²³⁴⁵⁶⁷⁸⁹]|\d[xyzabckmvshtwrnp]|\([−-]?\d+\s*,|[+−-]\s*\d|\b(?:sin|cos|tan)\b/.test(expression);
     if (isMath && /[\dA-Za-zθ]/.test(expression)) {
       const start = raw.indexOf(expression);
       const math = mathNode("math");

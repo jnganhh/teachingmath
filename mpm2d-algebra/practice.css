@@ -22,7 +22,7 @@ h2 { font-size: 1.25rem; }
 .progress-link { color: white; font-weight: 700; border: 1px solid #83b799; padding: .45rem .75rem; border-radius: .5rem; text-decoration: none; }
 .progress-link:hover { background: #20543b; }
 .topic-picker { margin: 1rem 0; }
-#topics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .5rem; margin-top: .6rem; }
+#topics { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .5rem; margin-top: .6rem; }
 .actions { display: flex; gap: .55rem; flex-wrap: wrap; }
 button, select { font: inherit; }
 button { border: 1px solid #8fac9c; border-radius: .5rem; padding: .48rem .72rem; background: white; color: inherit; cursor: pointer; font-weight: 650; }
@@ -67,7 +67,7 @@ th, td { padding: .5rem .65rem; border-bottom: 1px solid var(--line); }
 th { background: var(--wash); }
 #report-form { align-items: end; }
 #student-id { display: block; font: inherit; max-width: 100%; border: 1px solid #8fac9c; border-radius: .35rem; padding: .35rem; margin-top: .25rem; }
-@media (max-width: 900px) { #topics { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1000px) { #topics { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 670px) {
   .layout { grid-template-columns: 1fr; }
   #topics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -102,3 +102,13 @@ math { font-size: 1.09em; }
 #math math, .example-math math { font-size: 1.15em; }
 .choice:has(math) { align-items: center; }
 #math, .example-math, .review-math { overflow-x: auto; }
+
+.math-figure .plot-tick {
+  font-size: 11px;
+  paint-order: stroke;
+  stroke: #fbfdfb;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.quadratic-curve { fill: none; stroke: #176444; stroke-width: 2.5px; }
+.target-line { stroke: #a7461d; stroke-width: 2px; stroke-dasharray: 6 4; }
