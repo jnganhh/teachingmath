@@ -41,9 +41,10 @@
     <main class="md:col-span-2 space-y-5">
       <section class="comic bg-white p-4">
         <div class="font-black mb-2">1. Choose a mode</div>
-        <div class="flex gap-2 mb-3">
+        <div class="flex flex-wrap gap-2 mb-3">
           <button class="btn chip px-3 py-1 active" data-mode="expand">Expand</button>
           <button class="btn chip px-3 py-1" data-mode="factor">Factor</button>
+          <button class="btn chip px-3 py-1" data-mode="solve">Solve</button>
           <button class="btn chip px-3 py-1" data-mode="mixed">Mixed</button>
         </div>
         <div class="font-black mb-2">2. Choose skills</div>
@@ -168,8 +169,9 @@ const pretty = s => s.replace(/\^(\d+)/g, (_, d) => d.split('').map(c => sup[c])
 /* ================= Expression parser ================= */
 function normalizeLatex(str) {
   str = String(str || '').trim().replace(/^\$+|\$+$/g, '').replace(/\^\{\s*(-?\d+)\s*\}/g, '^$1');
-  // Convert \frac{a}{b} (handles simple nested braces)
-  for (let pass = 0; pass < 5 && str.includes('\\frac'); pass++) {
+  // Convert \sqrt{a} and \frac{a}{b} (handles simple nested braces)
+  for (let pass = 0; pass < 5 && (str.includes('\\frac') || str.includes('\\sqrt')); pass++) {
+    str = str.replace(/\\sqrt\s*\{([^{}]*)\}/g, 'sqrt($1)');
     str = str.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '(($1)/($2))');
   }
   return str
@@ -179,12 +181,15 @@ function normalizeLatex(str) {
     .replace(/\\div\b/g, '/')
     .replace(/\\(?:text|mathrm|mathit|mathbf)\{([^{}]*)\}/g, '$1')
     .replace(/\\[,;:! ]/g, '')
+    .replace(/√\s*(\d+(?:\.\d+)?)/g, 'sqrt($1)')
+    .replace(/√\s*\(/g, 'sqrt(')
     .replace(/\{/g, '(').replace(/\}/g, ')');
 }
 function tokenize(str) {
   str = normalizeLatex(str).replace(/[−–]/g, '-').replace(/[·×]/g, '*').replace(/²/g, '^2').replace(/³/g, '^3').replace(/\s+/g, '').replace(/X/g, 'x');
   const t = []; let i = 0;
   while (i < str.length) {
+    if (str.slice(i, i + 4).toLowerCase() === 'sqrt') { t.push({ type: 'sqrt' }); i += 4; continue; }
     const c = str[i];
     if (/[0-9.]/.test(c)) { let n = ''; while (i < str.length && /[0-9.]/.test(str[i])) n += str[i++]; t.push({ type: 'num', v: parseFloat(n) }); continue; }
     if (c === 'x') { t.push({ type: 'var' }); i++; continue; }
@@ -195,7 +200,7 @@ function tokenize(str) {
   }
   return t;
 }
-// AST: {op:'+', terms:[{sign, node}]}, {op:'*', factors:[node]}, {op:'^', base, exp}, {op:'num'}, {op:'var'}, {op:'neg', node}
+// AST: {op:'+', terms:[{sign, node}]}, {op:'*', factors:[node]}, {op:'^', base, exp}, {op:'num'}, {op:'var'}, {op:'neg', node}, {op:'sqrt', node}
 function parse(str) {
   const t = tokenize(str); let p = 0;
   if (!t.length) throw new Error('Type an answer first.');
@@ -210,7 +215,7 @@ function parse(str) {
   }
   function term() {
     const f = [power()];
-    while (peek() && (peek().type === '*' || peek().type === '/' || ['num','var','('].includes(peek().type))) {
+    while (peek() && (peek().type === '*' || peek().type === '/' || ['num','var','(','sqrt'].includes(peek().type))) {
       if (peek().type === '*') p++;
       else if (peek().type === '/') { p++; f.push({ op: 'inv', node: power() }); continue; }
       f.push(power());
@@ -226,6 +231,7 @@ function parse(str) {
     const k = peek(); if (!k) throw new Error('Your answer ends too early.');
     if (k.type === 'num') { p++; return { op: 'num', v: k.v }; }
     if (k.type === 'var') { p++; return { op: 'var' }; }
+    if (k.type === 'sqrt') { p++; eat('('); const e = expr(); eat(')'); return { op: 'sqrt', node: e }; }
     if (k.type === '(') { p++; const e = expr(); eat(')'); return { op: 'grp', node: e }; }
     if (k.type === '-') { p++; return { op: 'neg', node: power() }; }
     throw new Error('Something is out of place near "' + k.type + '".');
@@ -241,6 +247,7 @@ function evalAst(n, x) {
     case 'grp': return evalAst(n.node, x);
     case 'neg': return -evalAst(n.node, x);
     case 'inv': return 1 / evalAst(n.node, x);
+    case 'sqrt': return Math.sqrt(evalAst(n.node, x));
     case '^': return Math.pow(evalAst(n.base, x), evalAst(n.exp, x));
     case '*': return n.factors.reduce((a, f) => a * evalAst(f, x), 1);
     case '+': return n.terms.reduce((a, t) => a + t.sign * evalAst(t.node, x), 0);
@@ -377,10 +384,120 @@ const SKILLS = {
               `Now factor the trinomial ${poly(inner)}: two numbers that multiply to ${inner[0]} and add to ${inner[1]}.`],
       steps: [`= ${g}(${poly(inner)})`, `= ${g}${paren(lin(1,r))}${paren(lin(1,s))}`] };
   }},
+  // ---------- SOLVING QUADRATIC EQUATIONS ----------
+  s_factored: { mode: 'solve', name: 'Solve (Factored Form)', gen() {
+    const a = pick([1,1,2,3]), b = rndNZ(-8,8), c = pick([1,1,2,3]), d = rndNZ(-8,8);
+    const r1 = -b / a, r2 = -d / c;
+    const roots = Math.abs(r1 - r2) < 1e-9 ? [r1] : [r1, r2];
+    const fmtFrac = (n, den) => { const g = gcd(n, den); n /= g; den /= g; if (den < 0) { n = -n; den = -den; } return den === 1 ? `${n}` : `${n}/${den}`; };
+    return { expr: `${paren(lin(a,b))}${paren(lin(c,d))} = 0`, roots, solve: true,
+      hints: ['Use the <b>Zero Product Property</b>: if A · B = 0, then either A = 0 or B = 0.',
+              `Set each bracket equal to 0: ${lin(a,b)} = 0  or  ${lin(c,d)} = 0.`,
+              `Solve each linear equation for x. Watch the signs when moving terms across the = sign!`],
+      steps: [`${lin(a,b)} = 0  or  ${lin(c,d)} = 0`, `x = ${fmtFrac(-b, a)}` + (roots.length > 1 ? `  or  x = ${fmtFrac(-d, c)}` : ' (double root)')] };
+  }},
+  s_factor: { mode: 'solve', name: 'Solve by Factoring', gen() {
+    let a, b, c, d;
+    do { a = pick([1,1,1,2,3]); c = pick([1,1,2]); b = rndNZ(-7,7); d = rndNZ(-7,7); } while (gcd(a,b)!==1 || gcd(c,d)!==1);
+    const res = mulP([b,a],[d,c]);
+    const r1 = -b / a, r2 = -d / c;
+    const roots = Math.abs(r1 - r2) < 1e-9 ? [r1] : [r1, r2];
+    const fmtFrac = (n, den) => { const g = gcd(n, den); n /= g; den /= g; if (den < 0) { n = -n; den = -den; } return den === 1 ? `${n}` : `${n}/${den}`; };
+    const moveC = Math.random() < 0.35;
+    const expr = moveC ? `${poly([0, res[1], res[2]])} = ${-res[0]}` : `${poly(res)} = 0`;
+    return { expr, roots, solve: true,
+      hints: [moveC ? `First move all terms to one side so the equation equals 0: ${poly(res)} = 0.` : 'Factor the left-hand side into two brackets.',
+              `Factored form: ${paren(lin(a,b))}${paren(lin(c,d))} = 0.`,
+              `Set each bracket equal to 0: ${lin(a,b)} = 0  or  ${lin(c,d)} = 0.`],
+      steps: [...(moveC ? [`${poly(res)} = 0`] : []), `${paren(lin(a,b))}${paren(lin(c,d))} = 0`, `x = ${fmtFrac(-b, a)}` + (roots.length > 1 ? `  or  x = ${fmtFrac(-d, c)}` : ' (double root)')] };
+  }},
+  s_sqrt: { mode: 'solve', name: 'Solve by Square Roots', gen() {
+    if (Math.random() < 0.5) {
+      const h = rndNZ(-7,7), k = rnd(1,9), rhs = k * k;
+      return { expr: `${paren(lin(1,h))}^2 = ${rhs}`, roots: [-h + k, -h - k], solve: true,
+        hints: ['Take the square root of both sides — remember there are <b>two</b> roots: + and −!',
+                `${lin(1,h)} = ±${k}  (since √${rhs} = ${k}).`,
+                `Solve both: ${lin(1,h)} = ${k}  and  ${lin(1,h)} = −${k}.`],
+        steps: [`${lin(1,h)} = ±√${rhs} = ±${k}`, `x = ${-h} + ${k} = ${-h + k}  or  x = ${-h} − ${k} = ${-h - k}`] };
+    }
+    const a = pick([1,2,3,4]), k = rnd(1,8), c = a * k * k;
+    return { expr: `${mono(a,2)} − ${c} = 0`, roots: [k, -k], solve: true,
+      hints: ['Isolate x² first, then take ± the square root of both sides.',
+              `${mono(a,2)} = ${c}` + (a > 1 ? `  →  x² = ${k * k}.` : '.'),
+              `x = ±√${k * k}. Don't forget the negative root!`],
+      steps: [`${mono(a,2)} = ${c}`, ...(a > 1 ? [`x² = ${k * k}`] : []), `x = ±${k}  →  x = ${k}, −${k}`] };
+  }},
+  s_formula: { mode: 'solve', name: 'Quadratic Formula', gen() {
+    let a, b, c, D;
+    const noSol = Math.random() < 0.15;
+    if (noSol) {
+      a = pick([1,2,3]); b = rnd(-4,4); c = Math.ceil((b*b)/(4*a)) + rnd(1,5); D = b*b - 4*a*c;
+      return { expr: `${poly([c,b,a])} = 0`, roots: [], solve: true,
+        hints: [`Use the quadratic formula: x = (−b ± √(b² − 4ac)) / (2a), with a = ${a}, b = ${b}, c = ${c}.`,
+                `Compute the discriminant: b² − 4ac = (${b})² − 4(${a})(${c}) = ${D}.`,
+                'Since the discriminant is negative, you cannot take the real square root of a negative number. Type "no solution".'],
+        steps: [`a = ${a}, b = ${b}, c = ${c}`, `Discriminant D = b² − 4ac = ${D} < 0`, 'No real solutions'] };
+    }
+    do { a = pick([1,1,2,3]); b = rndNZ(-7,7); c = rndNZ(-6,6); D = b*b - 4*a*c; } while (D <= 0 || Number.isInteger(Math.sqrt(D)));
+    const r1 = (-b + Math.sqrt(D)) / (2 * a), r2 = (-b - Math.sqrt(D)) / (2 * a);
+    return { expr: `${poly([c,b,a])} = 0`, roots: [r1, r2], solve: true,
+      hints: [`Use the quadratic formula: x = (−b ± √(b² − 4ac)) / (2a), with a = ${a}, b = ${b}, c = ${c}.`,
+              `Discriminant: b² − 4ac = (${b})² − 4(${a})(${c}) = ${D}.`,
+              `x = (${-b} ± √${D}) / ${2 * a}. You can enter exact form with √ or decimals rounded to 2 decimal places.`],
+      steps: [`a = ${a}, b = ${b}, c = ${c}`, `D = (${b})² − 4(${a})(${c}) = ${D}`, `x = (${-b} ± √${D}) / ${2 * a} ≈ ${r1.toFixed(2)}, ${r2.toFixed(2)}`] };
+  }},
 };
 
 /* ================= Answer checking ================= */
+function checkSolve(input, q) {
+  const raw = String(input || '').trim();
+  if (!raw) return { ok: false, syntax: true, msg: '✏️ Type an answer first.' };
+  const lower = raw.toLowerCase().replace(/\\text\{([^}]*)\}/g, '$1').trim();
+  if (/^(no\s*(real\s*)?solutions?|none|dne|∅|\\emptyset)$/.test(lower)) {
+    return q.roots.length === 0
+      ? { ok: true, msg: '🎉 Correct! The discriminant is negative, so there are no real solutions.' }
+      : { ok: false, msg: '❌ This equation does have real solution(s). Try factoring or the quadratic formula.' };
+  }
+  // Split on comma, semicolon, "or", "and", or ±
+  let parts = raw.split(/\s*(?:,|;|\bor\b|\band\b)\s*/i).filter(Boolean);
+  // Expand ± or \pm into two expressions
+  parts = parts.flatMap(p => {
+    if (/\\pm|±/.test(p)) return [p.replace(/\\pm|±/g, '+'), p.replace(/\\pm|±/g, '-')];
+    return [p];
+  });
+  const vals = [];
+  for (let p of parts) {
+    p = p.replace(/^x\s*=\s*/i, '').trim();
+    if (!p) continue;
+    let ast;
+    try { ast = parse(p); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
+    const v = evalAst(ast, 0);
+    if (!Number.isFinite(v)) return { ok: false, syntax: true, msg: '✏️ That does not evaluate to a real number.' };
+    vals.push(v);
+  }
+  if (!vals.length) return { ok: false, syntax: true, msg: '✏️ Type your solution(s) for x, separated by a comma (e.g. -3, 2).' };
+  if (q.roots.length === 0) return { ok: false, msg: '❌ Check the discriminant (b² − 4ac). Are there any real solutions?' };
+
+  // Deduplicate student roots (within 1e-2)
+  const uniq = [];
+  for (const v of vals) if (!uniq.some(u => Math.abs(u - v) < 1e-2)) uniq.push(v);
+  const tol = 0.015;
+  const matched = q.roots.filter(r => uniq.some(u => Math.abs(u - r) <= tol));
+  if (matched.length === q.roots.length && uniq.length === q.roots.length) {
+    return { ok: true, msg: '🎉 Correct! Great job solving the quadratic equation.' };
+  }
+  if (matched.length > 0 && uniq.length < q.roots.length) {
+    return { ok: false, partial: true, msg: '🟡 You found one root, but this quadratic has <b>two</b> solutions! Separate them with a comma (e.g. -3, 2).' };
+  }
+  const oppMatched = q.roots.filter(r => uniq.some(u => Math.abs(u + r) <= tol));
+  if (oppMatched.length === q.roots.length) {
+    return { ok: false, msg: '❌ So close — your signs are flipped! Remember: if (x + 3) = 0, then x = −3.' };
+  }
+  return { ok: false, msg: '❌ Not quite. Plug your x value(s) back into the equation to check, or press <b>Hint 💡</b>.' };
+}
+
 function check(input, q) {
+  if (q.solve) return checkSolve(input, q);
   let ast;
   try { ast = parse(input); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
   const target = x => q.co.reduce((s, c, d) => s + c * Math.pow(x, d), 0);
@@ -572,11 +689,11 @@ function newQuestion() {
   const ids = available(), w = ids.map(id => 110 - masteryOf(id)), tot = w.reduce((a, b) => a + b, 0);
   let r = Math.random() * tot; qId = ids[ids.length - 1];
   for (let i = 0; i < ids.length; i++) { r -= w[i]; if (r <= 0) { qId = ids[i]; break; } }
-  q = SKILLS[qId].gen(); q.factor = SKILLS[qId].mode === 'factor';
+  q = SKILLS[qId].gen(); q.factor = SKILLS[qId].mode === 'factor'; q.solve = SKILLS[qId].mode === 'solve';
   hintsShown = 0; attemptedWrong = false; done = false;
   $('qSkill').textContent = SKILLS[qId].name;
   $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
-  $('qPrompt').textContent = q.factor ? 'Factor fully:' : 'Expand and simplify:';
+  $('qPrompt').textContent = q.solve ? 'Solve for x (separate multiple roots with a comma, e.g. -3, 2):' : q.factor ? 'Factor fully:' : 'Expand and simplify:';
   $('qExpr').textContent = pretty(q.expr);
   setAnswer(''); setAnswerDisabled(false);
   $('feedback').className = 'mt-4 hidden p-3 rounded-lg border-2 font-bold';
