@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MPM2D Factoring & Expansion Drill</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://unpkg.com/mathlive"></script>
 <style>
   .comic { border: 3px solid #1e293b; box-shadow: 5px 5px 0 #1e293b; border-radius: 14px; }
   .btn { border: 3px solid #1e293b; box-shadow: 3px 3px 0 #1e293b; border-radius: 10px; font-weight: 800; transition: .1s; }
@@ -12,6 +13,9 @@
   .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #1e293b; }
   .chip.active { background:#2563eb; color:white; }
   .math { font-family: "Cambria Math", Cambria, Georgia, serif; }
+  math-field { display: block; width: 100%; padding: 10px 12px; border: 4px solid #1e293b; border-radius: 10px; font-size: 1.4rem; background: white; }
+  math-field:focus-within { outline: none; box-shadow: 0 0 0 4px #93c5fd; }
+  math-field[disabled] { opacity: .65; pointer-events: none; background: #f1f5f9; }
   @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
   .shake { animation: shake .3s; }
 </style>
@@ -54,11 +58,15 @@
         <div id="qPrompt" class="font-bold text-slate-600"></div>
         <div id="qExpr" class="math text-3xl md:text-4xl font-bold my-4 text-center"></div>
 
-        <label class="font-bold text-sm">Your answer</label>
+        <div class="flex items-center justify-between mb-1">
+          <label class="font-bold text-sm">Your answer</label>
+          <button id="toggleInputMode" type="button" class="text-xs font-bold text-blue-600 underline">Switch to LaTeX / plain text</button>
+        </div>
+        <math-field id="mathAnswer" smart-superscript="true" placeholder="(x+3)(x-2) \text{ or } 2x^2+5x-3"></math-field>
         <input id="answer" autocomplete="off" spellcheck="false"
-          class="w-full p-3 border-4 border-slate-800 rounded-lg text-xl math focus:outline-none focus:ring-4 focus:ring-blue-300"
-          placeholder="e.g. (x+3)(x-2)  or  2x^2+5x-3">
-        <div class="text-xs text-slate-500 mt-1">Use <b>^</b> for powers (x^2). Multiplication can be implied: 3x(x+1).</div>
+          class="hidden w-full p-3 border-4 border-slate-800 rounded-lg text-xl math focus:outline-none focus:ring-4 focus:ring-blue-300"
+          placeholder="e.g. (x+3)(x-2)  or  2x^2+5x-3  or  2x^{2}+5x-3">
+        <div id="inputHint" class="text-xs text-slate-500 mt-1">Type math directly (use <b>^</b> for powers like x², or click the keyboard icon on the right). LaTeX commands like <code>\cdot</code> also work.</div>
         <div id="preview" class="math text-lg text-slate-600 mt-1 min-h-[28px]"></div>
 
         <div class="flex flex-wrap gap-2 mt-3">
@@ -158,8 +166,23 @@ const sup = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶'
 const pretty = s => s.replace(/\^(\d+)/g, (_, d) => d.split('').map(c => sup[c]).join('')).replace(/\*/g, '·').replace(/-/g, '−');
 
 /* ================= Expression parser ================= */
+function normalizeLatex(str) {
+  str = String(str || '').trim().replace(/^\$+|\$+$/g, '').replace(/\^\{\s*(-?\d+)\s*\}/g, '^$1');
+  // Convert \frac{a}{b} (handles simple nested braces)
+  for (let pass = 0; pass < 5 && str.includes('\\frac'); pass++) {
+    str = str.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '(($1)/($2))');
+  }
+  return str
+    .replace(/\\placeholder\{[^}]*\}/g, '')
+    .replace(/\\(?:left|right|big|Big|bigg|Bigg)\s*/g, '')
+    .replace(/\\(?:cdot|times|ast)\b/g, '*')
+    .replace(/\\div\b/g, '/')
+    .replace(/\\(?:text|mathrm|mathit|mathbf)\{([^{}]*)\}/g, '$1')
+    .replace(/\\[,;:! ]/g, '')
+    .replace(/\{/g, '(').replace(/\}/g, ')');
+}
 function tokenize(str) {
-  str = str.replace(/[−–]/g, '-').replace(/[·×]/g, '*').replace(/²/g, '^2').replace(/³/g, '^3').replace(/\s+/g, '').replace(/X/g, 'x');
+  str = normalizeLatex(str).replace(/[−–]/g, '-').replace(/[·×]/g, '*').replace(/²/g, '^2').replace(/³/g, '^3').replace(/\s+/g, '').replace(/X/g, 'x');
   const t = []; let i = 0;
   while (i < str.length) {
     const c = str[i];
@@ -507,6 +530,40 @@ function available() {
   const ids = Object.keys(SKILLS).filter(id => (mode === 'mixed' || SKILLS[id].mode === mode) && selected.has(id));
   return ids.length ? ids : Object.keys(SKILLS).filter(id => mode === 'mixed' || SKILLS[id].mode === mode);
 }
+/* ================= Answer input (MathLive + LaTeX/plain text) ================= */
+let useMathField = true;
+function setInputMode(rich) {
+  const prev = getAnswer();
+  useMathField = rich;
+  $('mathAnswer').classList.toggle('hidden', !rich);
+  $('answer').classList.toggle('hidden', rich);
+  $('preview').classList.toggle('hidden', rich);
+  $('toggleInputMode').textContent = rich ? 'Switch to LaTeX / plain text' : 'Switch to visual math input';
+  $('inputHint').innerHTML = rich
+    ? 'Type math directly (use <b>^</b> for powers like x², or click the keyboard icon on the right). LaTeX commands like <code>\\cdot</code> also work.'
+    : 'Type plain math or LaTeX: <b>x^2</b>, <b>x^{2}</b>, <b>(x+3)(x-2)</b>, <b>2\\cdot x^2</b>.';
+  setAnswer(prev);
+  focusAnswer();
+}
+function getAnswer() {
+  return (useMathField ? ($('mathAnswer').value || '') : $('answer').value).trim();
+}
+function setAnswer(v) {
+  $('mathAnswer').value = v;
+  $('answer').value = v;
+  $('preview').textContent = !useMathField && v ? 'Preview: ' + pretty(normalizeLatex(v).replace(/\*/g, '·')) : '';
+}
+function setAnswerDisabled(dis) {
+  $('answer').disabled = dis;
+  if (dis) $('mathAnswer').setAttribute('disabled', ''); else $('mathAnswer').removeAttribute('disabled');
+}
+function focusAnswer() {
+  try { (useMathField ? $('mathAnswer') : $('answer')).focus(); } catch (e) {}
+}
+$('toggleInputMode').onclick = () => setInputMode(!useMathField);
+// Fallback to plain/LaTeX input if MathLive CDN fails to load
+window.addEventListener('load', () => { if (!customElements.get('math-field')) setInputMode(false); });
+
 function newQuestion() {
   // Adaptive: weight weaker skills more
   const ids = available(), w = ids.map(id => 110 - masteryOf(id)), tot = w.reduce((a, b) => a + b, 0);
@@ -518,11 +575,11 @@ function newQuestion() {
   $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
   $('qPrompt').textContent = q.factor ? 'Factor fully:' : 'Expand and simplify:';
   $('qExpr').textContent = pretty(q.expr);
-  $('answer').value = ''; $('preview').textContent = ''; $('answer').disabled = false;
+  setAnswer(''); setAnswerDisabled(false);
   $('feedback').className = 'mt-4 hidden p-3 rounded-lg border-2 font-bold';
   $('hints').innerHTML = ''; $('hintCount').textContent = `(0/${q.hints.length})`;
   $('nextBtn').classList.add('hidden'); $('checkBtn').classList.remove('hidden');
-  $('answer').focus();
+  focusAnswer();
 }
 function showFeedback(res) {
   const fb = $('feedback');
@@ -533,13 +590,13 @@ function showSolution(title) {
   $('hints').insertAdjacentHTML('beforeend', `<div class="p-3 bg-blue-50 border-2 border-blue-600 rounded-lg"><div class="font-black mb-1">${title}</div>${q.steps.map(s => `<div class="math text-lg">${pretty(s)}</div>`).join('')}</div>`);
 }
 function finish() {
-  done = true; $('answer').disabled = true;
+  done = true; setAnswerDisabled(true);
   $('checkBtn').classList.add('hidden'); $('nextBtn').classList.remove('hidden'); $('nextBtn').focus();
 }
 
 $('checkBtn').onclick = () => {
   if (done) return;
-  const input = $('answer').value.trim();
+  const input = getAnswer();
   const res = check(input, q); showFeedback(res);
   if (res.syntax) return;
   if (res.ok) {
@@ -565,8 +622,10 @@ $('skipBtn').onclick = () => {
 };
 $('nextBtn').onclick = newQuestion;
 $('answer').addEventListener('keydown', e => { if (e.key === 'Enter') (done ? newQuestion : $('checkBtn').onclick)(); });
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && done && document.activeElement !== $('answer') && document.activeElement !== $('nextBtn')) newQuestion(); });
-$('answer').addEventListener('input', () => { $('preview').textContent = $('answer').value ? 'Preview: ' + pretty($('answer').value.replace(/\*/g,'·')) : ''; markActive(); });
+$('mathAnswer').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); (done ? newQuestion : $('checkBtn').onclick)(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && done && document.activeElement !== $('answer') && document.activeElement !== $('mathAnswer') && document.activeElement !== $('nextBtn')) newQuestion(); });
+$('answer').addEventListener('input', () => { $('preview').textContent = $('answer').value ? 'Preview: ' + pretty(normalizeLatex($('answer').value).replace(/\*/g,'·')) : ''; markActive(); });
+$('mathAnswer').addEventListener('input', () => markActive());
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
   mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
   renderChips(); newQuestion();
