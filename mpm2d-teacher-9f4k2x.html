@@ -94,18 +94,21 @@
 
     <!-- Data Persistence Controls (iPad Share + Google Cloud Sync + Desktop Disk Save) -->
     <div class="flex flex-wrap items-center gap-2">
-      <button onclick="pushToGoogleCloud(true)" id="cloudQuickBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-600 text-white comic-btn flex items-center gap-1.5" title="Sync to your Google Drive Sheet & Cloud Backup (works on iPad & Desktop)">
-        <span>☁️</span> <span id="cloudBtnLabel">Cloud Sync</span>
+      <button onclick="pullFromGoogleCloud(false)" id="cloudPullQuickBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-emerald-600 text-white comic-btn flex items-center gap-1.5" title="Download latest updates from your other device (iPad / MacBook)">
+        <span>⬇️</span> Pull Cloud
+      </button>
+      <button onclick="pushToGoogleCloud(true)" id="cloudQuickBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-600 text-white comic-btn flex items-center gap-1.5" title="Upload this device's changes to Google Cloud">
+        <span>⬆️</span> <span id="cloudBtnLabel">Push Cloud</span>
       </button>
       <button onclick="shareOrBackupiPad()" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-300 text-slate-900 comic-btn flex items-center gap-1.5" title="Save directly to iPad Files / iCloud Drive / AirDrop or Download JSON">
-        <span>📱</span> iPad Save / Backup
+        <span>📱</span> Backup
       </button>
       <label class="px-3 py-2 text-xs font-black rounded-lg bg-white text-slate-800 comic-btn flex items-center gap-1.5 cursor-pointer">
-        <span>⬆️</span> Restore JSON
+        <span>⬆️</span> Restore
         <input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="importBackupJSON(event)" />
       </label>
       <button onclick="exportReportCSV()" class="px-3 py-2 text-xs font-black rounded-lg bg-blue-600 text-white comic-btn flex items-center gap-1.5">
-        <span>📊</span> Export CSV
+        <span>📊</span> CSV
       </button>
       <button onclick="lockTeacherTracker()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn flex items-center gap-1" title="Lock screen if leaving iPad on desk">
         <span>🔒</span> Lock
@@ -1759,6 +1762,9 @@
       return rows;
     }
 
+    let lastSyncedTimestamp = '';
+    let isPushing = false;
+
     async function pushToGoogleCloud(manualClick) {
       const url = getActiveCloudUrl();
       const statusEl = document.getElementById('cloudSyncStatus');
@@ -1769,18 +1775,23 @@
           switchView('roster');
           if (statusEl) {
             statusEl.classList.remove('hidden');
-            statusEl.textContent = '⚠️ Paste your Google Apps Script Web App URL above first (see mpm2d-tracker-sync.gs).';
+            statusEl.textContent = '⚠️ Paste your Google Apps Script Web App URL above on THIS device so it can sync!';
           }
+          alert('Please paste your Google Apps Script URL into the Purple Cloud Sync box on THIS device once so it knows where to sync.');
         }
         return;
       }
 
       try {
-        if (btnLabel) btnLabel.textContent = 'Syncing...';
+        isPushing = true;
+        if (btnLabel) btnLabel.textContent = 'Pushing...';
         if (statusEl && manualClick) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = '⏳ Syncing all 3 periods to Google Drive...';
         }
+
+        const nowIso = new Date().toISOString();
+        state._clientUpdatedAt = nowIso;
 
         const payload = {
           action: 'save',
@@ -1791,62 +1802,85 @@
         await fetch(url, {
           method: 'POST',
           mode: 'no-cors',
+          cache: 'no-store',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
 
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        if (btnLabel) btnLabel.textContent = `Synced ✓`;
-        updateSaveIndicator('Saved Locally + Google Cloud');
+        lastSyncedTimestamp = nowIso;
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (btnLabel) btnLabel.textContent = `Push Cloud ✓`;
+        updateSaveIndicator('Saved + Pushed to Cloud');
         if (statusEl) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = `✓ Pushed to Google Drive & Sheet backup at ${time}`;
         }
       } catch (err) {
-        if (btnLabel) btnLabel.textContent = 'Cloud Sync';
+        if (btnLabel) btnLabel.textContent = 'Push Cloud';
         if (statusEl) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = `❌ Cloud sync failed: ${err.message}`;
         }
+      } finally {
+        setTimeout(() => { isPushing = false; }, 1500);
       }
     }
 
     async function pullFromGoogleCloud(silentOnLoad) {
+      if (isPushing && silentOnLoad) return;
       const url = getActiveCloudUrl();
       const statusEl = document.getElementById('cloudSyncStatus');
-      const btnLabel = document.getElementById('cloudBtnLabel');
+      const pullBtn = document.getElementById('cloudPullQuickBtn');
       if (!url) {
-        if (!silentOnLoad && statusEl) {
-          statusEl.classList.remove('hidden');
-          statusEl.textContent = '⚠️ Paste your Google Apps Script Web App URL above first.';
+        if (!silentOnLoad) {
+          switchView('roster');
+          if (statusEl) {
+            statusEl.classList.remove('hidden');
+            statusEl.textContent = '⚠️ Paste your Google Apps Script Web App URL above on THIS device first.';
+          }
+          alert('This device does not have your Google Apps Script URL saved yet! Paste your https://script.google.com/.../exec link in the Purple Cloud Sync box.');
         }
         return;
       }
 
       try {
+        if (!silentOnLoad && pullBtn) pullBtn.innerHTML = '<span>⏳</span> Pulling...';
         if (!silentOnLoad && statusEl) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = '⏳ Pulling latest state from Google Drive...';
         }
-        const res = await fetch(url);
+        // Cache-busting query string so iPad Safari never serves a stale cached response
+        const sep = url.includes('?') ? '&' : '?';
+        const res = await fetch(`${url}${sep}_t=${Date.now()}`, { cache: 'no-store', redirect: 'follow' });
         const data = await res.json();
         if (data && data.ok && data.state && data.state.periods) {
-          state = data.state;
-          const serialized = JSON.stringify(state, null, 2);
-          localStorage.setItem(STORAGE_KEY, serialized);
-          saveToIndexedDB(serialized);
-          renderCurrentView();
-          if (btnLabel) btnLabel.textContent = 'Cloud Synced ✓';
-          updateSaveIndicator('Synced with Google Cloud');
+          // Only overwrite if manual pull OR cloud timestamp changed
+          if (!silentOnLoad || !lastSyncedTimestamp || data.lastUpdated !== lastSyncedTimestamp) {
+            lastSyncedTimestamp = data.lastUpdated || '';
+            // Keep activePeriod tab local so switching devices doesn't unexpectedly jump tabs unless desired
+            const currentTab = state.currentView || 'daily';
+            state = { ...data.state, currentView: currentTab };
+            const serialized = JSON.stringify(state, null, 2);
+            localStorage.setItem(STORAGE_KEY, serialized);
+            saveToIndexedDB(serialized);
+            renderCurrentView();
+            updateSaveIndicator('Synced from Cloud');
+          }
+          if (!silentOnLoad && pullBtn) pullBtn.innerHTML = '<span>✓</span> Pulled!';
+          setTimeout(() => {
+            if (pullBtn) pullBtn.innerHTML = '<span>⬇️</span> Pull Cloud';
+          }, 1800);
           if (statusEl) {
             statusEl.classList.remove('hidden');
-            statusEl.textContent = `✓ Pulled latest data from Google Cloud (last updated ${data.lastUpdated ? new Date(data.lastUpdated).toLocaleString() : 'recently'})`;
+            statusEl.textContent = `✓ Pulled latest data from Google Cloud (updated ${data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : 'just now'})`;
           }
         } else if (!silentOnLoad && statusEl) {
           statusEl.classList.remove('hidden');
-          statusEl.textContent = 'ℹ️ No cloud backup found yet. Click "Push to Google Drive Now" first.';
+          statusEl.textContent = 'ℹ️ No cloud backup found yet. Click "Push Cloud" on your other device first.';
+          if (pullBtn) pullBtn.innerHTML = '<span>⬇️</span> Pull Cloud';
         }
       } catch (err) {
+        if (pullBtn) pullBtn.innerHTML = '<span>⬇️</span> Pull Cloud';
         if (!silentOnLoad && statusEl) {
           statusEl.classList.remove('hidden');
           statusEl.textContent = `❌ Could not pull from Google Cloud: ${err.message}`;
@@ -1854,12 +1888,28 @@
       }
     }
 
+    // Automatically pull fresh changes when switching between iPad and MacBook (tab focus / wake) + every 20s when open
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && getActiveCloudUrl() && !cloudSyncTimer) {
+        pullFromGoogleCloud(true);
+      }
+    });
+    window.addEventListener('focus', () => {
+      if (getActiveCloudUrl() && !cloudSyncTimer) {
+        pullFromGoogleCloud(true);
+      }
+    });
+    setInterval(() => {
+      if (document.visibilityState === 'visible' && getActiveCloudUrl() && !cloudSyncTimer && !isPushing) {
+        pullFromGoogleCloud(true);
+      }
+    }, 20000);
+
     async function shareOrBackupiPad() {
       const filename = `mpm2d-tracker-backup-${state.activeDate}.json`;
       const jsonStr = JSON.stringify(state, null, 2);
       const file = new File([jsonStr], filename, { type: 'application/json' });
 
-      // On iPad Safari, navigator.canShare({ files }) opens the native iPadOS Share Sheet ("Save to Files", iCloud Drive, AirDrop, Google Drive)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
@@ -1872,7 +1922,6 @@
           if (err.name === 'AbortError') return;
         }
       }
-      // Fallback to standard file download on desktop or if Share sheet is dismissed
       exportBackupJSON();
     }
 
