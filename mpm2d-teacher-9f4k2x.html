@@ -1188,6 +1188,51 @@
       renderCurrentView();
     }
 
+    function toggleDirectLookFor(studentId, skillCode, lookForId) {
+      const skill = GROWING_SUCCESS_SKILLS[skillCode];
+      if (!skill) return;
+      const item = skill.lookFors.find(l => l.id === lookForId);
+      if (!item) return;
+
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      if (!Array.isArray(rec.observations)) rec.observations = [];
+      const existingIdx = rec.observations.findIndex(o => o.lookForId === lookForId);
+      if (existingIdx !== -1) {
+        rec.observations.splice(existingIdx, 1);
+      } else {
+        rec.observations.push({
+          skill: skillCode,
+          lookForId: item.id,
+          text: item.text,
+          weight: item.weight,
+          ts: Date.now()
+        });
+      }
+      saveState();
+      renderCurrentView();
+    }
+
+    function addCustomObservation(studentId) {
+      const textEl = document.getElementById(`customObsText-${studentId}`);
+      const skillEl = document.getElementById(`customObsSkill-${studentId}`);
+      const text = (textEl?.value || '').trim();
+      const skillCode = skillEl?.value || 'RE';
+      if (!text) return;
+
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      if (!Array.isArray(rec.observations)) rec.observations = [];
+      rec.observations.push({
+        skill: skillCode,
+        lookForId: 'CUSTOM_' + Date.now(),
+        text: `+ ${text}`,
+        weight: 1,
+        ts: Date.now()
+      });
+      textEl.value = '';
+      saveState();
+      renderCurrentView();
+    }
+
     function removeObservation(studentId, index) {
       const rec = getStudentDayRecord(state.activeDate, studentId);
       rec.observations.splice(index, 1);
@@ -1348,6 +1393,46 @@
       });
       html += `</select>`;
       return html;
+    }
+
+    function buildLookForDirectGridHTML(studentId) {
+      const rec = getStudentDayRecord(state.activeDate, studentId);
+      const checkedIds = new Set((rec.observations || []).map(o => o.lookForId));
+
+      const groupsHTML = Object.values(GROWING_SUCCESS_SKILLS).map(skill => {
+        const itemsHTML = skill.lookFors.map(lf => {
+          const isChecked = checkedIds.has(lf.id);
+          const isPos = lf.weight > 0;
+          const activeClass = isChecked
+            ? (isPos ? 'bg-emerald-100 border-emerald-700 text-emerald-950 font-black' : 'bg-red-100 border-red-700 text-red-950 font-black')
+            : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold';
+          return `
+            <label class="flex items-start gap-2 px-2.5 py-1.5 rounded-lg border-2 text-xs cursor-pointer select-none transition ${activeClass}">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDirectLookFor('${studentId}', '${skill.code}', '${lf.id}')" class="mt-0.5 w-4 h-4 ${isPos ? 'accent-emerald-600' : 'accent-red-600'} rounded cursor-pointer shrink-0" />
+              <span class="leading-snug">${lf.text}</span>
+            </label>
+          `;
+        }).join('');
+
+        return `
+          <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-300 space-y-1.5">
+            <div class="text-[11px] font-black text-slate-800 uppercase">${skill.code} — ${skill.name}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">${itemsHTML}</div>
+          </div>
+        `;
+      }).join('');
+
+      const customBox = `
+        <div class="flex flex-wrap sm:flex-nowrap items-center gap-1.5 pt-1">
+          <select id="customObsSkill-${studentId}" class="px-2 py-1.5 text-xs font-black rounded-lg bg-slate-50 border-2 border-slate-800">
+            ${Object.values(GROWING_SUCCESS_SKILLS).map(s => `<option value="${s.code}">${s.code} — ${s.name}</option>`).join('')}
+          </select>
+          <input type="text" id="customObsText-${studentId}" onkeydown="if(event.key==='Enter') addCustomObservation('${studentId}')" placeholder="Type custom comment..." class="flex-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none" />
+          <button onclick="addCustomObservation('${studentId}')" class="px-3 py-1.5 text-xs font-black rounded-lg bg-blue-600 text-white comic-btn shrink-0">+ Add</button>
+        </div>
+      `;
+
+      return `<div class="space-y-2">${groupsHTML}${customBox}</div>`;
     }
 
     function renderCurrentView() {
@@ -1601,8 +1686,8 @@
           <div>${tallyControls}</div>
         </div>
         <div>
-          <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">All 6 Growing Success Skills</div>
-          <div class="mb-2">${buildLookForDropdownHTML(studentId)}</div>
+          <div class="text-[10px] font-black uppercase text-slate-500 mb-1.5">All 6 Growing Success Skills (Tap any comment to toggle)</div>
+          <div class="mb-2">${buildLookForDirectGridHTML(studentId)}</div>
           ${chips ? `<div>${chips}</div>` : ''}
         </div>
         <div class="bg-orange-50/70 p-3 rounded-xl border-2 border-slate-200 space-y-2">
