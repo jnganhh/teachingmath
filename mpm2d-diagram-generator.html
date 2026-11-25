@@ -1544,7 +1544,8 @@
     }
 
     function drawAngleArcAndLabel(V, P1, P2, label, cfg) {
-      const r = 22;
+      const minEdge = Math.min(Math.hypot(P1.x - V.x, P1.y - V.y), Math.hypot(P2.x - V.x, P2.y - V.y));
+      const r = Math.max(8, Math.min(14, minEdge * 0.2));
       const a1 = Math.atan2(P1.y - V.y, P1.x - V.x);
       const a2 = Math.atan2(P2.y - V.y, P2.x - V.x);
       let diff = a2 - a1;
@@ -1557,10 +1558,10 @@
       const ex = V.x + r * Math.cos(a2);
       const ey = V.y + r * Math.sin(a2);
 
-      let out = `<path d="M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r} ${r} 0 0 ${sweep} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${cfg.ink}" stroke-width="${Math.max(1.2, cfg.sw * 0.7)}" />`;
+      let out = `<path d="M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r.toFixed(1)} ${r.toFixed(1)} 0 0 ${sweep} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${cfg.ink}" stroke-width="${Math.max(1.2, cfg.sw * 0.7)}" />`;
       if (label) {
         const mid = a1 + diff / 2;
-        const lr = r + cfg.fs * 1.1;
+        const lr = r + cfg.fs * 0.95;
         const lx = V.x + lr * Math.cos(mid);
         const ly = V.y + lr * Math.sin(mid) + cfg.fs * 0.32;
         out += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs - 1}" fill="${cfg.ink}">${esc(label)}</text>`;
