@@ -1505,9 +1505,14 @@ async function syncToFirestore(reason = 'milestone') {
     const k = store.skills[id];
     if (k && k.attempts) skillsSummary[id] = { name: S.name, correct: k.correct, attempts: k.attempts, mastery: masteryOf(id) };
   }
+  const modesPracticed = [...new Set(Object.keys(skillsSummary).map(id => SKILLS[id]?.mode).filter(Boolean))];
   const payload = {
     name: store.student.name,
     cls: store.student.cls,
+    course: 'MPM2D',
+    practiceType: 'MPM2D Math Drill Center',
+    lastMode: typeof mode !== 'undefined' ? mode : 'expand',
+    modesPracticed,
     totalCorrect: totalCorrect(),
     totalAttempts: Object.values(store.skills).reduce((a, s) => a + s.attempts, 0),
     bestStreak: store.best,
@@ -1519,6 +1524,9 @@ async function syncToFirestore(reason = 'milestone') {
   await db.collection('mpm2d_students').doc(key).set(payload, { merge: true });
   await db.collection('mpm2d_reports').add({
     student: store.student.name, cls: store.student.cls,
+    course: 'MPM2D',
+    practiceType: 'MPM2D Math Drill Center',
+    mode: typeof mode !== 'undefined' ? mode : 'expand',
     correct: payload.totalCorrect, attempts: payload.totalAttempts,
     activeMin: payload.activeMin, reason,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()

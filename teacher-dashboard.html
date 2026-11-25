@@ -57,6 +57,7 @@
           <tr class="border-b-2 border-slate-800 text-xs uppercase text-slate-500">
             <th class="py-2 pr-3">Student</th>
             <th class="py-2 pr-3">Class</th>
+            <th class="py-2 pr-3">Practice Type</th>
             <th class="py-2 pr-3">Correct / Attempts</th>
             <th class="py-2 pr-3">Accuracy</th>
             <th class="py-2 pr-3">Best Streak</th>
@@ -118,10 +119,13 @@ function render() {
   $('rows').innerHTML = list.map(s => {
     const acc = s.totalAttempts ? Math.round(100 * s.totalCorrect / s.totalAttempts) : 0;
     const lvlCount = Object.keys(s.levelled || {}).length;
+    const pType = s.practiceType || s.course || 'MPM2D';
+    const modes = (s.modesPracticed || []).join(', ');
     const skList = Object.values(s.skills || {}).map(k => `${k.name}: ${k.correct}/${k.attempts} (${k.mastery}%)`).join(' · ');
     return `<tr class="border-b border-slate-200 align-top">
       <td class="py-2 pr-3 font-bold">${s.name || ''}</td>
       <td class="py-2 pr-3">${s.cls || ''}</td>
+      <td class="py-2 pr-3 text-xs"><div class="font-bold">${pType}</div><div class="text-slate-500">${modes}</div></td>
       <td class="py-2 pr-3">${s.totalCorrect || 0} / ${s.totalAttempts || 0}</td>
       <td class="py-2 pr-3 font-bold">${acc}%</td>
       <td class="py-2 pr-3">🔥 ${s.bestStreak || 0}</td>
@@ -129,7 +133,7 @@ function render() {
       <td class="py-2 pr-3">${lvlCount}</td>
       <td class="py-2 text-xs text-slate-600 max-w-md">${skList || '—'}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-400">No student reports yet.</td></tr>';
+  }).join('') || '<tr><td colspan="9" class="py-4 text-center text-slate-400">No student reports yet.</td></tr>';
 }
 
 $('saveCfgBtn').onclick = () => {
