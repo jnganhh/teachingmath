@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPM2D Teacher Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+  .comic { border: 3px solid #1e293b; box-shadow: 5px 5px 0 #1e293b; border-radius: 14px; }
+  .btn { border: 3px solid #1e293b; box-shadow: 3px 3px 0 #1e293b; border-radius: 10px; font-weight: 800; transition: .1s; }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #1e293b; }
+</style>
+</head>
+<body class="bg-yellow-50 text-slate-800 min-h-screen p-4 md:p-6">
+<div class="max-w-6xl mx-auto space-y-5">
+
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <a href="mpm2d-drill.html" class="text-sm font-bold text-blue-600">← MPM2D Math Drill Center</a>
+      <h1 class="text-3xl font-black text-blue-600">📊 MPM2D Teacher Dashboard</h1>
+    </div>
+    <div class="flex gap-2">
+      <button id="refreshBtn" class="btn bg-white px-3 py-2 text-sm">🔄 Refresh</button>
+      <button id="csvBtn" class="btn bg-green-400 px-3 py-2 text-sm">📥 Export All CSV</button>
+    </div>
+  </header>
+
+  <section id="setupBox" class="comic bg-amber-50 p-4 hidden space-y-2 text-sm">
+    <div class="font-black text-base">🔥 Connect Firebase Firestore (Free Spark Tier)</div>
+    <p>Paste your <code>firebaseConfig</code> JSON below (saved in your browser, or paste it into <code>FIREBASE_CONFIG</code> in <code>mpm2d-drill.html</code> and <code>teacher-dashboard.html</code>):</p>
+    <textarea id="cfgInput" rows="4" class="w-full p-2 border-2 border-slate-800 rounded font-mono text-xs" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'></textarea>
+    <button id="saveCfgBtn" class="btn bg-blue-500 text-white px-4 py-1.5 text-sm">Connect &amp; Load</button>
+  </section>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="comic bg-white p-4"><div class="text-xs font-bold text-slate-500">Students</div><div id="statStudents" class="text-3xl font-black text-blue-600">0</div></div>
+    <div class="comic bg-white p-4"><div class="text-xs font-bold text-slate-500">Total Correct</div><div id="statCorrect" class="text-3xl font-black text-green-600">0</div></div>
+    <div class="comic bg-white p-4"><div class="text-xs font-bold text-slate-500">Avg Accuracy</div><div id="statAcc" class="text-3xl font-black text-purple-600">0%</div></div>
+    <div class="comic bg-white p-4"><div class="text-xs font-bold text-slate-500">Total Active Min</div><div id="statMin" class="text-3xl font-black text-amber-600">0</div></div>
+  </div>
+
+  <section class="comic bg-white p-4 space-y-3">
+    <div class="flex flex-wrap gap-3 items-center justify-between">
+      <div class="font-black text-lg">Student Performance</div>
+      <div class="flex flex-wrap gap-2">
+        <select id="classFilter" class="border-2 border-slate-800 rounded px-2 py-1 text-sm font-bold">
+          <option value="">All Classes</option>
+        </select>
+        <input id="searchInput" placeholder="Search student…" class="border-2 border-slate-800 rounded px-2 py-1 text-sm font-bold">
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left border-collapse">
+        <thead>
+          <tr class="border-b-2 border-slate-800 text-xs uppercase text-slate-500">
+            <th class="py-2 pr-3">Student</th>
+            <th class="py-2 pr-3">Class</th>
+            <th class="py-2 pr-3">Correct / Attempts</th>
+            <th class="py-2 pr-3">Accuracy</th>
+            <th class="py-2 pr-3">Best Streak</th>
+            <th class="py-2 pr-3">Active Min</th>
+            <th class="py-2 pr-3">🌶️ Levels</th>
+            <th class="py-2">Skills</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+<script>
+const DEFAULT_CONFIG = {
+  apiKey: 'PASTE_API_KEY',
+  authDomain: '',
+  projectId: '',
+  storageBucket: '',
+  messagingSenderId: '',
+  appId: ''
+};
+const CFG_KEY = 'mpm2d_fb_cfg';
+const $ = id => document.getElementById(id);
+let students = [];
+
+function getConfig() {
+  if (DEFAULT_CONFIG.apiKey && DEFAULT_CONFIG.apiKey !== 'PASTE_API_KEY') return DEFAULT_CONFIG;
+  try { return JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch { return null; }
+}
+
+async function loadData() {
+  const cfg = getConfig();
+  if (!cfg || !cfg.apiKey) { $('setupBox').classList.remove('hidden'); return; }
+  $('setupBox').classList.add('hidden');
+  if (!firebase.apps.length) firebase.initializeApp(cfg);
+  const db = firebase.firestore();
+  const snap = await db.collection('mpm2d_students').get();
+  students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  students.sort((a, b) => (b.totalCorrect || 0) - (a.totalCorrect || 0));
+
+  const classes = [...new Set(students.map(s => s.cls).filter(Boolean))].sort();
+  $('classFilter').innerHTML = '<option value="">All Classes</option>' + classes.map(c => `<option value="${c}">${c}</option>`).join('');
+  render();
+}
+
+function render() {
+  const cls = $('classFilter').value, q = $('searchInput').value.toLowerCase().trim();
+  const list = students.filter(s => (!cls || s.cls === cls) && (!q || (s.name || '').toLowerCase().includes(q)));
+  $('statStudents').textContent = list.length;
+  const totC = list.reduce((a, s) => a + (s.totalCorrect || 0), 0);
+  const totA = list.reduce((a, s) => a + (s.totalAttempts || 0), 0);
+  $('statCorrect').textContent = totC;
+  $('statAcc').textContent = totA ? Math.round(100 * totC / totA) + '%' : '0%';
+  $('statMin').textContent = list.reduce((a, s) => a + (s.activeMin || 0), 0);
+
+  $('rows').innerHTML = list.map(s => {
+    const acc = s.totalAttempts ? Math.round(100 * s.totalCorrect / s.totalAttempts) : 0;
+    const lvlCount = Object.keys(s.levelled || {}).length;
+    const skList = Object.values(s.skills || {}).map(k => `${k.name}: ${k.correct}/${k.attempts} (${k.mastery}%)`).join(' · ');
+    return `<tr class="border-b border-slate-200 align-top">
+      <td class="py-2 pr-3 font-bold">${s.name || ''}</td>
+      <td class="py-2 pr-3">${s.cls || ''}</td>
+      <td class="py-2 pr-3">${s.totalCorrect || 0} / ${s.totalAttempts || 0}</td>
+      <td class="py-2 pr-3 font-bold">${acc}%</td>
+      <td class="py-2 pr-3">🔥 ${s.bestStreak || 0}</td>
+      <td class="py-2 pr-3">${s.activeMin || 0}</td>
+      <td class="py-2 pr-3">${lvlCount}</td>
+      <td class="py-2 text-xs text-slate-600 max-w-md">${skList || '—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-400">No student reports yet.</td></tr>';
+}
+
+$('saveCfgBtn').onclick = () => {
+  try {
+    const raw = $('cfgInput').value.trim().replace(/^const\s+\w+\s*=\s*/, '').replace(/;$/, '');
+    const parsed = Function('return (' + raw + ')')();
+    localStorage.setItem(CFG_KEY, JSON.stringify(parsed));
+    loadData();
+  } catch (e) { alert('Could not parse config JSON. Paste the {...} object from Firebase Console.'); }
+};
+$('refreshBtn').onclick = loadData;
+$('classFilter').onchange = render;
+$('searchInput').oninput = render;
+$('csvBtn').onclick = () => {
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['Student','Class','Correct','Attempts','Accuracy %','Best Streak','Active Min','Levelled Passed'].map(esc).join(',')];
+  for (const s of students) {
+    const acc = s.totalAttempts ? Math.round(100 * s.totalCorrect / s.totalAttempts) : 0;
+    lines.push([s.name, s.cls, s.totalCorrect||0, s.totalAttempts||0, acc, s.bestStreak||0, s.activeMin||0, Object.keys(s.levelled||{}).length].map(esc).join(','));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `mpm2d-class-report-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+};
+
+window.addEventListener('load', loadData);
+</script>
+</body>
+</html>

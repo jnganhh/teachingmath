@@ -6,6 +6,8 @@
 <title>MPM2D Math Drill Center</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://unpkg.com/mathlive"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
   .comic { border: 3px solid #1e293b; box-shadow: 5px 5px 0 #1e293b; border-radius: 14px; }
   .btn { border: 3px solid #1e293b; box-shadow: 3px 3px 0 #1e293b; border-radius: 10px; font-weight: 800; transition: .1s; }
@@ -153,6 +155,8 @@
       <section class="comic bg-white p-4">
         <div class="font-black mb-3">📊 My Progress <span class="text-xs font-normal text-slate-500">(saved on this device)</span></div>
         <div id="mastery" class="space-y-3 text-sm"></div>
+        <button id="submitReportBtn" type="button" class="btn bg-blue-500 text-white px-3 py-2 text-xs w-full mt-3">📤 Submit Report to Teacher</button>
+        <div id="submitStatus" class="text-xs text-slate-600 mt-1 text-center"></div>
       </section>
       <section class="comic bg-white p-4">
         <div class="font-black mb-2">🕘 Recent attempts</div>
@@ -1471,9 +1475,56 @@ function record(id, correct, hintsUsed, input) {
 
 const $ = id => document.getElementById(id);
 
-/* ================= Student identity & teacher email ================= */
+/* ================= Student identity, Apps Script email & Firebase Firestore ================= */
 // Paste your Google Apps Script Web App URL here (see google-apps-script.gs in this repo)
 const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/gapps.yrdsb.ca/s/AKfycbxqBtV5pWjvNGX0xod_u0yOE-kB1GSmKdeji_TXg153UblqDkKa6zt3T8OR0C3ex_U/exec';
+// Optional: paste your Firebase Web App config here (Spark free tier) to also log to Firestore + Teacher Dashboard
+const FIREBASE_CONFIG = {
+  apiKey: 'PASTE_API_KEY',
+  authDomain: '',
+  projectId: '',
+  storageBucket: '',
+  messagingSenderId: '',
+  appId: ''
+};
+let _fsDb = null;
+function getDb() {
+  if (_fsDb) return _fsDb;
+  if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'PASTE_API_KEY' || typeof firebase === 'undefined') return null;
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  _fsDb = firebase.firestore();
+  return _fsDb;
+}
+async function syncToFirestore(reason = 'milestone') {
+  const db = getDb();
+  if (!db || !store.student?.name) return false;
+  const key = `${store.student.cls}_${store.student.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 80);
+  const skillsSummary = {};
+  for (const [id, S] of Object.entries(SKILLS)) {
+    const k = store.skills[id];
+    if (k && k.attempts) skillsSummary[id] = { name: S.name, correct: k.correct, attempts: k.attempts, mastery: masteryOf(id) };
+  }
+  const payload = {
+    name: store.student.name,
+    cls: store.student.cls,
+    totalCorrect: totalCorrect(),
+    totalAttempts: Object.values(store.skills).reduce((a, s) => a + s.attempts, 0),
+    bestStreak: store.best,
+    activeMin: Math.round(store.totalSec / 60),
+    levelled: store.levelled || {},
+    skills: skillsSummary,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  await db.collection('mpm2d_students').doc(key).set(payload, { merge: true });
+  await db.collection('mpm2d_reports').add({
+    student: store.student.name, cls: store.student.cls,
+    correct: payload.totalCorrect, attempts: payload.totalAttempts,
+    activeMin: payload.activeMin, reason,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  return true;
+}
+
 const MILESTONE = 20;
 const totalCorrect = () => Object.values(store.skills).reduce((a, s) => a + s.correct, 0);
 function askStudent() {
@@ -1488,19 +1539,25 @@ $('studentForm').onsubmit = e => {
 };
 $('changeStudent').onclick = askStudent;
 
+function buildReportData(label) {
+  const summary = Object.entries(SKILLS).map(([id, S]) => { const k = store.skills[id]; return k ? `${S.name}: ${k.correct}/${k.attempts} correct, mastery ${masteryOf(id)}%` : null; }).filter(Boolean).join('\n');
+  return {
+    _subject: `MPM2D Drill: ${store.student?.name} (${store.student?.cls}) — ${label}`,
+    Student: store.student?.name, Class: store.student?.cls, 'Correct answers': totalCorrect(),
+    'Total attempts': Object.values(store.skills).reduce((a, s) => a + s.attempts, 0),
+    'Best streak': store.best, 'Total active minutes': Math.round(store.totalSec / 60),
+    'Skill breakdown': summary, 'Completed at': new Date().toLocaleString()
+  };
+}
+
 function checkMilestone() {
   store.milestonesSent ||= []; store.pendingEmails ||= [];
   const m = Math.floor(totalCorrect() / MILESTONE) * MILESTONE;
   if (m >= MILESTONE && !store.milestonesSent.includes(m) && !store.pendingEmails.some(p => p.milestone === m)) {
-    const summary = Object.entries(SKILLS).map(([id, S]) => { const k = store.skills[id]; return k ? `${S.name}: ${k.correct}/${k.attempts} correct, mastery ${masteryOf(id)}%` : null; }).filter(Boolean).join('\n');
-    store.pendingEmails.push({ milestone: m, data: {
-      _subject: `MPM2D Drill: ${store.student?.name} (${store.student?.cls}) reached ${m} correct`,
-      Student: store.student?.name, Class: store.student?.cls, 'Correct answers': m,
-      'Total attempts': Object.values(store.skills).reduce((a, s) => a + s.attempts, 0),
-      'Best streak': store.best, 'Total active minutes': Math.round(store.totalSec / 60),
-      'Skill breakdown': summary, 'Completed at': new Date().toLocaleString() } });
+    store.pendingEmails.push({ milestone: m, data: buildReportData(`reached ${m} correct`) });
     save();
     showFeedback({ ok: true, msg: `🏆 Amazing! You reached ${m} correct answers. Sending a report to your teacher…` });
+    syncToFirestore(`milestone_${m}`).catch(() => {});
   }
   flushEmails();
 }
@@ -1516,6 +1573,22 @@ async function flushEmails() {
     } catch (e) { /* offline or blocked: keep in queue and retry later */ }
   }
 }
+$('submitReportBtn').onclick = async () => {
+  if (!store.student?.name) { askStudent(); return; }
+  const st = $('submitStatus');
+  st.textContent = 'Sending report…';
+  try {
+    if (APPS_SCRIPT_URL.startsWith('https://script.google.com/')) {
+      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(buildReportData(`submitted (${totalCorrect()} correct)`)) });
+    }
+    await syncToFirestore('manual_submit').catch(() => {});
+    st.textContent = `✅ Sent at ${new Date().toLocaleTimeString()}`;
+  } catch (e) {
+    st.textContent = '⚠️ Could not send right now (offline?). Try again in a moment.';
+  }
+};
 function masteryOf(id) { const s = store.skills[id]; if (!s || !s.recent.length) return 0; return Math.round(100 * s.recent.reduce((a, b) => a + b, 0) / 10); }
 
 function renderProgress() {
