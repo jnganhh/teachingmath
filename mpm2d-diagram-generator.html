@@ -616,6 +616,16 @@
         simLabel2: '6 cm, 9 cm, 12 cm',
         simVerts1: 'A, B, C',
         simVerts2: 'D, E, F',
+        // Compound triangles ('bowtie' | 'nested' | 'shared_height')
+        compType: 'bowtie',
+        compParallel: true,
+        compVerts: 'A, B, C, D, E',
+        // Bowtie (8-shape): AB, AC, DE, CD
+        btAB: 'x', btAC: '6 m', btDE: '12 m', btCD: '9 m',
+        // Nested (shared angle A, DE || BC): AD, DB, DE, BC
+        nsAD: '4 cm', nsDB: '6 cm', nsDE: 'x', nsBC: '15 cm',
+        // Shared height: h, b1, b2, ang1, ang2
+        shH: 'h', shB1: 'x', shB2: '20 m', shAng1: '32°', shAng2: '48°',
       },
       // Lines state
       lines: {
@@ -926,6 +936,7 @@
             <button type="button" class="pill-btn ${t.mode==='right'?'active':''}" onclick="state.tri.mode='right'; buildControls(); render();">Right Triangle</button>
             <button type="button" class="pill-btn ${t.mode==='oblique'?'active':''}" onclick="state.tri.mode='oblique'; buildControls(); render();">Oblique (Sine/Cosine)</button>
             <button type="button" class="pill-btn ${t.mode==='similar'?'active':''}" onclick="state.tri.mode='similar'; buildControls(); render();">Similar Triangles</button>
+            <button type="button" class="pill-btn ${t.mode==='compound'?'active':''}" onclick="state.tri.mode='compound'; buildControls(); render();">Compound / 8-Shape</button>
           </div>
         </div>
       `;
@@ -980,7 +991,7 @@
             <label class="check-label"><input type="checkbox" ${t.tickC?'checked':''} onchange="state.tri.tickC=this.checked; render()"> Tick right</label>
           </div>
         `;
-      } else {
+      } else if (t.mode === 'similar') {
         html += `
           <div id="simScaleReadout" class="info-box">Scale Factor: auto</div>
           <div class="form-grid">
@@ -989,6 +1000,43 @@
             <div class="field"><label>Triangle 1 Vertices (top, right, left)</label><input type="text" value="${esc(t.simVerts1)}" placeholder="A, B, C" oninput="state.tri.simVerts1=this.value; render()"></div>
             <div class="field"><label>Triangle 2 Vertices (top, right, left)</label><input type="text" value="${esc(t.simVerts2)}" placeholder="D, E, F" oninput="state.tri.simVerts2=this.value; render()"></div>
           </div>
+        `;
+      } else {
+        html += `
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${t.compType==='bowtie'?'active':''}" onclick="state.tri.compType='bowtie'; buildControls(); render();">8-Shape (Bowtie)</button>
+            <button type="button" class="pill-btn ${t.compType==='nested'?'active':''}" onclick="state.tri.compType='nested'; buildControls(); render();">Nested (Shared ∠)</button>
+            <button type="button" class="pill-btn ${t.compType==='shared_height'?'active':''}" onclick="state.tri.compType='shared_height'; buildControls(); render();">Shared Height (2 Right △s)</button>
+          </div>
+          ${t.compType === 'bowtie' ? `
+            <div class="form-grid">
+              <div class="field"><label>Left Base (AB)</label><input type="text" value="${esc(t.btAB)}" oninput="state.tri.btAB=this.value; render()"></div>
+              <div class="field"><label>Right Base (DE)</label><input type="text" value="${esc(t.btDE)}" oninput="state.tri.btDE=this.value; render()"></div>
+              <div class="field"><label>Left Segment (AC)</label><input type="text" value="${esc(t.btAC)}" oninput="state.tri.btAC=this.value; render()"></div>
+              <div class="field"><label>Right Segment (CD)</label><input type="text" value="${esc(t.btCD)}" oninput="state.tri.btCD=this.value; render()"></div>
+              <div class="field full"><label>Vertices (A, B, C, D, E)</label><input type="text" value="${esc(t.compVerts)}" oninput="state.tri.compVerts=this.value; render()"></div>
+            </div>
+            <div class="check-row"><label class="check-label"><input type="checkbox" ${t.compParallel?'checked':''} onchange="state.tri.compParallel=this.checked; render()"> Parallel markers (AB ∥ DE)</label></div>
+          ` : t.compType === 'nested' ? `
+            <div class="form-grid">
+              <div class="field"><label>Upper Side (AD)</label><input type="text" value="${esc(t.nsAD)}" oninput="state.tri.nsAD=this.value; render()"></div>
+              <div class="field"><label>Lower Segment (DB)</label><input type="text" value="${esc(t.nsDB)}" oninput="state.tri.nsDB=this.value; render()"></div>
+              <div class="field"><label>Inner Parallel (DE)</label><input type="text" value="${esc(t.nsDE)}" oninput="state.tri.nsDE=this.value; render()"></div>
+              <div class="field"><label>Outer Base (BC)</label><input type="text" value="${esc(t.nsBC)}" oninput="state.tri.nsBC=this.value; render()"></div>
+              <div class="field full"><label>Vertices (A, B, C, D, E)</label><input type="text" value="${esc(t.compVerts)}" oninput="state.tri.compVerts=this.value; render()"></div>
+            </div>
+            <div class="check-row"><label class="check-label"><input type="checkbox" ${t.compParallel?'checked':''} onchange="state.tri.compParallel=this.checked; render()"> Parallel markers (DE ∥ BC)</label></div>
+          ` : `
+            <div class="form-grid-3">
+              <div class="field"><label>Shared Height</label><input type="text" value="${esc(t.shH)}" oninput="state.tri.shH=this.value; render()"></div>
+              <div class="field"><label>Left Base</label><input type="text" value="${esc(t.shB1)}" oninput="state.tri.shB1=this.value; render()"></div>
+              <div class="field"><label>Right Base</label><input type="text" value="${esc(t.shB2)}" oninput="state.tri.shB2=this.value; render()"></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label>Left Angle</label><input type="text" value="${esc(t.shAng1)}" oninput="state.tri.shAng1=this.value; render()"></div>
+              <div class="field"><label>Right Angle</label><input type="text" value="${esc(t.shAng2)}" oninput="state.tri.shAng2=this.value; render()"></div>
+            </div>
+          `}
         `;
       }
       return html;
@@ -1767,7 +1815,7 @@
           if (p.lbl) inner += drawVertexLabel(p, { x: cx, y: cy }, p.lbl, cfg);
         });
 
-      } else {
+      } else if (t.mode === 'similar') {
         // Similar triangles: auto-match side lengths, shape, scale factor k, and vertex names
         const s1 = t.simLabel1.split(',').map(x => x.trim());
         const s2 = t.simLabel2.split(',').map(x => x.trim());
@@ -1877,6 +1925,141 @@
 
         inner += drawAngleArcAndLabel(C1, B1, A1, '', cfg);
         inner += drawAngleArcAndLabel(C2, B2, A2, '', cfg);
+      } else {
+        // Compound / 8-Shape Triangles
+        const vs = (t.compVerts || 'A,B,C,D,E').split(',').map(x => x.trim());
+        const [vA, vB, vC, vD, vE] = [vs[0] || 'A', vs[1] || 'B', vs[2] || 'C', vs[3] || 'D', vs[4] || 'E'];
+
+        const drawParallelTick = (P1, P2, color) => {
+          const mx = (P1.x + P2.x) / 2, my = (P1.y + P2.y) / 2;
+          const d = normalize(P2.x - P1.x, P2.y - P1.y);
+          const n = { x: -d.y, y: d.x };
+          const s = 5.5;
+          return `<polyline points="${(mx - d.x * s + n.x * s).toFixed(1)},${(my - d.y * s + n.y * s).toFixed(1)} ${(mx + d.x * s).toFixed(1)},${(my + d.y * s).toFixed(1)} ${(mx - d.x * s - n.x * s).toFixed(1)},${(my - d.y * s - n.y * s).toFixed(1)}" fill="none" stroke="${color}" stroke-width="${Math.max(1.4, cfg.sw * 0.8)}" />`;
+        };
+
+        if (t.compType === 'bowtie') {
+          // 8-shape: A-B on left, meeting at C, D-E on right (AB || DE)
+          const acNum = extractNum(t.btAC), cdNum = extractNum(t.btCD);
+          const abNum = extractNum(t.btAB), deNum = extractNum(t.btDE);
+          const k = (acNum && cdNum) ? (cdNum / acNum) : ((abNum && deNum) ? (deNum / abNum) : 1.5);
+          const kVis = Math.max(0.4, Math.min(2.5, k));
+
+          const rawPts = [
+            { x: -1, y: -0.75, lbl: vA }, // A (top-left)
+            { x: -1, y: 0.75, lbl: vB },  // B (bot-left)
+            { x: 0, y: 0, lbl: vC },      // C (center)
+            { x: kVis, y: 0.75 * kVis, lbl: vD },  // D (bot-right, collinear A-C-D)
+            { x: kVis, y: -0.75 * kVis, lbl: vE }, // E (top-right, collinear B-C-E)
+          ];
+          const { pts, cx, cy } = fitPolygonToCanvas(rawPts, cfg.w, cfg.h, 48);
+          const [A, B, C, D, E] = pts;
+
+          inner += `<polygon points="${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)} ${C.x.toFixed(1)},${C.y.toFixed(1)}" fill="${cfg.fillSoft1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+          inner += `<polygon points="${D.x.toFixed(1)},${D.y.toFixed(1)} ${E.x.toFixed(1)},${E.y.toFixed(1)} ${C.x.toFixed(1)},${C.y.toFixed(1)}" fill="${cfg.fillSoft2}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+
+          inner += drawUnknownEdgeOverlay(A, B, t.btAB, cfg);
+          inner += drawUnknownEdgeOverlay(D, E, t.btDE, cfg);
+          inner += drawUnknownEdgeOverlay(A, C, t.btAC, cfg);
+          inner += drawUnknownEdgeOverlay(C, D, t.btCD, cfg);
+
+          if (t.compParallel) {
+            inner += drawParallelTick(A, B, cfg.ink);
+            inner += drawParallelTick(E, D, cfg.ink);
+          }
+
+          inner += drawAngleArcAndLabel(C, A, B, '', cfg);
+          inner += drawAngleArcAndLabel(C, D, E, '', cfg);
+
+          if (t.btAB) inner += drawEdgeLabel(A, B, C, t.btAB, cfg, cfg.primary);
+          if (t.btDE) inner += drawEdgeLabel(D, E, C, t.btDE, cfg, cfg.tertiary);
+          if (t.btAC) inner += drawEdgeLabel(A, C, B, t.btAC, cfg, cfg.primary);
+          if (t.btCD) inner += drawEdgeLabel(C, D, E, t.btCD, cfg, cfg.tertiary);
+
+          inner += drawVertexLabel(A, C, vA, cfg);
+          inner += drawVertexLabel(B, C, vB, cfg);
+          inner += `<text x="${C.x.toFixed(1)}" y="${(C.y - cfg.fs - 2).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(vC)}</text>`;
+          inner += drawVertexLabel(D, C, vD, cfg);
+          inner += drawVertexLabel(E, C, vE, cfg);
+
+        } else if (t.compType === 'nested') {
+          // Nested triangles sharing top vertex A, with DE || BC
+          const ad = extractNum(t.nsAD), db = extractNum(t.nsDB);
+          const de = extractNum(t.nsDE), bc = extractNum(t.nsBC);
+          let r = (ad && db) ? ad / (ad + db) : ((de && bc && bc > de) ? de / bc : 0.45);
+          r = Math.max(0.22, Math.min(0.82, r));
+
+          const rawA = { x: 0.45, y: -1, lbl: vA };
+          const rawB = { x: 0, y: 0, lbl: vB };
+          const rawC = { x: 1.35, y: 0, lbl: vC };
+          const rawD = { x: rawA.x + r * (rawB.x - rawA.x), y: rawA.y + r * (rawB.y - rawA.y), lbl: vD };
+          const rawE = { x: rawA.x + r * (rawC.x - rawA.x), y: rawA.y + r * (rawC.y - rawA.y), lbl: vE };
+
+          const { pts, cx, cy } = fitPolygonToCanvas([rawA, rawB, rawC, rawD, rawE], cfg.w, cfg.h, 52);
+          const [A, B, C, D, E] = pts;
+
+          inner += `<polygon points="${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)} ${C.x.toFixed(1)},${C.y.toFixed(1)}" fill="${cfg.fillSoft1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+          inner += `<line x1="${D.x.toFixed(1)}" y1="${D.y.toFixed(1)}" x2="${E.x.toFixed(1)}" y2="${E.y.toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" />`;
+
+          inner += drawUnknownEdgeOverlay(A, D, t.nsAD, cfg);
+          inner += drawUnknownEdgeOverlay(D, B, t.nsDB, cfg);
+          inner += drawUnknownEdgeOverlay(D, E, t.nsDE, cfg);
+          inner += drawUnknownEdgeOverlay(B, C, t.nsBC, cfg);
+
+          if (t.compParallel) {
+            inner += drawParallelTick(D, E, cfg.tertiary);
+            inner += drawParallelTick(B, C, cfg.primary);
+          }
+
+          inner += drawAngleArcAndLabel(A, B, C, '', cfg);
+
+          if (t.nsAD) inner += drawEdgeLabel(A, D, { x: cx, y: cy }, t.nsAD, cfg, cfg.primary);
+          if (t.nsDB) inner += drawEdgeLabel(D, B, { x: cx, y: cy }, t.nsDB, cfg, cfg.primary);
+          if (t.nsDE) inner += drawEdgeLabel(D, E, A, t.nsDE, cfg, cfg.tertiary);
+          if (t.nsBC) inner += drawEdgeLabel(B, C, { x: cx, y: cy }, t.nsBC, cfg, cfg.primary);
+
+          inner += drawVertexLabel(A, { x: cx, y: cy }, vA, cfg);
+          inner += drawVertexLabel(B, { x: cx, y: cy }, vB, cfg);
+          inner += drawVertexLabel(C, { x: cx, y: cy }, vC, cfg);
+          inner += drawVertexLabel(D, E, vD, cfg);
+          inner += drawVertexLabel(E, D, vE, cfg);
+
+        } else {
+          // Shared height: two right triangles sharing vertical height CD
+          const ang1 = Math.max(12, Math.min(78, extractNum(t.shAng1) || 32));
+          const ang2 = Math.max(12, Math.min(78, extractNum(t.shAng2) || 48));
+          const h = 1;
+          const b1 = h / Math.tan((ang1 * Math.PI) / 180);
+          const b2 = h / Math.tan((ang2 * Math.PI) / 180);
+
+          const rawPts = [
+            { x: -b1, y: 0, lbl: vA }, // A (left)
+            { x: b2, y: 0, lbl: vB },  // B (right)
+            { x: 0, y: 0, lbl: vC },   // C (base center)
+            { x: 0, y: -h, lbl: vD }   // D (top)
+          ];
+          const { pts, cx, cy } = fitPolygonToCanvas(rawPts, cfg.w, cfg.h, 52);
+          const [A, B, C, D] = pts;
+
+          inner += `<polygon points="${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)} ${D.x.toFixed(1)},${D.y.toFixed(1)}" fill="${cfg.fillSoft1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+          inner += `<line x1="${C.x.toFixed(1)}" y1="${C.y.toFixed(1)}" x2="${D.x.toFixed(1)}" y2="${D.y.toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" stroke-dasharray="5,3" />`;
+          inner += drawUnknownEdgeOverlay(C, D, t.shH, cfg);
+          inner += drawUnknownEdgeOverlay(A, C, t.shB1, cfg);
+          inner += drawUnknownEdgeOverlay(C, B, t.shB2, cfg);
+
+          inner += drawRightAngleBox(C, B, D, 12, cfg.ink, Math.max(1.3, cfg.sw * 0.75));
+          if (t.shAng1) inner += drawAngleArcAndLabel(A, B, D, t.shAng1, cfg);
+          if (t.shAng2) inner += drawAngleArcAndLabel(B, D, A, t.shAng2, cfg);
+
+          if (t.shB1) inner += drawEdgeLabel(A, C, D, t.shB1, cfg, cfg.primary);
+          if (t.shB2) inner += drawEdgeLabel(C, B, D, t.shB2, cfg, cfg.primary);
+          if (t.shH) inner += `<text x="${(C.x + 8).toFixed(1)}" y="${((C.y + D.y) / 2).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-weight="${isUnknownLabel(t.shH) ? '700' : '400'}" font-size="${cfg.fs}" fill="${cfg.isColor && isUnknownLabel(t.shH) ? cfg.secondary : cfg.tertiary}">${esc(t.shH)}</text>`;
+
+          inner += drawVertexLabel(A, { x: cx, y: cy }, vA, cfg);
+          inner += drawVertexLabel(B, { x: cx, y: cy }, vB, cfg);
+          inner += `<text x="${C.x.toFixed(1)}" y="${(C.y + cfg.fs + 6).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(vC)}</text>`;
+          inner += drawVertexLabel(D, { x: cx, y: cy }, vD, cfg);
+        }
       }
 
       return inner;
