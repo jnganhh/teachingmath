@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mcr3u } from '../assets/wodb/mcr3u.mjs';
 import { mhf4u } from '../assets/wodb/mhf4u.mjs';
+import { mcv4u } from '../assets/wodb/mcv4u.mjs';
 import fs from 'node:fs';
 
 function cardKey(value) {
@@ -42,6 +43,27 @@ for (const [course, bank, codes] of courses) {
     assert.ok(boards.size >= 400);
   });
 }
+
+test('MCV4U skeleton covers A1-C3 with distinct 4-card boards', () => {
+  assert.deepEqual(mcv4u.map(strand => strand.groups.map(group => group.code).join(' ')), [
+    'A1 A2 A3', 'B1 B2 B3', 'C1 C2 C3'
+  ]);
+  const boards = new Set();
+  for (const { code, sets } of mcv4u.flatMap(strand => strand.groups)) {
+    assert.ok(sets.length >= 5, `MCV4U ${code} should have at least 5 starter sets`);
+    for (const [index, set] of sets.entries()) {
+      const id = `MCV4U ${code} #${index + 1}`;
+      assert.ok(set.title.trim(), `${id} title`);
+      assert.equal(set.cards.length, 4, `${id} card count`);
+      assert.ok(set.cards.every(card => card.reason.trim()), `${id} sample arguments`);
+      const cardKeys = set.cards.map(card => cardKey(card.value));
+      assert.equal(new Set(cardKeys).size, 4, `${id} has a duplicate card`);
+      const key = JSON.stringify([set.prompt, cardKeys.sort()]);
+      assert.ok(!boards.has(key), `${id} duplicates an earlier board`);
+      boards.add(key);
+    }
+  }
+});
 
 
 // --- MPM2D 800-puzzle & DOM/storage regression tests ---

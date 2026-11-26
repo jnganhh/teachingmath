@@ -1,8 +1,9 @@
 import { mcr3u } from './mcr3u.mjs';
 import { mhf4u } from './mhf4u.mjs';
+import { mcv4u } from './mcv4u.mjs';
 import { minus } from './sets.mjs';
 
-const banks = { MCR3U: mcr3u, MHF4U: mhf4u };
+const banks = { MCR3U: mcr3u, MHF4U: mhf4u, MCV4U: mcv4u };
 const letters = ['A', 'B', 'C', 'D'];
 const cardColors = ['bg-blue-50', 'bg-emerald-50', 'bg-amber-50', 'bg-purple-50'];
 const PAGE_SIZE = 12;
@@ -15,6 +16,10 @@ const COURSE_META = {
   MHF4U: {
     subtitle: 'MHF4U · Advanced Functions',
     curriculumUrl: 'https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf#page=87'
+  },
+  MCV4U: {
+    subtitle: 'MCV4U · Calculus and Vectors',
+    curriculumUrl: 'https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf#page=101'
   }
 };
 
