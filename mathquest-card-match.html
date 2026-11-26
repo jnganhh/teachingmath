@@ -165,11 +165,21 @@
           </button>
         </div>
 
+        <div class="mt-3">
+          <div class="text-xs font-black text-slate-700 mb-1.5">Difficulty Level:</div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button data-diff="easy" class="diff-btn comic-btn py-1.5 px-2 rounded-lg text-xs font-black bg-slate-100 text-slate-800">🟢 Easy</button>
+            <button data-diff="medium" class="diff-btn comic-btn py-1.5 px-2 rounded-lg text-xs font-black bg-amber-400 text-slate-900">🟡 Medium</button>
+            <button data-diff="hard" class="diff-btn comic-btn py-1.5 px-2 rounded-lg text-xs font-black bg-slate-100 text-slate-800">🔴 Hard</button>
+          </div>
+        </div>
+
         <div class="mt-3 flex items-center justify-between gap-2">
-          <label for="pairCountSelect" class="text-xs font-black text-slate-700">Pairs per round:</label>
+          <label for="pairCountSelect" class="text-xs font-black text-slate-700">Pairs / Quartets:</label>
           <select id="pairCountSelect" class="p-1.5 rounded-lg border-2 border-slate-800 font-bold text-xs bg-slate-50">
-            <option value="6">6 Pairs (12 cards)</option>
-            <option value="8">8 Pairs (16 cards)</option>
+            <option value="4">4 Pairs / 2 Quartets</option>
+            <option value="6" selected>6 Pairs / 3 Quartets</option>
+            <option value="8">8 Pairs / 4 Quartets</option>
           </select>
         </div>
 
@@ -236,6 +246,9 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <button id="hudDifficultyBtn" class="comic-btn bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-xl text-xs md:text-sm font-black" title="Click to change difficulty">
+            🟡 Medium
+          </button>
           <button id="hintBtn" class="comic-btn bg-amber-300 hover:bg-amber-200 px-3 py-1.5 rounded-xl text-xs md:text-sm font-black">
             💡 Hint (-15 pts)
           </button>
@@ -967,10 +980,17 @@
     // =========================================================================
     // 4. GAME STATE & RENDERING
     // =========================================================================
+    const DIFFICULTY_CONFIG = {
+      easy: { label: '🟢 Easy', pairs: 4, quartets: 2, speedSec: 90, bossHpMult: 0.8, hintCost: 0, scoreMult: 1, btnClass: 'bg-emerald-400 text-slate-900', pillClass: 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900' },
+      medium: { label: '🟡 Medium', pairs: 6, quartets: 3, speedSec: 60, bossHpMult: 1, hintCost: 15, scoreMult: 1, btnClass: 'bg-amber-400 text-slate-900', pillClass: 'bg-amber-100 hover:bg-amber-200 text-amber-900' },
+      hard: { label: '🔴 Hard', pairs: 8, quartets: 4, speedSec: 60, bossHpMult: 1.4, hintCost: 25, scoreMult: 1.25, btnClass: 'bg-rose-500 text-white', pillClass: 'bg-rose-100 hover:bg-rose-200 text-rose-900' }
+    };
+
     const state = {
       course: 'MPM2D',
       unit: 'mpm2d_all',
       mode: 'memory',
+      difficulty: 'medium',
       pairCount: 6,
       deck: [],
       matchedIds: new Set(),
@@ -1096,9 +1116,24 @@
     // =========================================================================
     function startRound(keepBoss = false) {
       clearInterval(state.timerInterval);
+      const diffCfg = DIFFICULTY_CONFIG[state.difficulty] || DIFFICULTY_CONFIG.medium;
       if (state.mode === 'triangle4') {
-        const qCount = state.pairCount === 8 ? 4 : 3;
-        state.deck = shuffle(TRIANGLE_QUARTETS).slice(0, qCount);
+        const qCount = diffCfg.quartets;
+        let qPool = [...TRIANGLE_QUARTETS];
+        if (state.difficulty === 'easy') {
+          qPool = shuffle(qPool.filter(q => ['tri_aa1', 'tri_aa3', 'tri_sss2'].includes(q.id))).concat(shuffle(qPool));
+        } else if (state.difficulty === 'hard') {
+          qPool = shuffle(qPool.filter(q => ['tri_aa2', 'tri_sss1', 'tri_sas1', 'tri_sas2', 'tri_aa4'].includes(q.id))).concat(shuffle(qPool));
+        } else {
+          qPool = shuffle(qPool);
+        }
+        const seenQ = new Set();
+        const pickedQ = [];
+        for (const q of qPool) {
+          if (!seenQ.has(q.id)) { seenQ.add(q.id); pickedQ.push(q); }
+          if (pickedQ.length >= qCount) break;
+        }
+        state.deck = pickedQ;
         state.quartetSel = { graph: null, reason: null, scale: null, missing: null };
       } else {
         const pool = shuffle(getFilteredPool());
@@ -1127,12 +1162,12 @@
         state.bossWave = 1;
         state.hearts = 3;
         const boss = BOSSES[0];
-        state.bossMaxHp = boss.hp;
-        state.bossHp = boss.hp;
+        state.bossMaxHp = Math.round(boss.hp * diffCfg.bossHpMult);
+        state.bossHp = state.bossMaxHp;
       }
 
       if (state.mode === 'speed') {
-        state.timerSec = state.deck.length === 8 ? 90 : 60;
+        state.timerSec = diffCfg.speedSec;
         state.timerInterval = setInterval(() => {
           state.timerSec--;
           updateHudUI();
@@ -1466,7 +1501,8 @@
       state.matchedIds.add(item.id);
       state.streak++;
       const mult = Math.min(4, 1 + Math.floor(state.streak / 3));
-      const pts = 50 * mult;
+      const diffMult = (DIFFICULTY_CONFIG[state.difficulty] || DIFFICULTY_CONFIG.medium).scoreMult;
+      const pts = Math.round(50 * mult * diffMult);
       state.score += pts;
 
       store.totalCorrect++;
@@ -1657,6 +1693,36 @@
       });
     });
 
+    function setDifficulty(level) {
+      if (!DIFFICULTY_CONFIG[level]) return;
+      state.difficulty = level;
+      const cfg = DIFFICULTY_CONFIG[level];
+      state.pairCount = cfg.pairs;
+      $('pairCountSelect').value = String(cfg.pairs);
+
+      document.querySelectorAll('.diff-btn').forEach(b => {
+        b.className = b.dataset.diff === level
+          ? `diff-btn comic-btn py-1.5 px-2 rounded-lg text-xs font-black ${cfg.btnClass}`
+          : 'diff-btn comic-btn py-1.5 px-2 rounded-lg text-xs font-black bg-slate-100 text-slate-800';
+      });
+
+      const hudBtn = $('hudDifficultyBtn');
+      hudBtn.textContent = cfg.label;
+      hudBtn.className = `comic-btn px-3 py-1.5 rounded-xl text-xs md:text-sm font-black ${cfg.pillClass}`;
+      $('hintBtn').textContent = cfg.hintCost === 0 ? '💡 Hint (Free)' : `💡 Hint (-${cfg.hintCost} pts)`;
+      startRound(false);
+    }
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => setDifficulty(btn.dataset.diff));
+    });
+
+    $('hudDifficultyBtn').addEventListener('click', () => {
+      const order = ['easy', 'medium', 'hard'];
+      const next = order[(order.indexOf(state.difficulty) + 1) % order.length];
+      setDifficulty(next);
+    });
+
     $('pairCountSelect').addEventListener('change', e => {
       state.pairCount = Number(e.target.value);
       startRound(false);
@@ -1668,7 +1734,8 @@
       const remaining = state.deck.filter(d => !state.matchedIds.has(d.id));
       if (!remaining.length) return;
       const target = remaining[0];
-      state.score = Math.max(0, state.score - 15);
+      const cost = (DIFFICULTY_CONFIG[state.difficulty] || DIFFICULTY_CONFIG.medium).hintCost;
+      state.score = Math.max(0, state.score - cost);
       updateHudUI();
       setFeedback(`💡 <strong>Hint for ${renderTexString(target.prompt)}:</strong> ${renderTexString(target.hint)}`, 'hint');
     });
