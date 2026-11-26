@@ -717,8 +717,9 @@
         // Polynomial: a(x-r1)^m1 (x-r2)^m2 (x-r3)^m3
         pa: 0.25,
         rootsSpec: '-2:1, 1:2, 3:1',
-        // Rational: (ra*x + rb) / (rc*x + rd) or quadratic denom
-        ratType: 'lin_lin', // 'lin_lin' | 'quad_den'
+        // Rational: LaTeX input, (ra*x + rb) / (rc*x + rd), or quadratic denom
+        ratType: 'latex', // 'latex' | 'lin_lin' | 'quad_den'
+        ratLatex: '\\frac{2x - 2}{x - 3}',
         ra: 2, rb: -2, rc: 1, rd: -3,
         qdA: 4, qdR1: -2, qdR2: 2,
         // Log: la * log_lb(lk*(x - ld)) + lc
@@ -1360,10 +1361,22 @@
       } else if (m.mode === 'rational') {
         html += `
           <div class="submode-pills">
+            <button type="button" class="pill-btn ${m.ratType==='latex'?'active':''}" onclick="state.mhf4u.ratType='latex'; buildControls(); render();">LaTeX Input</button>
             <button type="button" class="pill-btn ${m.ratType==='lin_lin'?'active':''}" onclick="state.mhf4u.ratType='lin_lin'; buildControls(); render();">(ax + b) / (cx + d)</button>
             <button type="button" class="pill-btn ${m.ratType==='quad_den'?'active':''}" onclick="state.mhf4u.ratType='quad_den'; buildControls(); render();">a / ((x - r₁)(x - r₂))</button>
           </div>
-          ${m.ratType === 'lin_lin' ? `
+          ${m.ratType === 'latex' ? `
+            <div class="field full">
+              <label>LaTeX or Math Expression (e.g. \\frac{x^2 - 1}{x - 1})</label>
+              <input type="text" style="font-family:var(--mono);" value="${esc(m.ratLatex)}" placeholder="\\frac{2x - 2}{x - 3}" oninput="state.mhf4u.ratLatex=this.value; render()">
+            </div>
+            <div class="preset-row">
+              <button type="button" class="preset-chip" onclick="state.mhf4u.ratLatex='\\\\frac{x+1}{x-2}';buildControls();render();">(x+1)/(x-2)</button>
+              <button type="button" class="preset-chip" onclick="state.mhf4u.ratLatex='\\\\frac{x^2-1}{x-1}';buildControls();render();">Hole: (x²-1)/(x-1)</button>
+              <button type="button" class="preset-chip" onclick="state.mhf4u.ratLatex='\\\\frac{2x}{x^2-4}';buildControls();render();">2 VAs: 2x/(x²-4)</button>
+              <button type="button" class="preset-chip" onclick="state.mhf4u.ratLatex='\\\\frac{x^2-4}{x^2-x-2}';buildControls();render();">Hole+VA</button>
+            </div>
+          ` : m.ratType === 'lin_lin' ? `
             <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
               <div class="field"><label>a</label><input type="number" step="0.5" value="${m.ra}" oninput="state.mhf4u.ra=parseFloat(this.value)||0; render()"></div>
               <div class="field"><label>b</label><input type="number" step="0.5" value="${m.rb}" oninput="state.mhf4u.rb=parseFloat(this.value)||0; render()"></div>
@@ -2621,6 +2634,163 @@
     // ===========================
     // MHF4U Renderer (Poly, Rational, Log)
     // ===========================
+    // Safe recursive-descent math/LaTeX expression compiler (no eval)
+    function compileMathExpr(raw) {
+      let s = String(raw || '').trim()
+        .replace(/\\left\s*\(/g, '(').replace(/\\right\s*\)/g, ')')
+        .replace(/\\cdot|\\times/g, '*')
+        .replace(/\{([^{}]+)\}/g, '($1)')
+        .replace(/\{([^{}]+)\}/g, '($1)')
+        .replace(/\s+/g, '');
+      if (!s) return { error: 'Empty expression.' };
+
+      // Insert implicit multiplication: 2x, 2(, )x, )(, x(
+      s = s
+        .replace(/(\d)(x|\()/gi, '$1*$2')
+        .replace(/(x|\))(\d|x|\()/gi, '$1*$2')
+        .replace(/\)(x|\()/gi, ')*$1');
+
+      const tokens = [];
+      let i = 0;
+      while (i < s.length) {
+        const ch = s[i];
+        if ('+-*/^()'.includes(ch)) {
+          tokens.push({ t: ch }); i++;
+        } else if (ch === 'x' || ch === 'X') {
+          tokens.push({ t: 'x' }); i++;
+        } else if (/\d|\./.test(ch)) {
+          let numStr = '';
+          while (i < s.length && /[\d.]/.test(s[i])) { numStr += s[i++]; }
+          const val = Number(numStr);
+          if (!isFinite(val)) return { error: `Invalid number "${numStr}".` };
+          tokens.push({ t: 'num', v: val });
+        } else {
+          return { error: `Unsupported symbol "${ch}" in expression.` };
+        }
+      }
+
+      let pos = 0;
+      const peek = () => tokens[pos];
+      const consume = () => tokens[pos++];
+
+      function parseExpr() {
+        let left = parseTerm();
+        while (peek() && (peek().t === '+' || peek().t === '-')) {
+          const op = consume().t;
+          const right = parseTerm();
+          const prev = left;
+          left = op === '+' ? (x => prev(x) + right(x)) : (x => prev(x) - right(x));
+        }
+        return left;
+      }
+
+      function parseTerm() {
+        let left = parseUnary();
+        while (peek() && (peek().t === '*' || peek().t === '/')) {
+          const op = consume().t;
+          const right = parseUnary();
+          const prev = left;
+          left = op === '*' ? (x => prev(x) * right(x)) : (x => prev(x) / right(x));
+        }
+        return left;
+      }
+
+      function parseUnary() {
+        if (peek() && peek().t === '-') {
+          consume();
+          const inner = parseUnary();
+          return x => -inner(x);
+        }
+        if (peek() && peek().t === '+') {
+          consume();
+          return parseUnary();
+        }
+        return parsePower();
+      }
+
+      function parsePower() {
+        const base = parsePrimary();
+        if (peek() && peek().t === '^') {
+          consume();
+          const exp = parseUnary();
+          return x => Math.pow(base(x), exp(x));
+        }
+        return base;
+      }
+
+      function parsePrimary() {
+        const tok = peek();
+        if (!tok) throw new Error('Unexpected end of expression.');
+        if (tok.t === 'num') { consume(); return () => tok.v; }
+        if (tok.t === 'x') { consume(); return x => x; }
+        if (tok.t === '(') {
+          consume();
+          const inner = parseExpr();
+          if (!peek() || peek().t !== ')') throw new Error('Missing closing ")".');
+          consume();
+          return inner;
+        }
+        throw new Error(`Unexpected token "${tok.t}".`);
+      }
+
+      try {
+        const fn = parseExpr();
+        if (pos < tokens.length) return { error: 'Unexpected trailing characters in expression.' };
+        return { fn };
+      } catch (e) {
+        return { error: e.message || 'Invalid expression.' };
+      }
+    }
+
+    function parseLatexRational(rawInput) {
+      let s = String(rawInput || '').trim()
+        .replace(/^\$+|\$+$/g, '')
+        .replace(/^\\\[|\\\]$/g, '')
+        .replace(/^\\\(|\\\)$/g, '')
+        .trim();
+      s = s.replace(/^(?:y|f\s*\(\s*x\s*\))\s*=\s*/i, '').trim();
+      if (!s) return { error: 'Enter a LaTeX or math expression (e.g. \\frac{x+1}{x-2}).' };
+
+      let numStr = '', denStr = '';
+      if (s.startsWith('\\frac')) {
+        let idx = 5;
+        const readGroup = () => {
+          while (idx < s.length && /\s/.test(s[idx])) idx++;
+          if (s[idx] !== '{') return null;
+          let depth = 0, start = idx + 1;
+          for (; idx < s.length; idx++) {
+            if (s[idx] === '{') depth++;
+            else if (s[idx] === '}') {
+              depth--;
+              if (depth === 0) { const out = s.slice(start, idx); idx++; return out; }
+            }
+          }
+          return null;
+        };
+        const g1 = readGroup(), g2 = readGroup();
+        if (g1 === null || g2 === null || idx < s.length) {
+          return { error: 'Invalid \\frac{numerator}{denominator} syntax.' };
+        }
+        numStr = g1; denStr = g2;
+      } else {
+        // Fallback: split top-level '/'
+        let depth = 0, splitIdx = -1;
+        for (let i = 0; i < s.length; i++) {
+          if (s[i] === '(' || s[i] === '{') depth++;
+          else if (s[i] === ')' || s[i] === '}') depth--;
+          else if (s[i] === '/' && depth === 0) { splitIdx = i; break; }
+        }
+        if (splitIdx === -1) { numStr = s; denStr = '1'; }
+        else { numStr = s.slice(0, splitIdx); denStr = s.slice(splitIdx + 1); }
+      }
+
+      const numRes = compileMathExpr(numStr);
+      if (numRes.error) return { error: `Numerator: ${numRes.error}` };
+      const denRes = compileMathExpr(denStr);
+      if (denRes.error) return { error: `Denominator: ${denRes.error}` };
+      return { numFn: numRes.fn, denFn: denRes.fn, display: `y = (${numStr.trim()}) / (${denStr.trim()})` };
+    }
+
     function renderMhf4uSVG(cfg) {
       const m = state.mhf4u;
       const xMin = m.xMin, xMax = Math.max(m.xMin + 2, m.xMax);
@@ -2673,7 +2843,79 @@
           eqText = roots.length === 0 ? `y = ${fmtNum(m.pa)}` : `y = ${fmtNum(m.pa)}${facStr}`;
         }
       } else if (m.mode === 'rational') {
-        if (m.ratType === 'lin_lin') {
+        if (m.ratType === 'latex') {
+          const parsed = parseLatexRational(m.ratLatex);
+          if (parsed.error) {
+            errMsg = parsed.error;
+          } else {
+            const { numFn, denFn, display } = parsed;
+            // Check identically zero denominator
+            const testPts = [-3.17, -1.23, 0.41, 2.71, 5.13];
+            if (testPts.every(tx => Math.abs(denFn(tx)) < 1e-12)) {
+              errMsg = 'Denominator cannot be identically zero.';
+            } else {
+              // Find denominator roots in [xMin-2, xMax+2]
+              const findRoots = (fn, xa, xb) => {
+                const roots = [];
+                const N = 400;
+                const bisect = (a, b) => {
+                  let fa = fn(a), fb = fn(b);
+                  for (let it = 0; it < 32; it++) {
+                    const mid = (a + b) / 2, fm = fn(mid);
+                    if (Math.abs(fm) < 1e-12) return mid;
+                    if (fa * fm <= 0) { b = mid; fb = fm; } else { a = mid; fa = fm; }
+                  }
+                  return (a + b) / 2;
+                };
+                for (let i = 0; i < N; i++) {
+                  const a = xa + (i / N) * (xb - xa), b = xa + ((i + 1) / N) * (xb - xa);
+                  const fa = fn(a), fb = fn(b);
+                  if (Math.abs(fa) < 1e-8) roots.push(a);
+                  else if (fa * fb < 0) roots.push(bisect(a, b));
+                }
+                // Deduplicate
+                roots.sort((a, b) => a - b);
+                return roots.filter((r, idx) => idx === 0 || Math.abs(r - roots[idx - 1]) > 1e-3);
+              };
+
+              const denRoots = findRoots(denFn, xMin - 2, xMax + 2);
+              denRoots.forEach(r => {
+                excludedX.push(r);
+                const eps = 1e-4;
+                const limL = numFn(r - eps) / denFn(r - eps);
+                const limR = numFn(r + eps) / denFn(r + eps);
+                if (isFinite(limL) && isFinite(limR) && Math.abs(limL - limR) < 0.05 && Math.abs(limL) < 1e4) {
+                  holePts.push({ x: r, y: (limL + limR) / 2 });
+                } else {
+                  vaList.push(r);
+                }
+              });
+
+              // Horizontal asymptote check
+              const lPos = numFn(1e5) / denFn(1e5), lNeg = numFn(-1e5) / denFn(-1e5);
+              if (isFinite(lPos) && isFinite(lNeg) && Math.abs(lPos - lNeg) < 1e-2 && Math.abs(lPos) < 1e4) {
+                haList.push(Math.round(lPos * 1000) / 1000);
+              }
+
+              // Intercepts (excluding denominator roots)
+              const numRoots = findRoots(numFn, xMin, xMax);
+              numRoots.forEach(r => {
+                if (!excludedX.some(ex => Math.abs(ex - r) < 1e-3)) keyPts.push({ x: r, y: 0 });
+              });
+              if (!excludedX.some(ex => Math.abs(ex) < 1e-3)) {
+                const y0 = numFn(0) / denFn(0);
+                if (isFinite(y0)) keyPts.push({ x: 0, y: y0 });
+              }
+
+              evalFn = x => {
+                if (excludedX.some(ex => Math.abs(x - ex) < 1e-6)) return null;
+                const d = denFn(x);
+                return Math.abs(d) > 1e-9 ? numFn(x) / d : null;
+              };
+              eqText = display;
+            }
+          }
+        } else if (m.ratType === 'lin_lin') {
           if (Math.abs(m.rc) < 1e-9 && Math.abs(m.rd) < 1e-9) {
             errMsg = 'Denominator cx + d cannot be identically zero.';
           } else if (Math.abs(m.rc) < 1e-9) {
