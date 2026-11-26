@@ -5,36 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MPM2D Algebra Problem String Presenter</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.4/dist/katex.min.css" integrity="sha384-u1zONI5gPXUx0UKI62c75/zww972y0v2rSK5ZYlVdS6xEuWDeZWUI66v6t1gvlXJ" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.18.4/dist/katex.min.js" integrity="sha384-ykMNcWQhhTUb0YV9SPpPUFURHZ+tWmubkakGBP+OgNK/UXdO2gtzglWx0Rj9hnO3" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.18.4/dist/contrib/auto-render.min.js" integrity="sha384-bjyGPfbij8/NDKJhSGZNP/khQVgtHUE5exjm4Ydllo42FwIgYsdLO2lXGmRBf5Mz" crossorigin="anonymous"></script>
   <style>
-    .comic-border {
-      border: 3px solid #1e293b;
-      box-shadow: 5px 5px 0px #1e293b;
-    }
+    [hidden] { display: none !important; }
+    .comic-border { border: 3px solid #1e293b; box-shadow: 5px 5px 0 #1e293b; }
     .comic-btn {
+      min-height: 2.75rem;
       border: 2px solid #1e293b;
-      box-shadow: 3px 3px 0px #1e293b;
-      transition: all 0.12s ease;
+      box-shadow: 3px 3px 0 #1e293b;
+      transition: transform .12s ease, box-shadow .12s ease;
     }
-    .comic-btn:hover {
-      transform: translate(-1px, -1px);
-      box-shadow: 4px 4px 0px #1e293b;
+    .comic-btn:not(:disabled):hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #1e293b; }
+    .comic-btn:not(:disabled):active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1e293b; }
+    button:disabled { opacity: .55; cursor: default; }
+    :focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
+    .tab-active { background: #1d4ed8; color: #fff; }
+    .math-text { min-width: 0; overflow-x: auto; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .math-text .katex-display { margin: .4em 0; }
+    .step-prompt { font-size: clamp(1.125rem, 2vw, 1.5rem); }
+    .projector-mode .step-prompt { font-size: clamp(1.375rem, 3vw, 2.25rem); }
+    .projector-mode .step-note { font-size: clamp(1rem, 1.6vw, 1.25rem); }
+    .step-card { background: #f8fafc; }
+    .step-card[aria-current="step"] { background: #fffbeb; box-shadow: 0 0 0 2px #f59e0b; }
+    .sketch-surface { position: relative; aspect-ratio: 3 / 2; }
+    .sketch-surface > svg, .sketch-surface > canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .sketch-surface svg { pointer-events: none; }
+    #sketchCanvas { touch-action: none; cursor: crosshair; }
+    .pen-swatch { display: grid; place-items: center; min-width: 2.75rem; min-height: 2.75rem; border-radius: .5rem; }
+    .pen-swatch span { display: block; width: 1.25rem; height: 1.25rem; border: 1px solid #1e293b; border-radius: 50%; }
+    .pen-swatch[aria-pressed="true"] { background: #dbeafe; box-shadow: inset 0 0 0 2px #1d4ed8; }
+    .editor-field { display: block; width: 100%; margin-top: .25rem; border: 2px solid #334155; border-radius: .5rem; padding: .5rem .75rem; background: #f8fafc; }
+    #customStringModal {
+      position: fixed;
+      inset: 0;
+      margin: auto;
+      width: min(calc(100% - 1.5rem), 66rem);
+      max-height: calc(100vh - 1.5rem);
+      max-height: calc(100dvh - 1.5rem);
+      overflow: auto;
+      overscroll-behavior: contain;
     }
-    .comic-btn:active {
-      transform: translate(1px, 1px);
-      box-shadow: 1px 1px 0px #1e293b;
-    }
-    .tab-active {
-      background-color: #2563eb !important;
-      color: #ffffff !important;
-    }
+    #customStringModal::backdrop { background: rgb(15 23 42 / .75); }
+    @media (prefers-reduced-motion: reduce) { .comic-btn { transition: none; } }
   </style>
 </head>
-<body class="bg-yellow-50 text-slate-900 font-sans min-h-screen p-3 sm:p-5 overflow-x-hidden">
-  <div class="max-w-7xl mx-auto space-y-4">
-    <!-- Top Header -->
+<body class="bg-yellow-50 text-slate-900 font-sans min-h-screen p-3 sm:p-5">
+  <main class="max-w-7xl mx-auto space-y-4">
     <header class="bg-white rounded-xl comic-border p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div>
         <div class="flex items-center gap-2 flex-wrap">
@@ -43,201 +61,282 @@
           <span class="px-2.5 py-1 text-xs font-black rounded bg-purple-100 text-purple-900 border-2 border-slate-800">Building Thinking Classrooms</span>
         </div>
         <h1 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">🔗 Algebra Problem String Presenter</h1>
-        <p class="text-xs font-bold text-slate-600">Reveal one connected problem at a time. Press <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-400 rounded">Space</kbd> or tap <strong>Reveal Next</strong>.</p>
+        <p class="text-sm text-slate-700 mt-1">On the stage, <kbd>Space</kbd> or <kbd>→</kbd> reveals the next problem. <kbd>←</kbd> or <kbd>Backspace</kbd> goes back.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button onclick="toggleSketchPad()" id="sketchToggleBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-200 text-slate-900 comic-btn">
-          ✏️ Show Sketch Pad
-        </button>
-        <button onclick="openCustomModal()" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">
-          ➕ Custom String
-        </button>
-        <button onclick="toggleProjectorMode()" id="projectorBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
-          ⛶ Large Font
-        </button>
-        <button onclick="hardRefreshApp()" class="px-3 py-2 text-xs font-black rounded-lg bg-cyan-100 text-cyan-950 comic-btn" title="Reload latest version of this page">
-          🔄 Refresh
-        </button>
+        <button type="button" data-action="sketch" id="sketchToggleBtn" aria-controls="sketchPadSection" aria-expanded="false" class="px-3 py-2 text-sm font-black rounded-lg bg-amber-200 comic-btn">✏️ Show Sketch Pad</button>
+        <button type="button" data-action="custom" id="customOpenBtn" aria-haspopup="dialog" class="px-3 py-2 text-sm font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">Custom Strings</button>
+        <button type="button" data-action="projector" id="projectorBtn" aria-pressed="false" class="px-3 py-2 text-sm font-black rounded-lg bg-slate-800 text-white comic-btn">Large Font</button>
+        <button type="button" data-action="refresh" class="px-3 py-2 text-sm font-black rounded-lg bg-cyan-100 text-cyan-950 comic-btn" title="Reload the latest version">Refresh</button>
       </div>
     </header>
 
-    <!-- Topic & String Selector -->
-    <section class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3">
-      <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar"></div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2" id="stringSelectorGrid"></div>
+    <p id="mathStatus" role="status" class="p-3 rounded-lg bg-amber-100 text-sm font-bold" hidden>Math typesetting could not load. Expressions are shown as entered.</p>
+    <p id="libraryStatus" role="status" class="p-3 rounded-lg bg-amber-100 text-sm font-bold" hidden></p>
+
+    <section class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3" aria-label="Browse problem strings">
+      <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar" aria-label="Topics" role="group"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 p-1 max-h-48 overflow-y-auto" id="stringSelectorGrid"></div>
     </section>
 
-    <!-- Main Presenter + Optional Sketch Pad -->
-    <div id="mainWorkspace" class="grid grid-cols-1 gap-4">
-      <!-- Problem String Stage -->
-      <section class="bg-white rounded-xl comic-border p-4 sm:p-6 space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
-          <div>
-            <span id="activeStringUnit" class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800">Unit</span>
-            <h2 id="activeStringTitle" class="text-lg sm:text-2xl font-black text-slate-900 mt-1">String Title</h2>
-            <p id="activeStringGoal" class="text-xs font-bold text-slate-600 mt-0.5"></p>
+    <div id="mainWorkspace" class="grid grid-cols-1 items-start gap-4">
+      <section id="presenterStage" tabindex="0" aria-labelledby="activeStringTitle" aria-keyshortcuts="Space ArrowRight ArrowLeft Backspace" class="min-w-0 bg-white rounded-xl comic-border p-3 sm:p-5 space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b-2 border-slate-200 pb-3">
+          <div class="min-w-0 max-w-full">
+            <span id="activeStringUnit" class="px-2 py-0.5 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800"></span>
+            <h2 id="activeStringTitle" class="text-lg sm:text-2xl font-black mt-1 break-words"></h2>
+            <p id="activeStringGoal" class="math-text text-sm font-bold text-slate-700 mt-1"></p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button onclick="revealNextStep()" id="revealNextBtn" class="px-4 py-2 text-xs sm:text-sm font-black rounded-lg bg-emerald-600 text-white comic-btn">
-              ➕ Reveal Next (<span id="stepCounter">1/5</span>)
-            </button>
-            <button onclick="revealAllSteps()" class="px-3 py-2 text-xs font-black rounded-lg bg-blue-100 text-blue-900 comic-btn">
-              👁️ Reveal All
-            </button>
-            <button onclick="resetStringSteps()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-100 text-slate-800 comic-btn">
-              🔄 Reset
-            </button>
+            <button type="button" data-action="back" id="stepBackBtn" class="px-3 py-2 text-sm font-black rounded-lg bg-slate-100 comic-btn">← Back</button>
+            <button type="button" data-action="next" id="revealNextBtn" class="px-3 py-2 text-sm font-black rounded-lg bg-emerald-700 text-white comic-btn">Reveal Next</button>
+            <button type="button" data-action="all-steps" id="revealAllBtn" class="px-3 py-2 text-sm font-black rounded-lg bg-blue-100 text-blue-900 comic-btn">Reveal All Steps</button>
+            <button type="button" data-action="all-answers" id="allAnswersBtn" aria-controls="stepsContainer" title="Show or hide answers to revealed problems" class="px-3 py-2 text-sm font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">Show All Answers</button>
+            <button type="button" data-action="reset" class="px-3 py-2 text-sm font-black rounded-lg bg-slate-100 comic-btn">Reset</button>
           </div>
+          <p id="stepCounter" role="status" class="text-sm font-bold text-slate-700"></p>
         </div>
 
-        <!-- Revealed Steps List -->
-        <div id="stepsContainer" class="space-y-3"></div>
-
-        <!-- Teacher Consolidation Prompt -->
-        <div id="consolidationBox" class="hidden p-3.5 rounded-xl bg-amber-50 border-2 border-slate-800">
-          <div class="text-xs font-black uppercase text-amber-900">💡 Consolidation / Connection Question</div>
-          <div id="consolidationText" class="text-sm font-bold text-slate-800 mt-1"></div>
-        </div>
+        <ol id="stepsContainer" class="space-y-3"></ol>
+        <section id="consolidationBox" class="p-3.5 rounded-xl bg-amber-50 border-2 border-slate-800" aria-labelledby="consolidationHeading" hidden>
+          <h3 id="consolidationHeading" class="text-sm font-black text-amber-900">💡 Consolidation question</h3>
+          <p id="consolidationText" class="math-text step-note text-sm text-slate-800 mt-1"></p>
+        </section>
       </section>
 
-      <!-- Live Sketch Pad (for iPad Apple Pencil / Projector Annotation) -->
-      <section id="sketchPadSection" class="hidden bg-white rounded-xl comic-border p-3.5 sm:p-4 space-y-2.5">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="text-xs font-black uppercase text-slate-700">✏️ Teacher Sketch Pad (Area Models / Number Lines / Steps)</div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="setPenColor('#0f172a')" class="w-6 h-6 rounded-full bg-slate-900 border-2 border-slate-800" title="Black"></button>
-            <button onclick="setPenColor('#2563eb')" class="w-6 h-6 rounded-full bg-blue-600 border-2 border-slate-800" title="Blue"></button>
-            <button onclick="setPenColor('#dc2626')" class="w-6 h-6 rounded-full bg-red-600 border-2 border-slate-800" title="Red"></button>
-            <button onclick="setPenColor('#16a34a')" class="w-6 h-6 rounded-full bg-emerald-600 border-2 border-slate-800" title="Green"></button>
-            <button onclick="clearSketchPad()" class="px-2.5 py-1 text-xs font-black rounded-lg bg-red-100 text-red-900 border-2 border-slate-800 ml-2">🧹 Clear Pad</button>
+      <section id="sketchPadSection" class="min-w-0 bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3 lg:sticky lg:top-3" aria-labelledby="sketchHeading" hidden>
+        <h2 id="sketchHeading" class="text-base font-black">✏️ Teacher Sketch Pad</h2>
+        <div id="sketchTools" class="flex flex-wrap items-end gap-x-3 gap-y-2">
+          <div class="flex flex-wrap items-center gap-0.5" role="group" aria-label="Pen colour">
+            <button type="button" data-colour="#0f172a" aria-label="Black pen" aria-pressed="true" class="pen-swatch"><span class="bg-slate-900"></span></button>
+            <button type="button" data-colour="#2563eb" aria-label="Blue pen" aria-pressed="false" class="pen-swatch"><span class="bg-blue-600"></span></button>
+            <button type="button" data-colour="#dc2626" aria-label="Red pen" aria-pressed="false" class="pen-swatch"><span class="bg-red-600"></span></button>
+            <button type="button" data-colour="#15803d" aria-label="Green pen" aria-pressed="false" class="pen-swatch"><span class="bg-green-700"></span></button>
           </div>
+          <label class="text-xs font-bold" for="penWidth">Thickness
+            <select id="penWidth" class="block min-h-11 mt-0.5 px-2 rounded-lg bg-white border-2 border-slate-800 text-sm">
+              <option value="3">Thin</option>
+              <option value="6" selected>Medium</option>
+              <option value="12">Thick</option>
+            </select>
+          </label>
+          <label class="text-xs font-bold" for="sketchBackground">Background
+            <select id="sketchBackground" class="block min-h-11 mt-0.5 px-2 rounded-lg bg-white border-2 border-slate-800 text-sm">
+              <option value="blank">Blank</option>
+              <option value="dots">Dot Grid</option>
+              <option value="axes">Coordinate Axes</option>
+            </select>
+          </label>
+          <button type="button" data-action="eraser" id="eraserBtn" aria-pressed="false" class="px-2.5 py-1 text-sm font-bold rounded-lg bg-amber-100 comic-btn">Eraser</button>
+          <button type="button" data-action="undo-sketch" id="undoSketchBtn" class="px-2.5 py-1 text-sm font-bold rounded-lg bg-blue-100 comic-btn" disabled>Undo</button>
+          <button type="button" data-action="clear-sketch" id="clearSketchBtn" class="px-2.5 py-1 text-sm font-bold rounded-lg bg-red-100 text-red-900 comic-btn" disabled>Clear</button>
         </div>
-        <canvas id="sketchCanvas" class="w-full h-72 sm:h-96 bg-slate-50 rounded-xl border-2 border-slate-800 touch-none cursor-crosshair"></canvas>
+        <p id="sketchStatus" role="status" class="sr-only"></p>
+        <div class="sketch-surface bg-slate-50 rounded-xl border-2 border-slate-800 overflow-hidden">
+          <svg viewBox="0 0 900 600" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="sketchDots" width="30" height="30" patternUnits="userSpaceOnUse">
+                <circle cx="15" cy="15" r="2.5" fill="#94a3b8"/>
+              </pattern>
+              <pattern id="sketchGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M30 0H0V30" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+              </pattern>
+            </defs>
+            <rect id="sketchDotLayer" width="900" height="600" fill="url(#sketchDots)" hidden/>
+            <g id="sketchAxesLayer" hidden>
+              <rect width="900" height="600" fill="url(#sketchGrid)"/>
+              <path d="M30 300H870 M450 570V30 M855 288L870 300L855 312 M438 45L450 30L462 45" fill="none" stroke="#475569" stroke-width="4"/>
+              <g fill="#334155" font-size="23" font-weight="bold"><text x="870" y="277">x</text><text x="470" y="45">y</text><text x="427" y="328">0</text></g>
+            </g>
+          </svg>
+          <canvas id="sketchCanvas" role="img" aria-label="Teacher’s live drawing">The sketch pad requires canvas support.</canvas>
+        </div>
       </section>
     </div>
-  </div>
+  </main>
 
-  <!-- Custom String Modal -->
-  <div id="customStringModal" onclick="if(event.target===this) closeCustomModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-3 sm:p-6">
-    <div class="bg-white max-w-lg w-full rounded-2xl comic-border p-4 sm:p-5 space-y-3">
-      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2">
-        <h3 class="text-lg font-black">➕ Add Custom Problem String</h3>
-        <button onclick="closeCustomModal()" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-800 text-white">✕</button>
-      </div>
-      <input type="text" id="customTitle" placeholder="Title (e.g., Factoring Difference of Squares)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-      <input type="text" id="customGoal" placeholder="Goal / Big Idea (optional)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-      <div>
-        <label class="text-[11px] font-black text-slate-600">Problems (one per line; optionally add `| answer` after each):</label>
-        <textarea id="customSteps" rows="6" placeholder="19 × 21 | 399&#10;(x - 1)(x + 1) | x² - 1&#10;(x - 5)(x + 5) | x² - 25&#10;(2x - 3)(2x + 3) | 4x² - 9" class="w-full mt-1 px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800"></textarea>
-      </div>
-      <input type="text" id="customConsolidation" placeholder="Consolidation question (e.g., What pattern do you notice?)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-      <button onclick="saveCustomString()" class="w-full py-2.5 text-xs font-black rounded-xl bg-emerald-600 text-white comic-btn">💾 Save &amp; Present</button>
+  <dialog id="customStringModal" class="rounded-xl comic-border bg-white p-4 sm:p-6 text-slate-900" aria-labelledby="customDialogHeading">
+    <div class="flex items-center justify-between gap-3 border-b-2 border-slate-200 pb-3">
+      <h2 id="customDialogHeading" class="text-xl font-black">Custom Problem Strings</h2>
+      <button type="button" data-action="close-custom" class="px-3 py-1 text-sm font-bold rounded-lg bg-slate-800 text-white comic-btn">Close</button>
     </div>
-  </div>
+
+    <div class="mt-4 flex flex-wrap items-end gap-2">
+      <label for="customLibrary" class="font-bold text-sm grow min-w-0">String to edit
+        <select id="customLibrary" class="editor-field"></select>
+      </label>
+      <button type="button" id="deleteCustomBtn" data-action="delete-custom" class="px-3 py-2 text-sm font-bold rounded-lg bg-red-100 text-red-900 comic-btn">Delete</button>
+      <button type="button" id="exportCustomBtn" data-action="export-custom" class="px-3 py-2 text-sm font-bold rounded-lg bg-blue-100 text-blue-900 comic-btn">Export JSON</button>
+      <button type="button" id="importCustomBtn" data-action="import-custom" class="px-3 py-2 text-sm font-bold rounded-lg bg-blue-100 text-blue-900 comic-btn">Import JSON</button>
+      <input type="file" id="customImport" accept=".json,application/json" hidden/>
+    </div>
+    <p id="editorStatus" class="mt-3 text-sm font-bold" role="status" hidden></p>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 items-start gap-5">
+      <form id="customStringForm" class="min-w-0 space-y-3">
+        <label for="customTitle" class="block text-sm font-bold">Title
+          <input id="customTitle" class="editor-field" maxlength="120" required/>
+        </label>
+        <label for="customGoal" class="block text-sm font-bold">Goal <span class="font-normal">(optional)</span>
+          <textarea id="customGoal" rows="2" class="editor-field" maxlength="1000"></textarea>
+        </label>
+        <p class="text-sm text-slate-700">Use <code>\(x^2\)</code> or <code>$x^2$</code> for math. Unicode math also works.</p>
+        <div id="customStepFields" class="space-y-3"></div>
+        <button type="button" id="addCustomStepBtn" data-action="add-step" class="px-3 py-1 text-sm font-bold rounded-lg bg-purple-100 comic-btn">Add Problem</button>
+        <details class="rounded-lg border border-slate-300 p-2">
+          <summary class="cursor-pointer text-sm font-bold">Paste multiple problems</summary>
+          <label for="customBulk" class="mt-2 block text-sm">Use one problem per line. Separate a problem and answer with <code> | </code>.</label>
+          <textarea id="customBulk" rows="3" class="editor-field" maxlength="24000"></textarea>
+          <button type="button" data-action="paste-steps" class="mt-2 px-3 py-1 text-sm font-bold rounded-lg bg-purple-100 comic-btn">Add Pasted Problems</button>
+        </details>
+        <label for="customConsolidation" class="block text-sm font-bold">Consolidation question <span class="font-normal">(optional)</span>
+          <textarea id="customConsolidation" rows="2" class="editor-field" maxlength="1000"></textarea>
+        </label>
+        <button type="submit" id="saveCustomBtn" class="w-full px-3 py-2 text-sm font-black rounded-xl bg-emerald-700 text-white comic-btn">Save &amp; Present</button>
+      </form>
+      <section class="min-w-0 rounded-xl border-2 border-slate-800 bg-purple-50 p-3 md:sticky md:top-0" aria-labelledby="previewHeading">
+        <h3 id="previewHeading" class="font-black">Live preview</h3>
+        <p id="previewStatus" class="mt-1 text-sm font-bold text-red-900" role="status" hidden></p>
+        <div id="customPreview" class="mt-2 max-h-96 overflow-y-auto p-1 space-y-2"></div>
+      </section>
+    </div>
+  </dialog>
+
+  <template id="presentationStepTemplate">
+    <li class="step-card min-w-0 p-3 rounded-xl border-2 border-slate-800 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 sm:gap-3">
+      <span data-part="number" class="w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-black grid place-items-center"></span>
+      <div class="min-w-0 space-y-2">
+        <p data-part="prompt" class="step-prompt math-text font-bold"></p>
+        <div data-part="controls" class="flex flex-wrap gap-2">
+          <button type="button" data-action="hint" class="px-2.5 py-1 text-sm font-bold rounded-lg border-2 border-slate-800 bg-amber-100 min-h-11">Hint</button>
+          <button type="button" data-action="answer" class="px-2.5 py-1 text-sm font-bold rounded-lg border-2 border-slate-800 bg-emerald-100 min-h-11">Answer</button>
+        </div>
+        <p data-part="hint" class="step-note math-text text-sm rounded-lg bg-amber-100 px-3 py-2 text-amber-950" hidden></p>
+        <p data-part="answer" class="step-note math-text text-sm rounded-lg bg-emerald-100 px-3 py-2 font-bold text-emerald-950" hidden></p>
+      </div>
+    </li>
+  </template>
+
+  <template id="customStepTemplate">
+    <fieldset class="min-w-0 rounded-lg border-2 border-slate-300 p-3 space-y-2">
+      <legend class="px-1 text-sm font-black"></legend>
+      <label class="block text-sm font-bold">Problem
+        <textarea data-field="prompt" rows="2" class="editor-field" maxlength="1000" required></textarea>
+      </label>
+      <label class="block text-sm font-bold">Hint <span class="font-normal">(optional)</span>
+        <textarea data-field="hint" rows="2" class="editor-field" maxlength="1000"></textarea>
+      </label>
+      <label class="block text-sm font-bold">Answer <span class="font-normal">(optional)</span>
+        <textarea data-field="answer" rows="2" class="editor-field" maxlength="1000"></textarea>
+      </label>
+      <button type="button" data-action="remove-step" class="px-3 py-1 text-sm font-bold rounded-lg bg-red-100 text-red-900 border-2 border-slate-800 min-h-11">Remove Problem</button>
+    </fieldset>
+  </template>
 
   <script>
+    'use strict';
     const BUILTIN_STRINGS = [
       {
-        id: 'exp-area',
-        unit: 'Expanding',
-        title: 'From Numbers to Binomials (Area Model)',
-        goal: 'Connect mental multiplication (partial products) to expanding (x + a)(x + b).',
-        consolidation: 'How is multiplying (x + 2)(x + 5) identical to multiplying 12 × 15?',
+        id: "exp-area",
+        unit: "Expanding",
+        title: "From Numbers to Binomials (Area Model)",
+        goal: "Connect partial products in whole-number multiplication to $(x+a)(x+b)$.",
+        consolidation: "In $(x+2)(x+5)$, what does each partial product become when you set $x=10$?",
         steps: [
-          { prompt: '10 × 14', hint: 'Think 10 × 10 + 10 × 4', answer: '140' },
-          { prompt: '12 × 15', hint: 'Break into (10 + 2)(10 + 5)', answer: '100 + 50 + 20 + 10 = 180' },
-          { prompt: '(x + 2)(10 + 5)', hint: 'Distribute (x + 2) across 10 and 5', answer: '15x + 30' },
-          { prompt: '(x + 2)(x + 5)', hint: '4 partial products in the area model', answer: 'x² + 7x + 10' },
-          { prompt: '(x − 3)(x + 5)', hint: 'Watch the negative sign on −3', answer: 'x² + 2x − 15' },
-          { prompt: '(2x + 1)(x + 4)', hint: '2x · x + 2x · 4 + 1 · x + 1 · 4', answer: '2x² + 9x + 4' }
+          { prompt: "Calculate $10\\times14$.", hint: "Split $14$ into $10+4$.", answer: "$140$" },
+          { prompt: "Calculate $12\\times15$.", hint: "Break it into $(10+2)(10+5)$.", answer: "$100+50+20+10=180$" },
+          { prompt: "Expand $(x+2)(10+5)$.", hint: "Distribute the first bracket across $10$ and $5$.", answer: "$15x+30$" },
+          { prompt: "Expand $(x+2)(x+5)$.", hint: "List the four partial products. Which two are like terms?", answer: "$x^2+7x+10$" },
+          { prompt: "Expand $(x-3)(x+5)$.", hint: "Mark both products that use $-3$.", answer: "$x^2+2x-15$" },
+          { prompt: "Expand $(2x+1)(x+4)$.", hint: "Start by multiplying $2x$ by each term in the second bracket.", answer: "$2x^2+9x+4$" },
         ]
       },
       {
-        id: 'exp-special',
-        unit: 'Expanding',
-        title: 'Special Products & Difference of Squares',
-        goal: 'Notice when the middle term cancels out vs. doubles.',
-        consolidation: 'Why does the middle term disappear in (2x − 3)(2x + 3) but NOT in (x + 4)²?',
+        id: "exp-special",
+        unit: "Expanding",
+        title: "Special Products & Difference of Squares",
+        goal: "Compare products whose middle terms cancel with products whose middle terms add.",
+        consolidation: "Why do the middle terms cancel in $(2x-3)(2x+3)$ and add in $(x+4)^2$?",
         steps: [
-          { prompt: '20² − 1²', hint: '400 − 1', answer: '399' },
-          { prompt: '19 × 21', hint: 'Write as (20 − 1)(20 + 1)', answer: '400 − 1 = 399' },
-          { prompt: '(x − 1)(x + 1)', hint: 'Middle terms: +x and −x', answer: 'x² − 1' },
-          { prompt: '(x − 5)(x + 5)', hint: 'Difference of squares', answer: 'x² − 25' },
-          { prompt: '(2x − 3)(2x + 3)', hint: '(2x)² − 3²', answer: '4x² − 9' },
-          { prompt: '(x + 4)²', hint: 'Careful! (x + 4)(x + 4)', answer: 'x² + 8x + 16' }
+          { prompt: "Calculate $20^2-1^2$.", hint: "Find each square before subtracting.", answer: "$399$" },
+          { prompt: "Calculate $19\\times21$.", hint: "Write it as $(20-1)(20+1)$.", answer: "$400-1=399$" },
+          { prompt: "Expand $(x-1)(x+1)$.", hint: "Compare the signs of the two $x$ terms.", answer: "$x^2-1$" },
+          { prompt: "Expand $(x-5)(x+5)$.", hint: "Which pieces play the roles of $a$ and $b$ in $(a-b)(a+b)$?", answer: "$x^2-25$" },
+          { prompt: "Expand $(2x-3)(2x+3)$.", hint: "The first square uses the full term $2x$.", answer: "$4x^2-9$" },
+          { prompt: "Expand $(x+4)^2$.", hint: "Write the square as $(x+4)(x+4)$ and compare its middle terms.", answer: "$x^2+8x+16$" },
         ]
       },
       {
-        id: 'fac-sumprod',
-        unit: 'Factoring',
-        title: 'Sum-Product Factoring Intuition',
-        goal: 'Reverse expansion by tracking how signs affect factors.',
-        consolidation: 'How do the signs of b and c tell you the signs inside the two brackets?',
+        id: "fac-sumprod",
+        unit: "Factoring",
+        title: "Sum-Product Factoring Intuition",
+        goal: "Reverse expansion by tracking the sum and product of the constants.",
+        consolidation: "In $x^2+bx+c$, which signs of $b$ and $c$ force two negative constants in the factors?",
         steps: [
-          { prompt: 'Expand: (x + 2)(x + 3)', hint: 'Sum is 5, product is 6', answer: 'x² + 5x + 6' },
-          { prompt: 'Factor: x² + 5x + 6', hint: 'Multiply to 6, add to 5', answer: '(x + 2)(x + 3)' },
-          { prompt: 'Factor: x² + 7x + 6', hint: 'Multiply to 6, add to 7', answer: '(x + 1)(x + 6)' },
-          { prompt: 'Factor: x² − 5x + 6', hint: 'Positive product, negative sum → both negative', answer: '(x − 2)(x − 3)' },
-          { prompt: 'Factor: x² − x − 6', hint: 'Negative product → opposite signs', answer: '(x − 3)(x + 2)' },
-          { prompt: 'Factor: 2x² − 2x − 12', hint: 'Always check for a GCF first!', answer: '2(x − 3)(x + 2)' }
+          { prompt: "Expand $(x+2)(x+3)$.", hint: "Find the sum and product of $2$ and $3$.", answer: "$x^2+5x+6$" },
+          { prompt: "Factor $x^2+5x+6$.", hint: "Look for a pair with product $6$ and sum $5$.", answer: "$(x+2)(x+3)$" },
+          { prompt: "Factor $x^2+7x+6$.", hint: "The product stayed $6$. Try a different factor pair.", answer: "$(x+1)(x+6)$" },
+          { prompt: "Factor $x^2-5x+6$.", hint: "A positive product and negative sum require two negative numbers.", answer: "$(x-2)(x-3)$" },
+          { prompt: "Factor $x^2-x-6$.", hint: "A negative product requires opposite signs. Which factor-pair member needs the minus sign?", answer: "$(x-3)(x+2)$" },
+          { prompt: "Factor $2x^2-2x-12$ completely.", hint: "Take out the GCF, then compare with the previous problem.", answer: "$2(x-3)(x+2)$" },
         ]
       },
       {
-        id: 'quad-forms',
-        unit: 'Quadratics',
-        title: 'Vertex & Roots from Equations',
-        goal: 'Read key features directly without expanding unnecessarily.',
-        consolidation: 'How can you find the vertex from factored form y = (x − 1)(x − 5) without completing the square?',
+        id: "quad-forms",
+        unit: "Quadratics",
+        title: "Vertex & Roots from Equations",
+        goal: "Read key features from vertex and factored forms of a quadratic.",
+        consolidation: "How can you find the vertex of $y=(x-1)(x-5)$ without expanding or completing the square?",
         steps: [
-          { prompt: 'Vertex of y = x²', hint: 'Parent parabola', answer: '(0, 0)' },
-          { prompt: 'Vertex of y = (x − 3)²', hint: 'Horizontal shift right 3', answer: '(3, 0)' },
-          { prompt: 'Vertex of y = (x − 3)² + 2', hint: 'Shift right 3, up 2', answer: '(3, 2)' },
-          { prompt: 'Vertex & Direction of y = −2(x − 3)² + 2', hint: 'a = −2 opens down', answer: 'Vertex (3, 2), opens down' },
-          { prompt: 'x-intercepts of y = (x − 1)(x − 5)', hint: 'Set y = 0', answer: 'x = 1 and x = 5' },
-          { prompt: 'Vertex of y = (x − 1)(x − 5)', hint: 'Axis of symmetry is halfway between 1 and 5', answer: 'x = 3 → y = (2)(−2) = −4 → (3, −4)' }
+          { prompt: "Find the vertex of $y=x^2$.", hint: "Where does the parent parabola attain its minimum?", answer: "$(0,0)$" },
+          { prompt: "Find the vertex of $y=(x-3)^2$.", hint: "Which $x$ makes the squared bracket zero?", answer: "$(3,0)$" },
+          { prompt: "Find the vertex of $y=(x-3)^2+2$.", hint: "What changed from the previous problem?", answer: "$(3,2)$" },
+          { prompt: "Find the vertex and opening direction of $y=-2(x-3)^2+2$.", hint: "Identify $h$ and $k$, then check the sign of $a$.", answer: "Vertex $(3,2)$. It opens downward." },
+          { prompt: "Find the $x$-intercepts of $y=(x-1)(x-5)$.", hint: "Set $y=0$ and use the zero-product property.", answer: "$(1,0)$ and $(5,0)$" },
+          { prompt: "Find the vertex of $y=(x-1)(x-5)$.", hint: "The axis of symmetry is halfway between the roots.", answer: "At $x=3$, $y=2(-2)=-4$. The vertex is $(3,-4)$." },
         ]
       },
       {
-        id: 'lin-sub',
-        unit: 'Linear Systems',
-        title: 'Mental Substitution & Balancing',
-        goal: 'Build algebraic substitution from simple number puzzles.',
-        consolidation: 'In the last two systems, what did we replace y with, and why?',
+        id: "lin-sub",
+        unit: "Linear Systems",
+        title: "Mental Substitution & Balancing",
+        goal: "Replace a variable with an equal number or expression.",
+        consolidation: "In the last two systems, which expression replaced $y$? Why does the resulting equation have just one variable?",
         steps: [
-          { prompt: 'x + 5 = 12', hint: 'What number plus 5 gives 12?', answer: 'x = 7' },
-          { prompt: '2x + 5 = 17', hint: '2x must equal 12', answer: 'x = 6' },
-          { prompt: 'x + y = 10  and  y = 4', hint: 'Substitute 4 for y', answer: '(6, 4)' },
-          { prompt: 'x + y = 10  and  y = x + 2', hint: 'Replace y with (x + 2)', answer: '2x + 2 = 10 → (4, 6)' },
-          { prompt: '2x + y = 14  and  y = 3x − 1', hint: '2x + (3x − 1) = 14', answer: '5x = 15 → (3, 8)' }
+          { prompt: "Solve $x+5=12$.", hint: "What number plus $5$ gives $12$?", answer: "$x=7$" },
+          { prompt: "Solve $2x+5=17$.", hint: "Undo the addition first.", answer: "$x=6$" },
+          { prompt: "Solve $x+y=10$ and $y=4$.", hint: "Substitute $4$ for $y$.", answer: "$(6,4)$" },
+          { prompt: "Solve $x+y=10$ and $y=x+2$.", hint: "Use the whole expression $x+2$ in place of $y$.", answer: "$2x+2=10$, so $(x,y)=(4,6)$." },
+          { prompt: "Solve $2x+y=14$ and $y=3x-1$.", hint: "Write $2x+(3x-1)=14$ before collecting terms.", answer: "$5x=15$, so $(x,y)=(3,8)$." },
         ]
       },
       {
-        id: 'lin-elim',
-        unit: 'Linear Systems',
-        title: 'Elimination by Adding or Subtracting',
-        goal: 'Spot matching or opposite coefficients before multiplying.',
-        consolidation: 'When should we ADD the two equations, and when should we SUBTRACT?',
+        id: "lin-elim",
+        unit: "Linear Systems",
+        title: "Elimination by Adding or Subtracting",
+        goal: "Choose addition or subtraction by comparing coefficients.",
+        consolidation: "What sign pattern tells you to add the equations? What sign pattern tells you to subtract?",
         steps: [
-          { prompt: '2a + b = 10  and  2a − b = 6', hint: 'Add equations to eliminate b', answer: '4a = 16 → a = 4, b = 2' },
-          { prompt: '3x + 2y = 16  and  3x − 2y = 8', hint: 'Add to eliminate y', answer: '6x = 24 → (4, 2)' },
-          { prompt: 'x + 2y = 11  and  2x + 2y = 14', hint: 'Subtract to eliminate 2y', answer: 'x = 3, y = 4' },
-          { prompt: '2x + 3y = 13  and  4x − 3y = 5', hint: 'Opposite signs on 3y → add!', answer: '6x = 18 → (3, 7/3)' }
+          { prompt: "Solve $2a+b=10$ and $2a-b=6$.", hint: "What happens to $b$ when you add the equations?", answer: "$4a=16$, so $a=4$ and $b=2$." },
+          { prompt: "Solve $3x+2y=16$ and $3x-2y=8$.", hint: "Check which coefficients are opposites.", answer: "$6x=24$, so $(x,y)=(4,2)$." },
+          { prompt: "Solve $x+2y=11$ and $2x+2y=14$.", hint: "Subtract one whole equation from the other.", answer: "$(3,4)$" },
+          { prompt: "Solve $2x+3y=13$ and $4x-3y=5$.", hint: "The $y$-coefficients are opposites again. What has changed about the $x$-coefficients?", answer: "$6x=18$, so $(x,y)=\\left(3,\\frac{7}{3}\\right)$." },
         ]
       },
       {
-        id: 'trig-soh',
-        unit: 'Trigonometry',
-        title: 'Similar Triangles & SOHCAHTOA',
-        goal: 'Understand trig ratios as constant side ratios for a given angle.',
-        consolidation: 'Why does sin(30°) stay 0.5 even when the triangle doubles in size?',
+        id: "trig-soh",
+        unit: "Trigonometry",
+        title: "Similar Triangles & SOHCAHTOA",
+        goal: "Connect similarity and invariant side ratios to sine and tangent.",
+        consolidation: "Why does $\\sin(30^\\circ)$ stay the same when all side lengths double?",
         steps: [
-          { prompt: 'Right triangle sides 3, 4, 5: find Opp/Hyp for ∠ opposite 3', hint: 'Opposite = 3, Hypotenuse = 5', answer: '3/5 = 0.6' },
-          { prompt: 'Double the triangle (6, 8, 10): find Opp/Hyp for the same angle', hint: '6/10 simplifies to...', answer: '6/10 = 0.6 (unchanged!)' },
-          { prompt: 'If sin(30°) = 0.5 and Hyp = 10, find Opp', hint: 'Opp / 10 = 0.5', answer: 'Opp = 5' },
-          { prompt: 'If sin(30°) = 0.5 and Hyp = 14, find Opp', hint: 'Half of 14', answer: 'Opp = 7' },
-          { prompt: 'If tan(45°) = 1 and Adj = 9, find Opp', hint: 'Opp / Adj = 1', answer: 'Opp = 9' }
+          { prompt: "A right triangle has side lengths $3,4,5$. Find the opposite-to-hypotenuse ratio for the angle opposite side $3$.", hint: "The side of length $5$ is the hypotenuse.", answer: "$\\frac{3}{5}=0.6$" },
+          { prompt: "Double the side lengths to $6,8,10$. Find the ratio for the corresponding angle.", hint: "Both entries in the ratio have been multiplied by $2$.", answer: "$\\frac{6}{10}=0.6$" },
+          { prompt: "In a right triangle, find the side opposite $30^\\circ$ if the hypotenuse is $10$.", hint: "Use $\\sin(30^\\circ)=0.5$ and write the ratio first.", answer: "The opposite side is $5$." },
+          { prompt: "Find the side opposite $30^\\circ$ if the hypotenuse is $14$.", hint: "Use the same sine ratio with the new hypotenuse.", answer: "The opposite side is $7$." },
+          { prompt: "Find the side opposite $45^\\circ$ if the adjacent leg is $9$.", hint: "Use $\\tan(45^\\circ)=1$ and compare the two legs.", answer: "The opposite side is $9$." },
         ]
-      }
+      },
     ];
 
     const CURRICULUM_100_STRINGS = [
@@ -245,32 +344,32 @@
     "id": "expa-1-5",
     "unit": "Exp A: Quadratics (Expand/Factor)",
     "title": "Quadratics (Expand/Factor) — Set 1 (#1–5)",
-    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Use distribution to predict the middle term in squares and conjugate products.",
+    "consolidation": "Compare $(4x-1)^2$ and $(5x+2y)(5x-2y)$. What tells you whether the cross terms add or cancel?",
     "steps": [
       {
         "prompt": "Expand and simplify: $(x + 4)(x - 7)$",
-        "hint": "",
+        "hint": "Mark the two cross products before combining like terms.",
         "answer": "$x^2 - 3x - 28$"
       },
       {
         "prompt": "Expand and simplify: $(2x - 3)(3x + 5)$",
-        "hint": "",
+        "hint": "Keep the signs on both cross products: $(2x)(5)$ and $(-3)(3x)$.",
         "answer": "$6x^2 + x - 15$"
       },
       {
         "prompt": "Expand and simplify: $(4x - 1)^2$",
-        "hint": "",
+        "hint": "Write two copies of the binomial. Each contributes one cross product.",
         "answer": "$16x^2 - 8x + 1$"
       },
       {
         "prompt": "Expand and simplify: $3(x - 2)^2 - 5x + 1$",
-        "hint": "",
+        "hint": "Expand the square first, then distribute the $3$ to every term.",
         "answer": "$3x^2 - 17x + 13$"
       },
       {
         "prompt": "Expand and simplify: $(5x + 2y)(5x - 2y)$",
-        "hint": "",
+        "hint": "Look for conjugate factors. Which cross products cancel?",
         "answer": "$25x^2 - 4y^2$"
       }
     ]
@@ -279,32 +378,32 @@
     "id": "expa-6-10",
     "unit": "Exp A: Quadratics (Expand/Factor)",
     "title": "Quadratics (Expand/Factor) — Set 2 (#6–10)",
-    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Separate common factoring, sum-product, and decomposition.",
+    "consolidation": "Why do you compare factor pairs of $c$ for a monic trinomial and of $ac$ for the last two trinomials?",
     "steps": [
       {
         "prompt": "Common factor completely: $12x^3y^2 - 18x^2y^3 + 6xy$",
-        "hint": "",
+        "hint": "Find the coefficient GCF and the smallest exponent of each shared variable.",
         "answer": "$6xy(2x^2y - 3xy^2 + 1)$"
       },
       {
         "prompt": "Factor the simple trinomial: $x^2 - 11x + 24$",
-        "hint": "",
+        "hint": "Look for two numbers with product $24$ and sum $-11$.",
         "answer": "$(x - 3)(x - 8)$"
       },
       {
         "prompt": "Factor the simple trinomial: $x^2 + 5x - 36$",
-        "hint": "",
+        "hint": "A negative product means opposite signs. Which absolute value must be bigger?",
         "answer": "$(x + 9)(x - 4)$"
       },
       {
         "prompt": "Factor the complex trinomial: $3x^2 + 11x + 6$",
-        "hint": "",
+        "hint": "Find two numbers with product $18$ and sum $11$, then split the middle term.",
         "answer": "$(3x + 2)(x + 3)$"
       },
       {
         "prompt": "Factor the complex trinomial: $6x^2 - 7x - 5$",
-        "hint": "",
+        "hint": "Use product $-30$ and sum $-7$. Group the resulting four terms.",
         "answer": "$(2x + 1)(3x - 5)$"
       }
     ]
@@ -313,32 +412,32 @@
     "id": "expa-11-15",
     "unit": "Exp A: Quadratics (Expand/Factor)",
     "title": "Quadratics (Expand/Factor) — Set 3 (#11–15)",
-    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Look for a GCF and recognize when the remaining factors can split further.",
+    "consolidation": "Why is $2(x^2-25)$ a correct first step but an incomplete factorization?",
     "steps": [
       {
         "prompt": "Factor the complex trinomial: $4x^2 - 16x + 15$",
-        "hint": "",
+        "hint": "Find two numbers with product $60$ and sum $-16$, then group.",
         "answer": "$(2x - 3)(2x - 5)$"
       },
       {
         "prompt": "Factor the difference of squares: $49x^2 - 81$",
-        "hint": "",
+        "hint": "Rewrite each term as a square. Use $A^2-B^2=(A-B)(A+B)$.",
         "answer": "$(7x - 9)(7x + 9)$"
       },
       {
         "prompt": "Factor the difference of squares: $100a^2 - 9b^2$",
-        "hint": "",
+        "hint": "Include the variables when taking the square root of each displayed term.",
         "answer": "$(10a - 3b)(10a + 3b)$"
       },
       {
         "prompt": "Factor completely: $2x^2 - 50$",
-        "hint": "",
+        "hint": "Factor out $2$, then inspect the remaining binomial for two squares.",
         "answer": "$2(x - 5)(x + 5)$"
       },
       {
         "prompt": "Factor completely: $5x^2 + 25x + 30$",
-        "hint": "",
+        "hint": "Take out $5$ and use the sum and product of the remaining trinomial.",
         "answer": "$5(x + 2)(x + 3)$"
       }
     ]
@@ -347,32 +446,32 @@
     "id": "expa-16-20",
     "unit": "Exp A: Quadratics (Expand/Factor)",
     "title": "Quadratics (Expand/Factor) — Set 4 (#16–20)",
-    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Distinguish square trinomials, grouping, and GCF followed by difference of squares.",
+    "consolidation": "How do you distinguish $(A-B)^2$ from $A^2-B^2$ by checking the middle and constant terms?",
     "steps": [
       {
         "prompt": "Factor the perfect square trinomial: $9x^2 + 24x + 16$",
-        "hint": "",
+        "hint": "The first and last terms are squares. Compare the middle term with $2(3x)(4)$.",
         "answer": "$(3x + 4)^2$"
       },
       {
         "prompt": "Factor the perfect square trinomial: $25x^2 - 30x + 9$",
-        "hint": "",
+        "hint": "Use the same middle-term test, then decide the sign inside the repeated factor.",
         "answer": "$(5x - 3)^2$"
       },
       {
         "prompt": "Factor by grouping: $ax + ay + 2x + 2y$",
-        "hint": "",
+        "hint": "Group the first two terms and the last two. What binomial do the groups share?",
         "answer": "$(x + y)(a + 2)$"
       },
       {
         "prompt": "Factor completely: $3x^3 - 12x$",
-        "hint": "",
+        "hint": "Factor out the shared monomial, then inspect the bracket for a difference of squares.",
         "answer": "$3x(x - 2)(x + 2)$"
       },
       {
         "prompt": "Expand and simplify: $(2x + 1)(x - 4) - (x + 3)(x - 3)$",
-        "hint": "",
+        "hint": "Keep the second product in brackets until you distribute its minus sign.",
         "answer": "$x^2 - 7x + 5$"
       }
     ]
@@ -381,32 +480,32 @@
     "id": "expa-21-25",
     "unit": "Exp A: Quadratics (Expand/Factor)",
     "title": "Quadratics (Expand/Factor) — Set 5 (#21–25)",
-    "goal": "Expectation A: Quadratic Expressions (Expanding & Factoring)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Select a factoring method and check a proposed factorization by expanding.",
+    "consolidation": "Use $(x+a)^2$ and $(x-a)^2$ to explain why changing the middle coefficient’s sign preserves the constant term.",
     "steps": [
       {
         "prompt": "Factor completely: $8x^2 - 2x - 3$",
-        "hint": "",
+        "hint": "Split the middle term using a pair with product $-24$ and sum $-2$.",
         "answer": "$(4x - 3)(2x + 1)$"
       },
       {
         "prompt": "Factor completely: $-x^2 + 9x - 14$",
-        "hint": "",
+        "hint": "Factor out $-1$ first so the trinomial inside begins with $x^2$.",
         "answer": "$-(x - 2)(x - 7)$"
       },
       {
         "prompt": "Expand and simplify: $2(3x - 4)(x + 2)$",
-        "hint": "",
+        "hint": "Expand the two binomials, then distribute the outside factor.",
         "answer": "$6x^2 + 4x - 16$"
       },
       {
         "prompt": "Factor completely: $12x^2 - 27y^2$",
-        "hint": "",
+        "hint": "Remove the GCF before checking whether the two remaining terms are squares.",
         "answer": "$3(2x - 3y)(2x + 3y)$"
       },
       {
         "prompt": "Find $k$ so that the expression is a perfect square trinomial: $x^2 + kx + 64$",
-        "hint": "",
+        "hint": "If the constant term is $64$, what are both possibilities for the constant inside a squared binomial?",
         "answer": "$k = \\pm 16$"
       }
     ]
@@ -415,32 +514,32 @@
     "id": "expb-1-5",
     "unit": "Exp B: Quadratic Equations",
     "title": "Quadratic Equations — Set 1 (#1–5)",
-    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Use the zero-product property and switch to the quadratic formula when appropriate.",
+    "consolidation": "Why does dividing $3x^2-12x=0$ by $x$ risk losing a solution?",
     "steps": [
       {
         "prompt": "Solve by factoring: $x^2 - 9x + 20 = 0$",
-        "hint": "",
+        "hint": "Find two constants with product $20$ and sum $-9$.",
         "answer": "$x = 4, x = 5$"
       },
       {
         "prompt": "Solve by factoring: $2x^2 + 5x - 3 = 0$",
-        "hint": "",
+        "hint": "Factor by decomposition, then set each linear factor equal to zero.",
         "answer": "$x = \\frac{1}{2}, x = -3$"
       },
       {
         "prompt": "Solve by factoring: $4x^2 - 25 = 0$",
-        "hint": "",
+        "hint": "Use difference of squares, then solve both linear equations.",
         "answer": "$x = \\frac{5}{2}, x = -\\frac{5}{2}$"
       },
       {
         "prompt": "Solve by factoring: $3x^2 - 12x = 0$",
-        "hint": "",
+        "hint": "Factor out the shared $x$ rather than dividing the equation by it.",
         "answer": "$x = 0, x = 4$"
       },
       {
         "prompt": "Solve using the quadratic formula (exact values): $x^2 + 4x - 2 = 0$",
-        "hint": "",
+        "hint": "Substitute $a=1$, $b=4$, and $c=-2$. Simplify the radical before dividing.",
         "answer": "$x = -2 \\pm \\sqrt{6}$"
       }
     ]
@@ -449,32 +548,32 @@
     "id": "expb-6-10",
     "unit": "Exp B: Quadratic Equations",
     "title": "Quadratic Equations — Set 2 (#6–10)",
-    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Use the discriminant to classify roots and complete the square to expose a vertex.",
+    "consolidation": "How does the sign of $b^2-4ac$ compare with what you see when a parabola crosses, touches, or misses the $x$-axis?",
     "steps": [
       {
         "prompt": "Solve using the quadratic formula (exact values): $2x^2 - 3x - 4 = 0$",
-        "hint": "",
+        "hint": "Show the substitution for $-b$ and the discriminant separately before combining them.",
         "answer": "$x = \\frac{3 \\pm \\sqrt{41}}{4}$"
       },
       {
         "prompt": "Determine the number of real roots using the discriminant: $3x^2 - 5x + 4 = 0$",
-        "hint": "",
+        "hint": "Put brackets around $-5$ when squaring $b$. Use the sign of the result.",
         "answer": "$0$ real roots ($D = -23$)"
       },
       {
         "prompt": "Determine the number of real roots using the discriminant: $4x^2 - 12x + 9 = 0$",
-        "hint": "",
+        "hint": "Calculate the discriminant, then decide how many distinct real roots it gives.",
         "answer": "$1$ real root ($D = 0$)"
       },
       {
         "prompt": "Convert to vertex form by completing the square: $y = x^2 + 6x + 5$",
-        "hint": "",
+        "hint": "Add and subtract the square of half the $x$-coefficient.",
         "answer": "$y = (x + 3)^2 - 4$"
       },
       {
         "prompt": "Convert to vertex form by completing the square: $y = x^2 - 10x + 28$",
-        "hint": "",
+        "hint": "Half of $-10$ is negative. Its square is positive. Show both terms you insert.",
         "answer": "$y = (x - 5)^2 + 3$"
       }
     ]
@@ -483,32 +582,32 @@
     "id": "expb-11-15",
     "unit": "Exp B: Quadratic Equations",
     "title": "Quadratic Equations — Set 3 (#11–15)",
-    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Read features in the most useful form and account for the leading coefficient.",
+    "consolidation": "Why must you factor $a$ out of the first two terms before completing the square in $ax^2+bx+c$ when $a\\ne1$?",
     "steps": [
       {
         "prompt": "Convert to vertex form by completing the square: $y = 2x^2 + 8x - 3$",
-        "hint": "",
+        "hint": "Factor $2$ from the quadratic and linear terms. Compensate for any term added inside the bracket.",
         "answer": "$y = 2(x + 2)^2 - 11$"
       },
       {
         "prompt": "Convert to vertex form by completing the square: $y = -3x^2 + 12x - 7$",
-        "hint": "",
+        "hint": "Factor $-3$ from the first two terms. Watch how it changes the sign of the compensation.",
         "answer": "$y = -3(x - 2)^2 + 5$"
       },
       {
         "prompt": "State the vertex of the parabola: $y = -2(x - 4)^2 + 9$",
-        "hint": "",
+        "hint": "Compare the equation with $y=a(x-h)^2+k$. Which $x$ makes the square zero?",
         "answer": "$(4, 9)$"
       },
       {
         "prompt": "Find the axis of symmetry of the parabola: $y = 3(x + 7)(x - 1)$",
-        "hint": "",
+        "hint": "Find the two zeros first and average their $x$-coordinates.",
         "answer": "$x = -3$"
       },
       {
         "prompt": "Find the $y$-intercept of the quadratic relation: $y = 2(x - 3)^2 - 5$",
-        "hint": "",
+        "hint": "Set $x=0$. Apply the square before multiplying by $2$ and subtracting $5$.",
         "answer": "$(0, 13)$"
       }
     ]
@@ -517,32 +616,32 @@
     "id": "expb-16-20",
     "unit": "Exp B: Quadratic Equations",
     "title": "Quadratic Equations — Set 4 (#16–20)",
-    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Build quadratic equations from features and find extrema or roots.",
+    "consolidation": "What piece of information determines $a$ when the vertex or both roots are already known?",
     "steps": [
       {
         "prompt": "Find the equation in vertex form with vertex $(2, -5)$ passing through $(4, 7)$:",
-        "hint": "",
+        "hint": "Start with $y=a(x-2)^2-5$ and substitute the given point to find $a$.",
         "answer": "$y = 3(x - 2)^2 - 5$"
       },
       {
         "prompt": "Find the equation in factored form with $x$-intercepts $-3$ and $5$, passing through $(1, -16)$:",
-        "hint": "",
+        "hint": "Build factors using the two zeros, then use the given point to find the multiplier.",
         "answer": "$y = (x + 3)(x - 5)$"
       },
       {
         "prompt": "Find the maximum or minimum value of: $y = -4x^2 + 16x + 3$",
-        "hint": "",
+        "hint": "Use $x=-\\frac{b}{2a}$ to locate the vertex and substitute back for its height.",
         "answer": "$\\text{Maximum value of } 19$"
       },
       {
         "prompt": "Solve for $x$: $(x - 3)^2 = 16$",
-        "hint": "",
+        "hint": "Take the positive and negative square roots of $16$ before isolating $x$.",
         "answer": "$x = 7, x = -1$"
       },
       {
         "prompt": "Solve for $x$: $5x^2 - 20 = 0$",
-        "hint": "",
+        "hint": "Isolate $x^2$ first. Include both signs when you take square roots.",
         "answer": "$x = 2, x = -2$"
       }
     ]
@@ -551,32 +650,32 @@
     "id": "expb-21-25",
     "unit": "Exp B: Quadratic Equations",
     "title": "Quadratic Equations — Set 5 (#21–25)",
-    "goal": "Expectation B: Quadratic Equations & Relations (Vertex, Roots & Properties)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Choose a form to expand, identify features, or model a situation.",
+    "consolidation": "How do the application’s units and domain help you interpret a root or a vertex in an equation?",
     "steps": [
       {
         "prompt": "Rewrite in standard form: $y = -2(x + 1)^2 + 6$",
-        "hint": "",
+        "hint": "Expand the square and distribute $-2$ before combining the constants.",
         "answer": "$y = -2x^2 - 4x + 4$"
       },
       {
         "prompt": "Rewrite in standard form: $y = 4(x - 2)(x + 5)$",
-        "hint": "",
+        "hint": "Find the three terms of the binomial product before multiplying by $4$.",
         "answer": "$y = 4x^2 + 12x - 40$"
       },
       {
-        "prompt": "A ball's height is modeled by $h = -5t^2 + 20t + 1$. Find the maximum height.",
-        "hint": "",
+        "prompt": "A ball's height $h$ in metres after $t$ seconds is modeled by $h = -5t^2 + 20t + 1$. Find the maximum height.",
+        "hint": "Find the vertex time using $t=-\\frac{b}{2a}$, then substitute it into $h(t)$.",
         "answer": "$21\\text{ m}$"
       },
       {
         "prompt": "Find two consecutive positive integers whose product is $72$.",
-        "hint": "",
+        "hint": "Use $n$ and $n+1$ for the integers. Keep the solution with $n>0$.",
         "answer": "$8 \\text{ and } 9$"
       },
       {
         "prompt": "Determine the $x$-intercepts of: $y = 6x^2 + x - 2$",
-        "hint": "",
+        "hint": "Factor the expression after setting $y=0$. Report the zeros as coordinate pairs.",
         "answer": "$\\left(\\frac{1}{2}, 0\\right) \\text{ and } \\left(-\\frac{2}{3}, 0\\right)$"
       }
     ]
@@ -585,32 +684,32 @@
     "id": "expc-1-5",
     "unit": "Exp C: Linear Systems",
     "title": "Linear Systems — Set 1 (#1–5)",
-    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Decide whether substitution or elimination gives the shorter start.",
+    "consolidation": "Which systems let you eliminate a variable immediately? What signals that substitution is easier?",
     "steps": [
       {
         "prompt": "Solve the linear system by substitution: $y = 2x - 1$ and $3x + y = 14$",
-        "hint": "",
+        "hint": "Replace $y$ in the second equation with $2x-1$.",
         "answer": "$(3, 5)$"
       },
       {
         "prompt": "Solve the linear system by substitution: $x = 4y + 3$ and $2x - 5y = 12$",
-        "hint": "",
+        "hint": "Substitute for $x$ in the second equation and distribute the $2$.",
         "answer": "$(11, 2)$"
       },
       {
         "prompt": "Solve the linear system by elimination: $2x + 3y = 12$ and $5x - 3y = 9$",
-        "hint": "",
+        "hint": "The $y$-coefficients are opposites. Add both sides of the equations.",
         "answer": "$(3, 2)$"
       },
       {
         "prompt": "Solve the linear system by elimination: $4x + 5y = 23$ and $4x + 2y = 14$",
-        "hint": "",
+        "hint": "The $x$-coefficients are equal. Subtract one equation from the other.",
         "answer": "$(2, 3)$"
       },
       {
         "prompt": "Solve the linear system by elimination: $3x + 2y = 16$ and $5x + 3y = 25$",
-        "hint": "",
+        "hint": "Multiply the first equation by $3$ and the second by $2$ to match the $y$-coefficients.",
         "answer": "$(2, 5)$"
       }
     ]
@@ -619,32 +718,32 @@
     "id": "expc-6-10",
     "unit": "Exp C: Linear Systems",
     "title": "Linear Systems — Set 2 (#6–10)",
-    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Clear fractions or decimals and recognize dependent and inconsistent systems.",
+    "consolidation": "When the coefficients become proportional, how do the constants tell you whether the lines coincide or are parallel and distinct?",
     "steps": [
       {
         "prompt": "Solve the linear system by elimination: $2x - 3y = -13$ and $4x + 5y = 7$",
-        "hint": "",
+        "hint": "Double the first equation so its $x$-coefficient matches the second.",
         "answer": "$(-2, 3)$"
       },
       {
         "prompt": "Solve the linear system with fractions: $\\frac{x}{2} + \\frac{y}{3} = 4$ and $x - y = 3$",
-        "hint": "",
+        "hint": "Multiply the first equation by $6$ to clear both denominators.",
         "answer": "$(6, 3)$"
       },
       {
         "prompt": "Solve the linear system with decimals: $0.2x + 0.5y = 2.6$ and $0.4x - 0.1y = 0.8$",
-        "hint": "",
+        "hint": "Multiply each equation by $10$, including its right-hand side.",
         "answer": "$(3, 4)$"
       },
       {
         "prompt": "Determine the number of solutions for the system: $2x - y = 5$ and $4x - 2y = 10$",
-        "hint": "",
+        "hint": "Multiply the first equation by $2$ and compare every term.",
         "answer": "$\\text{Infinitely many solutions}$"
       },
       {
         "prompt": "Determine the number of solutions for the system: $3x + 6y = 12$ and $x + 2y = 5$",
-        "hint": "",
+        "hint": "Divide the first equation by $3$. What differs between the two simplified equations?",
         "answer": "$\\text{No solution (parallel lines)}$"
       }
     ]
@@ -653,32 +752,32 @@
     "id": "expc-11-15",
     "unit": "Exp C: Linear Systems",
     "title": "Linear Systems — Set 3 (#11–15)",
-    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Interpret a system’s solution as an intersection or as two unknown quantities in context.",
+    "consolidation": "How can you verify a solution pair using both original equations? What do the two checks mean in the ticket problem?",
     "steps": [
       {
         "prompt": "Find the point of intersection of: $y = -3x + 7$ and $y = 2x - 8$",
-        "hint": "",
+        "hint": "At the intersection the two expressions for $y$ are equal.",
         "answer": "$(3, -2)$"
       },
       {
         "prompt": "Find the point of intersection of: $x + y = 10$ and $x - y = 4$",
-        "hint": "",
+        "hint": "Add the equations so the $y$ terms disappear.",
         "answer": "$(7, 3)$"
       },
       {
         "prompt": "Solve for $x$ and $y$: $7x - 2y = 5$ and $3x + 4y = 21$",
-        "hint": "",
+        "hint": "Double the first equation, then add it to the second to eliminate $y$.",
         "answer": "$\\left(\\frac{31}{17}, \\frac{66}{17}\\right)$"
       },
       {
         "prompt": "The sum of two numbers is $45$ and their difference is $13$. Find the numbers.",
-        "hint": "",
+        "hint": "Let $u$ be the larger number. Write a sum equation and a difference equation.",
         "answer": "$29 \\text{ and } 16$"
       },
       {
         "prompt": "Tickets cost $\\$8$ for students and $\\$12$ for adults. If $50$ tickets sold for $\\$480$, how many student tickets were sold?",
-        "hint": "",
+        "hint": "Write one equation for the number of tickets and one for revenue.",
         "answer": "$30 \\text{ student tickets}$"
       }
     ]
@@ -687,32 +786,32 @@
     "id": "expc-16-20",
     "unit": "Exp C: Linear Systems",
     "title": "Linear Systems — Set 4 (#16–20)",
-    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Prepare equations for elimination and check whether lines intersect.",
+    "consolidation": "Why do matching slopes alone leave two possibilities? Explain what the constant tells you after matching coefficients.",
     "steps": [
       {
         "prompt": "Solve the system: $3(x - 1) + 2y = 7$ and $2x - (y + 2) = 5$",
-        "hint": "",
-        "answer": "$(3, -1)$"
+        "hint": "Distribute $3$ and distribute the minus sign in the second equation before eliminating.",
+        "answer": "$\\left(\\frac{24}{7},-\\frac{1}{7}\\right)$"
       },
       {
         "prompt": "Find $k$ so that the lines $kx + 4y = 8$ and $3x + 2y = 5$ have no point of intersection.",
-        "hint": "",
+        "hint": "Scale the second equation so the $y$-coefficient is $4$ and compare the constants.",
         "answer": "$k = 6$"
       },
       {
         "prompt": "Solve the system: $5x + 4y = -2$ and $3x - 2y = 12$",
-        "hint": "",
+        "hint": "Double the second equation to make the $y$-terms opposites.",
         "answer": "$(2, -3)$"
       },
       {
         "prompt": "A chemistry lab needs $100\\text{ mL}$ of $20\\%$ acid using $10\\%$ and $35\\%$ solutions. How much $10\\%$ solution is needed?",
-        "hint": "",
+        "hint": "Let $u$ and $v$ be the two volumes. Write one total-volume and one pure-acid equation.",
         "answer": "$60\\text{ mL}$"
       },
       {
         "prompt": "Solve the system: $y = \\frac{1}{2}x + 3$ and $y = -\\frac{3}{2}x + 11$",
-        "hint": "",
+        "hint": "Set the right-hand sides equal, then use either original equation to find $y$.",
         "answer": "$(4, 5)$"
       }
     ]
@@ -721,32 +820,32 @@
     "id": "expc-21-25",
     "unit": "Exp C: Linear Systems",
     "title": "Linear Systems — Set 5 (#21–25)",
-    "goal": "Expectation C: Linear Systems (Substitution, Elimination & Applications)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Set up equations from angle, speed, and graph information.",
+    "consolidation": "In the boat problem, why do adding and subtracting the two speeds isolate different quantities?",
     "steps": [
       {
         "prompt": "Two angles are supplementary. One angle is $24^\\circ$ more than twice the other. Find both angles.",
-        "hint": "",
+        "hint": "Let the smaller angle be $a$. Supplementary means their sum is $180^\\circ$.",
         "answer": "$52^\\circ \\text{ and } 128^\\circ$"
       },
       {
         "prompt": "Solve for $x$ and $y$: $6x - 5y = 27$ and $2x + 3y = -5$",
-        "hint": "",
+        "hint": "Multiply the second equation by $3$ and subtract to eliminate $x$.",
         "answer": "$(2, -3)$"
       },
       {
         "prompt": "Find the point of intersection of $x = -4$ and $3x - 2y = 6$.",
-        "hint": "",
+        "hint": "Substitute the known $x$-coordinate into the other equation.",
         "answer": "$(-4, -9)$"
       },
       {
         "prompt": "Solve the system: $4x - 3y = 18$ and $6x + 5y = 8$",
-        "hint": "",
+        "hint": "Use $12x$ as the common $x$-term, then subtract.",
         "answer": "$(3, -2)$"
       },
       {
         "prompt": "A boat travels $36\\text{ km}$ downstream in $2\\text{ hours}$ and returns upstream in $3\\text{ hours}$. Find the speed of the current.",
-        "hint": "",
+        "hint": "Find each speed from distance divided by time. The current adds downstream and subtracts upstream.",
         "answer": "$3\\text{ km/h}$"
       }
     ]
@@ -755,32 +854,32 @@
     "id": "expd-1-5",
     "unit": "Exp D: Analytic Geometry",
     "title": "Analytic Geometry — Set 1 (#1–5)",
-    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Connect midpoint, distance, and an origin-centred circle.",
+    "consolidation": "How does the distance formula with one endpoint at the origin lead to the equation of an origin-centred circle?",
     "steps": [
       {
         "prompt": "Find the midpoint of the line segment joining $A(-4, 7)$ and $B(8, -3)$.",
-        "hint": "",
+        "hint": "Average the two coordinates separately. Keep the signs on both endpoints.",
         "answer": "$(2, 2)$"
       },
       {
         "prompt": "Find the exact length of the line segment joining $P(1, -2)$ and $Q(6, 10)$.",
-        "hint": "",
+        "hint": "Find the horizontal and vertical changes, then use Pythagoras.",
         "answer": "$13$"
       },
       {
         "prompt": "Find the exact length of the line segment joining $M(-3, 4)$ and $N(2, -1)$.",
-        "hint": "",
+        "hint": "Compare the absolute horizontal and vertical changes. Factor a perfect square out of the radicand.",
         "answer": "$5\\sqrt{2}$"
       },
       {
         "prompt": "If $M(3, -1)$ is the midpoint of $AB$ and $A$ is $(-2, 5)$, find the coordinates of $B$.",
-        "hint": "",
+        "hint": "Use the midpoint formula in reverse for $x$ and for $y$.",
         "answer": "$(8, -7)$"
       },
       {
         "prompt": "Find the equation of a circle centered at $(0, 0)$ with radius $7$.",
-        "hint": "",
+        "hint": "Use $x^2+y^2=r^2$ with the given radius.",
         "answer": "$x^2 + y^2 = 49$"
       }
     ]
@@ -789,33 +888,33 @@
     "id": "expd-6-10",
     "unit": "Exp D: Analytic Geometry",
     "title": "Analytic Geometry — Set 2 (#6–10)",
-    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Use squared distance to classify points and slope to compare lines.",
+    "consolidation": "Why is comparing $x^2+y^2$ with $r^2$ enough to classify a point without taking square roots?",
     "steps": [
       {
         "prompt": "Find the radius of the circle with equation $x^2 + y^2 = 121$.",
-        "hint": "",
+        "hint": "The right-hand side is $r^2$. A radius is a nonnegative length.",
         "answer": "$r = 11$"
       },
       {
         "prompt": "Find the equation of a circle centered at $(0, 0)$ passing through $(-3, 4)$.",
-        "hint": "",
+        "hint": "Substitute the point to find the value of $r^2$.",
         "answer": "$x^2 + y^2 = 25$"
       },
       {
         "prompt": "Determine whether the point $(4, -5)$ lies inside, outside, or on the circle $x^2 + y^2 = 40$.",
-        "hint": "",
+        "hint": "Compare $4^2+(-5)^2$ with the stated radius squared.",
         "answer": "$\\text{Outside } (4^2 + (-5)^2 = 41 > 40)$"
       },
       {
         "prompt": "Find the slope of the line perpendicular to $3x - 4y + 12 = 0$.",
-        "hint": "",
+        "hint": "Solve the displayed equation for $y$, then take the negative reciprocal of its slope.",
         "answer": "$m = -\\frac{4}{3}$"
       },
       {
-        "prompt": "Find the equation of the line parallel to $y = 2x - 5$ passing through $(3, 1)$.",
-        "hint": "",
-        "answer": "$y = 2x - 5$"
+        "prompt": "Find the equation of the line parallel to $y=2x-5$ passing through $(3,2)$.",
+        "hint": "Use the original slope and the new point to find a different intercept.",
+        "answer": "$y=2x-4$"
       }
     ]
   },
@@ -823,32 +922,32 @@
     "id": "expd-11-15",
     "unit": "Exp D: Analytic Geometry",
     "title": "Analytic Geometry — Set 3 (#11–15)",
-    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Choose the defining condition of a right bisector, median, or altitude.",
+    "consolidation": "Which constructions need a midpoint? Which constructions require perpendicular slopes? Which needs both?",
     "steps": [
       {
         "prompt": "Find the equation of the right bisector of the segment joining $A(2, 6)$ and $B(6, 2)$.",
-        "hint": "",
+        "hint": "Find the midpoint of $AB$ and the slope perpendicular to $AB$.",
         "answer": "$y = x$"
       },
       {
         "prompt": "Find the equation of the right bisector of the segment joining $P(-2, 1)$ and $Q(4, 5)$.",
-        "hint": "",
+        "hint": "Find the midpoint and the slope of $PQ$. Use both to build the right bisector.",
         "answer": "$3x + 2y = 9$"
       },
       {
         "prompt": "Find the equation of the median from vertex $A(0, 6)$ to side $BC$ where $B(-4, 0)$ and $C(4, 2)$.",
-        "hint": "",
-        "answer": "$y = 6$"
+        "hint": "Find the midpoint of $BC$ and compare its $x$-coordinate with the vertex’s.",
+        "answer": "$x=0$"
       },
       {
         "prompt": "Find the equation of the altitude from $A(1, 5)$ to $BC$ if the slope of $BC$ is $-\\frac{1}{3}$.",
-        "hint": "",
+        "hint": "Find the negative reciprocal of the slope of $BC$. Use $A$ as the point on the altitude.",
         "answer": "$y = 3x + 2$"
       },
       {
         "prompt": "Classify $\\triangle ABC$ with vertices $A(0, 0)$, $B(4, 0)$, and $C(2, 3)$ by side lengths.",
-        "hint": "",
+        "hint": "Compare squared side lengths. You can test equality without taking square roots.",
         "answer": "$\\text{Isosceles } (AC = BC = \\sqrt{13}, AB = 4)$"
       }
     ]
@@ -857,32 +956,32 @@
     "id": "expd-16-20",
     "unit": "Exp D: Analytic Geometry",
     "title": "Analytic Geometry — Set 4 (#16–20)",
-    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Isolate variables and simplify expressions while preserving restrictions.",
+    "consolidation": "Why do we keep $x\\ne0$ and $y\\ne0$ after simplifying the rational expression?",
     "steps": [
       {
         "prompt": "Solve the literal equation for $h$: $A = \\frac{1}{2}bh$",
-        "hint": "",
-        "answer": "$h = \\frac{2A}{b}$"
+        "hint": "Multiply by $2$ and divide by the coefficient of $h$.",
+        "answer": "$h=\\frac{2A}{b}$, for $b\\ne0$."
       },
       {
         "prompt": "Solve the literal equation for $y$: $5x - 3y = 18$",
-        "hint": "",
+        "hint": "Subtract $5x$ first. Divide every remaining term by $-3$.",
         "answer": "$y = \\frac{5}{3}x - 6$"
       },
       {
         "prompt": "Solve the literal equation for $r^2$: $V = \\pi r^2 h$",
-        "hint": "",
-        "answer": "$r^2 = \\frac{V}{\\pi h}$"
+        "hint": "Treat $r^2$ as the quantity to isolate. What is its coefficient?",
+        "answer": "$r^2=\\frac{V}{\\pi h}$, for $h\\ne0$."
       },
       {
         "prompt": "Simplify the algebraic expression: $\\frac{12x^4y^2 - 8x^2y^3}{4x^2y}$",
-        "hint": "",
-        "answer": "$3x^2y - 2y^2$"
+        "hint": "Divide each numerator term by $4x^2y$ and keep the original denominator restrictions.",
+        "answer": "$3x^2y-2y^2$, for $x\\ne0$ and $y\\ne0$."
       },
       {
         "prompt": "Simplify the radical: $\\sqrt{72}$",
-        "hint": "",
+        "hint": "Find the largest perfect-square factor of $72$.",
         "answer": "$6\\sqrt{2}$"
       }
     ]
@@ -891,280 +990,828 @@
     "id": "expd-21-25",
     "unit": "Exp D: Analytic Geometry",
     "title": "Analytic Geometry — Set 5 (#21–25)",
-    "goal": "Expectation D: Analytic Geometry & Algebraic Manipulation (Lines, Distance, Midpoint & Circles)",
-    "consolidation": "Which problem in this set used the smartest shortcut, and where is the most common sign/algebra trap?",
+    "goal": "Use exact values, clear denominators, and connect perpendicularity with shortest distance.",
+    "consolidation": "Why does a perpendicular segment give the shortest distance to a line? Describe how you would locate its endpoint.",
     "steps": [
       {
         "prompt": "Simplify the radical expression: $3\\sqrt{12} + 2\\sqrt{27}$",
-        "hint": "",
+        "hint": "Pull a perfect-square factor out of each radical before combining like radicals.",
         "answer": "$12\\sqrt{3}$"
       },
       {
         "prompt": "Solve for $x$: $\\frac{2x - 1}{3} - \\frac{x + 2}{4} = 2$",
-        "hint": "",
+        "hint": "Multiply the entire equation by $12$. Keep the brackets in both numerators.",
         "answer": "$x = \\frac{34}{5}$"
       },
       {
         "prompt": "Find the $x$-intercepts of the circle $x^2 + y^2 = 64$.",
-        "hint": "",
+        "hint": "At an $x$-intercept, $y=0$. Solve for both possible values of $x$.",
         "answer": "$(8, 0) \\text{ and } (-8, 0)$"
       },
       {
         "prompt": "Verify if $\\triangle PQR$ with $P(1, 1)$, $Q(4, 5)$, and $R(8, 2)$ is a right triangle.",
-        "hint": "",
+        "hint": "Compare the slopes of the sides meeting at $Q$ to see whether they are negative reciprocals.",
         "answer": "$\\text{Yes, right angle at } Q \\left(m_{PQ} = \\frac{4}{3}, m_{QR} = -\\frac{3}{4}\\right)$"
       },
       {
         "prompt": "Find the shortest distance from the origin $(0, 0)$ to the line $y = -x + 6$.",
-        "hint": "",
+        "hint": "Find the line through the origin perpendicular to $y=-x+6$. Intersect the lines and use the distance formula.",
         "answer": "$3\\sqrt{2}$"
       }
     ]
   }
 ];
-    BUILTIN_STRINGS.push(...CURRICULUM_100_STRINGS);
 
+    const LIBRARY = [...BUILTIN_STRINGS, ...CURRICULUM_100_STRINGS];
     const CUSTOM_KEY = 'mpm2d_custom_problem_strings_v1';
-    let customStrings = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+    const EXPORT_FORMAT = 'mpm2d-problem-strings';
+    const MAX_STEPS = 60;
+    const MAX_IMPORT_BYTES = 10_000_000;
+    const byId = id => document.getElementById(id);
+    const stage = byId('presenterStage');
+    const workspace = byId('mainWorkspace');
+    const dialog = byId('customStringModal');
+
+    let customStrings = [];
+    let savedLibraryValue = null;
+    let activeString = LIBRARY[0];
     let activeUnit = 'All';
-    let activeStringId = BUILTIN_STRINGS[0].id;
     let revealedCount = 1;
-    let largeFont = false;
-    let showAnswersMap = {};
+    let stepRows = [];
+    const openHints = new Set();
+    const openAnswers = new Set();
 
-    function getAllStrings() {
-      return [...BUILTIN_STRINGS, ...customStrings];
+    function typeset(node) {
+      if (typeof window.renderMathInElement !== 'function') return 0;
+      let errors = 0;
+      window.renderMathInElement(node, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '\\[', right: '\\]', display: true },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '$', right: '$', display: false }
+        ],
+        ignoredClasses: ['katex'],
+        trust: false,
+        maxExpand: 250,
+        maxSize: 20,
+        strict: 'ignore',
+        throwOnError: true,
+        errorCallback: () => { errors++; }
+      });
+      return errors;
     }
 
-    function getActiveString() {
-      return getAllStrings().find(s => s.id === activeStringId) || BUILTIN_STRINGS[0];
+    function displayStatus(id, message) {
+      const output = byId(id);
+      output.textContent = message;
+      output.hidden = !message;
     }
 
-    function renderUnitFilters() {
-      const units = ['All', ...new Set(getAllStrings().map(s => s.unit))];
-      document.getElementById('unitFilterBar').innerHTML = units.map(u => `
-        <button onclick="setUnitFilter('${u}')" class="px-3 py-1 text-xs font-black rounded-lg border-2 border-slate-800 transition ${activeUnit === u ? 'tab-active' : 'bg-slate-50 hover:bg-slate-100'}">${u}</button>
-      `).join('');
+    function makeElement(tag, className, text) {
+      const node = document.createElement(tag);
+      node.className = className;
+      node.textContent = text;
+      return node;
     }
 
-    function setUnitFilter(u) {
-      activeUnit = u;
-      renderUnitFilters();
+    function allStrings() {
+      return [...LIBRARY, ...customStrings];
+    }
+
+    function createButton(className, text = '') {
+      const button = makeElement('button', className, text);
+      button.type = 'button';
+      return button;
+    }
+
+    function renderLibrary() {
+      const units = ['All', ...new Set(allStrings().map(string => string.unit))];
+      if (!units.includes(activeUnit)) activeUnit = 'All';
+      byId('unitFilterBar').replaceChildren(...units.map(unit => {
+        const button = createButton('px-3 py-1.5 text-sm font-bold rounded-lg border-2 border-slate-800 min-h-11', unit);
+        button.dataset.unit = unit;
+        return button;
+      }));
       renderStringSelector();
     }
 
     function renderStringSelector() {
-      const list = getAllStrings().filter(s => activeUnit === 'All' || s.unit === activeUnit);
-      document.getElementById('stringSelectorGrid').innerHTML = list.map(s => `
-        <button onclick="selectString('${s.id}')" class="text-left p-2.5 rounded-xl border-2 border-slate-800 transition ${s.id === activeStringId ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-yellow-50'}">
-          <div class="text-[10px] font-black uppercase text-blue-700">${s.unit}</div>
-          <div class="text-xs font-black text-slate-900 mt-0.5">${s.title}</div>
-          <div class="text-[10px] font-bold text-slate-500 mt-0.5">${s.steps.length} problems</div>
-        </button>
-      `).join('');
+      const matches = allStrings().filter(string => activeUnit === 'All' || string.unit === activeUnit);
+      byId('stringSelectorGrid').replaceChildren(...matches.map(string => {
+        const button = createButton('min-w-0 text-left p-2 rounded-xl border-2 border-slate-800 bg-slate-50 hover:bg-yellow-50 break-words');
+        button.dataset.stringId = string.id;
+        button.append(
+          makeElement('span', 'block text-xs font-bold text-blue-700', string.unit),
+          makeElement('span', 'block text-sm font-black', string.title),
+          makeElement('span', 'block text-xs font-bold text-slate-600', string.steps.length === 1 ? '1 problem' : string.steps.length + ' problems')
+        );
+        return button;
+      }));
+      updateLibrarySelection();
     }
 
-    function selectString(id) {
-      activeStringId = id;
+    function updateLibrarySelection() {
+      byId('unitFilterBar').querySelectorAll('button').forEach(button => {
+        const selected = button.dataset.unit === activeUnit;
+        button.setAttribute('aria-pressed', selected);
+        button.classList.toggle('tab-active', selected);
+      });
+      byId('stringSelectorGrid').querySelectorAll('button').forEach(button => {
+        const selected = button.dataset.stringId === activeString.id;
+        if (selected) button.setAttribute('aria-current', 'true');
+        else button.removeAttribute('aria-current');
+        button.classList.toggle('ring-2', selected);
+        button.classList.toggle('ring-blue-700', selected);
+      });
+    }
+
+    function presentString(string) {
+      activeString = string;
       revealedCount = 1;
-      showAnswersMap = {};
-      renderStringSelector();
-      renderStage();
+      openHints.clear();
+      openAnswers.clear();
+      byId('activeStringUnit').textContent = string.unit;
+      byId('activeStringTitle').textContent = string.title;
+      byId('activeStringGoal').textContent = string.goal || '';
+      byId('activeStringGoal').hidden = !string.goal;
+      byId('consolidationText').textContent = string.consolidation || '';
+
+      stepRows = string.steps.map((step, index) => {
+        const row = byId('presentationStepTemplate').content.firstElementChild.cloneNode(true);
+        row.hidden = true;
+        row.dataset.step = index;
+        row.querySelector('[data-part="number"]').textContent = index + 1;
+        row.querySelector('[data-part="prompt"]').textContent = step.prompt;
+        for (const part of ['hint', 'answer']) {
+          const button = row.querySelector('[data-action="' + part + '"]');
+          const content = row.querySelector('[data-part="' + part + '"]');
+          content.id = 'step-' + part + '-' + index;
+          content.textContent = step[part] || '';
+          button.hidden = !step[part];
+          button.setAttribute('aria-controls', content.id);
+          button.setAttribute('aria-expanded', 'false');
+        }
+        row.querySelector('[data-part="controls"]').hidden = !step.hint && !step.answer;
+        return row;
+      });
+      byId('stepsContainer').replaceChildren(...stepRows);
+      for (const id of ['stepsContainer', 'consolidationText', 'activeStringGoal']) {
+        typeset(byId(id));
+      }
+      updateLibrarySelection();
+      updateStage();
     }
 
-    function revealNextStep() {
-      const str = getActiveString();
-      if (revealedCount < str.steps.length) {
-        revealedCount++;
-        renderStage();
+    function updateStage() {
+      const focused = document.activeElement;
+      const last = revealedCount === activeString.steps.length;
+      stepRows.forEach((row, index) => {
+        row.hidden = index >= revealedCount;
+        if (index === revealedCount - 1) row.setAttribute('aria-current', 'step');
+        else row.removeAttribute('aria-current');
+        for (const [part, shown] of [['hint', openHints], ['answer', openAnswers]]) {
+          const button = row.querySelector('[data-action="' + part + '"]');
+          const expanded = !row.hidden && shown.has(index);
+          const label = part === 'hint' ? 'Hint' : 'Answer';
+          row.querySelector('[data-part="' + part + '"]').hidden = !expanded;
+          button.setAttribute('aria-expanded', expanded);
+          button.setAttribute('aria-label', (expanded ? 'Hide ' : 'Show ') + part + ' for problem ' + (index + 1));
+          button.textContent = expanded ? 'Hide ' + part : label;
+        }
+      });
+      byId('stepCounter').textContent = revealedCount + ' of ' + stepRows.length + ' problems shown';
+      byId('stepBackBtn').disabled = revealedCount === 1;
+      byId('revealNextBtn').disabled = last;
+      byId('revealAllBtn').disabled = last;
+      byId('consolidationBox').hidden = !last || !activeString.consolidation;
+      const answerIndexes = visibleAnswerIndexes();
+      byId('allAnswersBtn').disabled = !answerIndexes.length;
+      byId('allAnswersBtn').textContent = allAnswersShown(answerIndexes) ? 'Hide All Answers' : 'Show All Answers';
+      if (stage.contains(focused) && focused.disabled) stage.focus({ preventScroll: true });
+    }
+
+    function visibleAnswerIndexes() {
+      return activeString.steps.slice(0, revealedCount).flatMap((step, index) => step.answer ? [index] : []);
+    }
+
+    function allAnswersShown(indexes) {
+      return indexes.length > 0 && indexes.every(index => openAnswers.has(index));
+    }
+
+    function moveStep(delta) {
+      const next = revealedCount + delta;
+      if (next < 1 || next > stepRows.length) return;
+      if (delta < 0) {
+        openHints.delete(next);
+        openAnswers.delete(next);
+      }
+      revealedCount = next;
+      updateStage();
+      const latest = stepRows[revealedCount - 1];
+      if (delta > 0 && latest.getBoundingClientRect().bottom > window.innerHeight) {
+        latest.scrollIntoView({ block: 'nearest' });
       }
     }
 
-    function revealAllSteps() {
-      const str = getActiveString();
-      revealedCount = str.steps.length;
-      renderStage();
-    }
-
-    function resetStringSteps() {
+    function resetSteps() {
       revealedCount = 1;
-      showAnswersMap = {};
-      renderStage();
+      openHints.clear();
+      openAnswers.clear();
+      updateStage();
     }
 
-    function toggleStepAnswer(idx) {
-      showAnswersMap[idx] = !showAnswersMap[idx];
-      renderStage();
+    function toggleAllAnswers() {
+      const indexes = visibleAnswerIndexes();
+      if (allAnswersShown(indexes)) openAnswers.clear();
+      else indexes.forEach(index => openAnswers.add(index));
+      updateStage();
     }
 
-    function renderStage() {
-      const str = getActiveString();
-      document.getElementById('activeStringUnit').textContent = str.unit;
-      document.getElementById('activeStringTitle').textContent = str.title;
-      document.getElementById('activeStringGoal').textContent = str.goal || '';
-      document.getElementById('stepCounter').textContent = `${revealedCount}/${str.steps.length}`;
-      document.getElementById('revealNextBtn').disabled = revealedCount >= str.steps.length;
-      document.getElementById('revealNextBtn').classList.toggle('opacity-50', revealedCount >= str.steps.length);
-
-      const promptSize = largeFont ? 'text-2xl sm:text-4xl' : 'text-lg sm:text-2xl';
-      const visible = str.steps.slice(0, revealedCount);
-
-      document.getElementById('stepsContainer').innerHTML = visible.map((st, idx) => {
-        const isLatest = idx === visible.length - 1;
-        const ansShown = !!showAnswersMap[idx];
-        return `
-          <div class="p-3.5 sm:p-4 rounded-xl border-2 border-slate-800 ${isLatest ? 'bg-yellow-50 ring-2 ring-amber-400' : 'bg-slate-50'} flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div class="flex items-start sm:items-center gap-3">
-              <span class="w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-black flex items-center justify-center shrink-0">${idx + 1}</span>
-              <div>
-                <div class="${promptSize} font-black font-mono text-slate-900">${st.prompt}</div>
-                ${st.hint ? `<div class="text-xs font-bold text-slate-500 mt-0.5">💬 ${st.hint}</div>` : ''}
-              </div>
-            </div>
-            ${st.answer ? `
-              <div class="flex items-center gap-2 self-end sm:self-center">
-                ${ansShown ? `<span class="px-3 py-1.5 rounded-lg bg-emerald-100 border-2 border-emerald-700 text-emerald-950 font-mono font-black text-sm sm:text-base">${st.answer}</span>` : ''}
-                <button onclick="toggleStepAnswer(${idx})" class="px-2.5 py-1.5 text-xs font-black rounded-lg bg-white border-2 border-slate-800 hover:bg-slate-100">
-                  ${ansShown ? '🙈 Hide' : '👁️ Answer'}
-                </button>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-
-      const conBox = document.getElementById('consolidationBox');
-      if (revealedCount >= str.steps.length && str.consolidation) {
-        conBox.classList.remove('hidden');
-        document.getElementById('consolidationText').textContent = str.consolidation;
-      } else {
-        conBox.classList.add('hidden');
-      }
-
-      if (typeof renderMathInElement === 'function') {
-        renderMathInElement(document.getElementById('stepsContainer'), {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false }
-          ],
-          throwOnError: false
-        });
-      }
+    function toggleStepDetail(button, shown) {
+      const index = Number(button.closest('[data-step]').dataset.step);
+      if (index >= revealedCount) return;
+      if (shown.has(index)) shown.delete(index);
+      else shown.add(index);
+      updateStage();
     }
 
-    function toggleProjectorMode() {
-      largeFont = !largeFont;
-      document.getElementById('projectorBtn').textContent = largeFont ? '⛶ Normal Font' : '⛶ Large Font';
-      renderStage();
+    function focusStage(scroll = false) {
+      stage.focus({ preventScroll: true });
+      if (scroll) stage.scrollIntoView({ block: 'nearest' });
     }
 
-    // Sketch Pad
+    function handlePresentationKey(event) {
+      if (dialog.open || event.defaultPrevented || event.isComposing ||
+          event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const target = event.target;
+      if (!(target instanceof Element) || target.closest('input, textarea, select, [contenteditable]')) return;
+
+      // Space activates a focused native control. Pointer navigation returns focus to the stage.
+      if (event.key === ' ' && target.closest('button, a[href], summary, [role="button"]')) return;
+      const direction = { ' ': 1, ArrowRight: 1, ArrowLeft: -1, Backspace: -1 }[event.key];
+      if (direction !== 1 && direction !== -1) return;
+      const onStage = target === document.body || stage.contains(target);
+      if (!onStage) return;
+      event.preventDefault();
+      if (!event.repeat) moveStep(direction);
+    }
+
+    // The drawing and the SVG background share this fixed coordinate space.
+    const DRAW_WIDTH = 900;
+    const DRAW_HEIGHT = 600;
+    const canvas = byId('sketchCanvas');
+    const ink = canvas.getContext('2d');
+    let view = null;
+    let strokes = [];
+    let pointerStroke = null;
+    const sketchHistory = [];
     let sketchVisible = false;
-    let penColor = '#0f172a';
-    let drawing = false;
-    let canvasInitialized = false;
+    let penColour = '#0f172a';
+    let erasing = false;
 
     function toggleSketchPad() {
       sketchVisible = !sketchVisible;
-      const sec = document.getElementById('sketchPadSection');
-      sec.classList.toggle('hidden', !sketchVisible);
-      document.getElementById('sketchToggleBtn').textContent = sketchVisible ? '✏️ Hide Sketch Pad' : '✏️ Show Sketch Pad';
-      if (sketchVisible && !canvasInitialized) initSketchCanvas();
-    }
-
-    function setPenColor(c) { penColor = c; }
-
-    function initSketchCanvas() {
-      const canvas = document.getElementById('sketchCanvas');
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * (window.devicePixelRatio || 1);
-      canvas.height = rect.height * (window.devicePixelRatio || 1);
-      const ctx = canvas.getContext('2d');
-      ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 3;
-
-      const getPos = (e) => {
-        const r = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - r.left, y: clientY - r.top };
-      };
-
-      const start = (e) => {
-        e.preventDefault();
-        drawing = true;
-        const p = getPos(e);
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-      };
-      const move = (e) => {
-        if (!drawing) return;
-        e.preventDefault();
-        const p = getPos(e);
-        ctx.strokeStyle = penColor;
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-      };
-      const end = () => { drawing = false; };
-
-      canvas.addEventListener('pointerdown', start);
-      canvas.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', end);
-      canvasInitialized = true;
-    }
-
-    function clearSketchPad() {
-      const canvas = document.getElementById('sketchCanvas');
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    // Custom String Modal
-    function openCustomModal() { document.getElementById('customStringModal').classList.remove('hidden'); }
-    function closeCustomModal() { document.getElementById('customStringModal').classList.add('hidden'); }
-    function saveCustomString() {
-      const title = document.getElementById('customTitle').value.trim();
-      const raw = document.getElementById('customSteps').value.trim();
-      if (!title || !raw) { alert('Please enter a title and at least one problem.'); return; }
-      const steps = raw.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
-        const parts = line.split('|');
-        return { prompt: parts[0].trim(), answer: (parts[1] || '').trim(), hint: '' };
-      });
-      const newStr = {
-        id: 'custom-' + Date.now(),
-        unit: 'Custom',
-        title,
-        goal: document.getElementById('customGoal').value.trim(),
-        consolidation: document.getElementById('customConsolidation').value.trim(),
-        steps
-      };
-      customStrings.push(newStr);
-      localStorage.setItem(CUSTOM_KEY, JSON.stringify(customStrings));
-      closeCustomModal();
-      activeUnit = 'All';
-      renderUnitFilters();
-      selectString(newStr.id);
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.code === 'Space' || e.code === 'ArrowRight') {
-        e.preventDefault();
-        revealNextStep();
+      byId('sketchPadSection').hidden = !sketchVisible;
+      workspace.classList.toggle('lg:grid-cols-2', sketchVisible);
+      byId('sketchToggleBtn').setAttribute('aria-expanded', sketchVisible);
+      byId('sketchToggleBtn').textContent = sketchVisible ? '✏️ Hide Sketch Pad' : '✏️ Show Sketch Pad';
+      if (sketchVisible) requestAnimationFrame(resizeSketch);
+      else {
+        finishStroke();
+        view = null;
       }
-    });
-
-    function hardRefreshApp() {
-      const url = new URL(window.location.href);
-      url.searchParams.set('_r', Date.now());
-      window.location.replace(url.toString());
     }
 
-    renderUnitFilters();
-    renderStringSelector();
-    renderStage();
-    window.addEventListener('load', renderStage);
+    function resizeSketch() {
+      if (!sketchVisible || !ink) return;
+      const { width, height } = canvas.getBoundingClientRect();
+      if (!width || !height) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const scale = Math.min(width / DRAW_WIDTH, height / DRAW_HEIGHT);
+      view = { dpr, scale, x: (width - DRAW_WIDTH * scale) / 2, y: (height - DRAW_HEIGHT * scale) / 2 };
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+      redrawSketch();
+    }
+
+    function withSketchView(draw) {
+      ink.save();
+      const units = view.scale * view.dpr;
+      ink.setTransform(units, 0, 0, units, view.x * view.dpr, view.y * view.dpr);
+      ink.beginPath();
+      ink.rect(0, 0, DRAW_WIDTH, DRAW_HEIGHT);
+      ink.clip();
+      draw();
+      ink.restore();
+    }
+
+    function setInk(stroke) {
+      ink.globalCompositeOperation = stroke.erase ? 'destination-out' : 'source-over';
+      ink.fillStyle = stroke.colour;
+      ink.strokeStyle = stroke.colour;
+      ink.lineWidth = stroke.width;
+      ink.lineCap = 'round';
+      ink.lineJoin = 'round';
+    }
+
+    function drawDot(point, width) {
+      ink.beginPath();
+      ink.arc(point.x, point.y, width / 2, 0, Math.PI * 2);
+      ink.fill();
+    }
+
+    function redrawSketch() {
+      if (!view || !ink) return;
+      ink.clearRect(0, 0, canvas.width, canvas.height);
+      withSketchView(() => {
+        for (const stroke of strokes) {
+          setInk(stroke);
+          const [first, ...rest] = stroke.points;
+          if (!rest.length) {
+            drawDot(first, stroke.width);
+            continue;
+          }
+          ink.beginPath();
+          ink.moveTo(first.x, first.y);
+          for (const point of rest) ink.lineTo(point.x, point.y);
+          ink.stroke();
+        }
+      });
+    }
+
+    function sketchPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left - view.x) / view.scale,
+        y: (event.clientY - rect.top - view.y) / view.scale
+      };
+    }
+
+    function startStroke(event) {
+      if (!sketchVisible || !ink || pointerStroke || event.button !== 0) return;
+      if (!view) resizeSketch();
+      if (!view) return;
+      const point = sketchPoint(event);
+      if (point.x < 0 || point.y < 0 || point.x > DRAW_WIDTH || point.y > DRAW_HEIGHT) return;
+      event.preventDefault();
+      const width = Number(byId('penWidth').value);
+      const stroke = { colour: penColour, width: erasing ? width * 4 : width, erase: erasing, points: [point] };
+      pointerStroke = { id: event.pointerId, stroke };
+      strokes.push(stroke);
+      canvas.setPointerCapture(event.pointerId);
+      withSketchView(() => {
+        setInk(stroke);
+        drawDot(point, stroke.width);
+      });
+    }
+
+    function extendStroke(event) {
+      if (!pointerStroke || event.pointerId !== pointerStroke.id) return;
+      const stroke = pointerStroke.stroke;
+      const next = sketchPoint(event);
+      const previous = stroke.points[stroke.points.length - 1];
+      if (next.x === previous.x && next.y === previous.y) return;
+      stroke.points.push(next);
+      withSketchView(() => {
+        setInk(stroke);
+        ink.beginPath();
+        ink.moveTo(previous.x, previous.y);
+        ink.lineTo(next.x, next.y);
+        ink.stroke();
+      });
+    }
+
+    function finishStroke(event) {
+      if (!pointerStroke || (event && event.pointerId !== pointerStroke.id)) return;
+      if (event?.type === 'pointerup') extendStroke(event);
+      const pointerId = pointerStroke.id;
+      pointerStroke = null;
+      sketchHistory.push({ type: 'stroke' });
+      if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+      updateSketchControls();
+    }
+
+    function updateSketchControls() {
+      byId('eraserBtn').setAttribute('aria-pressed', erasing);
+      byId('undoSketchBtn').disabled = !sketchHistory.length;
+      byId('clearSketchBtn').disabled = !strokes.length;
+      byId('sketchTools').querySelectorAll('[data-colour]').forEach(button => {
+        button.setAttribute('aria-pressed', !erasing && button.dataset.colour === penColour);
+      });
+    }
+
+    function updateSketchBackground() {
+      const choice = byId('sketchBackground').value;
+      byId('sketchDotLayer').toggleAttribute('hidden', choice !== 'dots');
+      byId('sketchAxesLayer').toggleAttribute('hidden', choice !== 'axes');
+    }
+
+    function undoSketch() {
+      finishStroke();
+      const entry = sketchHistory.pop();
+      if (!entry) return;
+      if (entry.type === 'clear') strokes = entry.strokes;
+      else strokes.pop();
+      redrawSketch();
+      updateSketchControls();
+      byId('sketchStatus').textContent = 'Last sketch action undone.';
+    }
+
+    function clearSketch() {
+      finishStroke();
+      if (!strokes.length) return;
+      sketchHistory.push({ type: 'clear', strokes });
+      strokes = [];
+      redrawSketch();
+      updateSketchControls();
+      byId('sketchStatus').textContent = 'Sketch cleared. Undo restores it.';
+    }
+
+    // Custom library. Preserve the original localStorage key and record shape.
+    function fieldText(value, name, max, required = false) {
+      if (value == null && !required) return '';
+      if (typeof value !== 'string') throw new Error(name + ' must be text.');
+      const text = value.trim();
+      if (required && !text) throw new Error(name + ' is required.');
+      if (text.length > max) throw new Error(name + ' must be at most ' + max + ' characters.');
+      return text;
+    }
+
+    function validateString(record) {
+      if (!record || !Array.isArray(record.steps) || record.steps.length < 1 || record.steps.length > MAX_STEPS) {
+        throw new Error('Include between 1 and ' + MAX_STEPS + ' problems.');
+      }
+      return {
+        id: typeof record.id === 'string' && /^custom-[a-z0-9-]{1,80}$/i.test(record.id) ? record.id : '',
+        unit: 'Custom',
+        title: fieldText(record.title, 'Title', 120, true),
+        goal: fieldText(record.goal, 'Goal', 1000),
+        consolidation: fieldText(record.consolidation, 'Consolidation', 1000),
+        steps: record.steps.map((step, index) => ({
+          prompt: fieldText(step?.prompt, 'Problem ' + (index + 1), 1000, true),
+          hint: fieldText(step?.hint, 'Hint for problem ' + (index + 1), 1000),
+          answer: fieldText(step?.answer, 'Answer for problem ' + (index + 1), 1000)
+        }))
+      };
+    }
+
+    function reserveId(id, used) {
+      while (!id || used.has(id)) {
+        id = 'custom-' + (globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
+      }
+      used.add(id);
+      return id;
+    }
+
+    function readCustomLibrary() {
+      try {
+        savedLibraryValue = localStorage.getItem(CUSTOM_KEY);
+        const saved = JSON.parse(savedLibraryValue ?? '[]');
+        if (!Array.isArray(saved)) throw new Error('Invalid library.');
+        const used = new Set();
+        let skipped = 0;
+        customStrings = saved.flatMap(record => {
+          try {
+            const valid = validateString(record);
+            valid.id = reserveId(valid.id, used);
+            return [valid];
+          } catch {
+            skipped++;
+            return [];
+          }
+        });
+        if (skipped) displayStatus('libraryStatus', skipped + ' saved custom string(s) could not be loaded.');
+      } catch {
+        displayStatus('libraryStatus', 'Custom strings could not be loaded. The built-in library is available.');
+      }
+    }
+
+    function saveLibrary(next) {
+      try {
+        if (localStorage.getItem(CUSTOM_KEY) !== savedLibraryValue) {
+          displayStatus('editorStatus', 'The custom library changed in another tab. Export your saved copy if needed, then reload before saving.');
+          return false;
+        }
+        const serialized = JSON.stringify(next);
+        localStorage.setItem(CUSTOM_KEY, serialized);
+        savedLibraryValue = serialized;
+      } catch {
+        displayStatus('editorStatus', 'Browser storage could not save this change. Your draft is still open.');
+        return false;
+      }
+      customStrings = next;
+      displayStatus('libraryStatus', '');
+      return true;
+    }
+
+    let editingId = '';
+    let draftChanged = false;
+    let previewTimer;
+
+    function renderCustomOptions() {
+      byId('customLibrary').replaceChildren(new Option('New string', ''), ...customStrings.map(string => new Option(string.title, string.id)));
+      byId('customLibrary').value = editingId;
+      byId('deleteCustomBtn').disabled = !editingId;
+      byId('exportCustomBtn').disabled = !customStrings.length;
+    }
+
+    function buildEditorStep(step = {}) {
+      const row = byId('customStepTemplate').content.firstElementChild.cloneNode(true);
+      for (const field of ['prompt', 'hint', 'answer']) {
+        row.querySelector('[data-field="' + field + '"]').value = step[field] || '';
+      }
+      return row;
+    }
+
+    function renumberEditorSteps() {
+      const fields = byId('customStepFields').children;
+      Array.from(fields).forEach((row, index) => {
+        row.querySelector('legend').textContent = 'Problem ' + (index + 1);
+        const remove = row.querySelector('[data-action="remove-step"]');
+        remove.setAttribute('aria-label', 'Remove problem ' + (index + 1));
+        remove.disabled = fields.length === 1;
+      });
+      byId('addCustomStepBtn').disabled = fields.length >= MAX_STEPS;
+    }
+
+    function loadEditor(id) {
+      const record = customStrings.find(string => string.id === id);
+      editingId = record?.id || '';
+      draftChanged = false;
+      byId('customTitle').value = record?.title || '';
+      byId('customGoal').value = record?.goal || '';
+      byId('customConsolidation').value = record?.consolidation || '';
+      byId('customBulk').value = '';
+      const steps = record?.steps || [{}];
+      byId('customStepFields').replaceChildren(...steps.map(buildEditorStep));
+      renderCustomOptions();
+      renumberEditorSteps();
+      displayStatus('editorStatus', '');
+      renderCustomPreview();
+    }
+
+    function getDraft() {
+      const formSteps = Array.from(byId('customStepFields').children);
+      return {
+        id: editingId,
+        title: byId('customTitle').value,
+        goal: byId('customGoal').value,
+        consolidation: byId('customConsolidation').value,
+        steps: formSteps.map(row => Object.fromEntries(
+          Array.from(row.querySelectorAll('[data-field]'), input => [input.dataset.field, input.value])
+        ))
+      };
+    }
+
+    function renderCustomPreview() {
+      clearTimeout(previewTimer);
+      const draft = getDraft();
+      const preview = byId('customPreview');
+      const children = [makeElement('h4', 'break-words text-lg font-black', draft.title || 'Untitled string')];
+      if (draft.goal) children.push(makeElement('p', 'math-text text-sm text-slate-700', draft.goal));
+      for (const [index, step] of draft.steps.entries()) {
+        const card = makeElement('div', 'min-w-0 p-3 space-y-2 rounded-lg bg-white border border-slate-300', '');
+        card.append(makeElement('p', 'math-text font-bold', step.prompt || 'Problem ' + (index + 1)));
+        if (step.hint) card.append(makeElement('p', 'math-text text-sm text-amber-950', 'Hint: ' + step.hint));
+        if (step.answer) card.append(makeElement('p', 'math-text text-sm text-emerald-950', 'Answer: ' + step.answer));
+        children.push(card);
+      }
+      if (draft.consolidation) children.push(makeElement('p', 'math-text text-sm font-bold', 'Consolidation: ' + draft.consolidation));
+      preview.replaceChildren(...children);
+      const errors = typeset(preview);
+      displayStatus('previewStatus', errors ? 'Check the TeX in the preview. An expression could not be typeset.' : '');
+    }
+
+    function queuePreview() {
+      draftChanged = true;
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(renderCustomPreview, 120);
+    }
+
+    function addEditorSteps(steps, focus = true) {
+      const fieldset = byId('customStepFields');
+      const firstIndex = fieldset.children.length;
+      const atBlankStart = firstIndex === 1 && Object.values(getDraft().steps[0]).every(value => !value.trim());
+      const replaceBlank = !focus && atBlankStart;
+      if (firstIndex + steps.length - Number(replaceBlank) > MAX_STEPS) {
+        displayStatus('editorStatus', 'A string can contain up to ' + MAX_STEPS + ' problems.');
+        return false;
+      }
+      if (replaceBlank) fieldset.replaceChildren();
+      fieldset.append(...steps.map(buildEditorStep));
+      renumberEditorSteps();
+      if (focus) fieldset.children[firstIndex].querySelector('[data-field="prompt"]').focus();
+      queuePreview();
+      return true;
+    }
+
+    function pasteEditorSteps() {
+      const input = byId('customBulk');
+      const steps = input.value.split(/\r?\n/).filter(line => line.trim()).map(line => {
+        const divider = line.indexOf(' | ');
+        return divider < 0 ? { prompt: line.trim() } : {
+          prompt: line.slice(0, divider).trim(),
+          answer: line.slice(divider + 3).trim()
+        };
+      });
+      if (steps.length && addEditorSteps(steps, false)) input.value = '';
+    }
+
+    function allowDiscard() {
+      return !draftChanged || window.confirm('Discard the unsaved changes to this string?');
+    }
+
+    function openCustomEditor() {
+      loadEditor(activeString.unit === 'Custom' ? activeString.id : '');
+      dialog.showModal();
+      byId('customTitle').focus();
+    }
+
+    function saveCustomString(event) {
+      event.preventDefault();
+      let record;
+      try {
+        record = validateString(getDraft());
+      } catch (error) {
+        displayStatus('editorStatus', error.message);
+        return;
+      }
+      const used = new Set(customStrings.map(string => string.id));
+      if (!editingId) record.id = reserveId('', used);
+      const next = editingId ? customStrings.map(string => string.id === editingId ? record : string) : [...customStrings, record];
+      if (!saveLibrary(next)) return;
+      draftChanged = false;
+      activeUnit = 'Custom';
+      renderLibrary();
+      dialog.close();
+      presentString(record);
+      focusStage(true);
+    }
+
+    function deleteCustomString() {
+      const record = customStrings.find(string => string.id === editingId);
+      if (!record || !window.confirm('Delete “' + record.title + '” from this device?')) return;
+      if (!saveLibrary(customStrings.filter(string => string.id !== editingId))) return;
+      renderLibrary();
+      if (activeString.id === editingId) {
+        const next = allStrings().find(string => activeUnit === 'All' || string.unit === activeUnit);
+        presentString(next || LIBRARY[0]);
+      }
+      loadEditor('');
+      displayStatus('editorStatus', 'Custom string deleted.');
+    }
+
+    function exportCustomStrings() {
+      const data = JSON.stringify({ format: EXPORT_FORMAT, version: 1, strings: customStrings }, null, 2);
+      const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'mpm2d-custom-strings.json';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function stringSignature({ title, goal, consolidation, steps }) {
+      return JSON.stringify([title, goal, consolidation, steps]);
+    }
+
+    async function importCustomStrings(event) {
+      const file = event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      const button = byId('importCustomBtn');
+      button.disabled = true;
+      try {
+        if (file.size > MAX_IMPORT_BYTES) throw new Error('Choose a JSON file smaller than 10 MB.');
+        const data = JSON.parse((await file.text()).replace(/^\uFEFF/, ''));
+        const records = Array.isArray(data) ? data : data?.format === EXPORT_FORMAT && data.version === 1 ? data.strings : null;
+        if (!Array.isArray(records)) throw new Error('Choose an exported custom-string JSON file.');
+        const signatures = new Set(customStrings.map(stringSignature));
+        const ids = new Set(customStrings.map(string => string.id));
+        const incoming = [];
+        for (const [index, entry] of records.entries()) {
+          let record;
+          try {
+            record = validateString(entry);
+          } catch (error) {
+            throw new Error('String ' + (index + 1) + ': ' + error.message);
+          }
+          const signature = stringSignature(record);
+          if (signatures.has(signature)) continue;
+          signatures.add(signature);
+          record.id = reserveId(record.id, ids);
+          incoming.push(record);
+        }
+        if (incoming.length) {
+          if (!saveLibrary([...customStrings, ...incoming])) return;
+          renderLibrary();
+        }
+        renderCustomOptions();
+        displayStatus('editorStatus', incoming.length ? 'Imported ' + incoming.length + ' custom string(s).' : 'No new strings to import.');
+      } catch (error) {
+        displayStatus('editorStatus', error instanceof SyntaxError ? 'This is not valid JSON.' : error.message);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function handleAction(event) {
+      if (!(event.target instanceof Element)) return;
+      const button = event.target.closest('button');
+      if (!button || button.disabled) return;
+      if ('unit' in button.dataset) {
+        activeUnit = button.dataset.unit;
+        renderStringSelector();
+        return;
+      }
+      if ('stringId' in button.dataset) {
+        const string = allStrings().find(entry => entry.id === button.dataset.stringId);
+        if (string && string.id !== activeString.id) presentString(string);
+        focusStage(true);
+        return;
+      }
+      if ('colour' in button.dataset) {
+        penColour = button.dataset.colour;
+        erasing = false;
+        updateSketchControls();
+        return;
+      }
+      const press = button.dataset.action;
+      if (event.detail > 0 && (stage.contains(button) || press === 'sketch' || press === 'projector')) focusStage();
+      switch (press) {
+        case 'next': moveStep(1); break;
+        case 'back': moveStep(-1); break;
+        case 'all-steps': revealedCount = stepRows.length; updateStage(); break;
+        case 'all-answers': toggleAllAnswers(); break;
+        case 'reset': resetSteps(); break;
+        case 'hint': toggleStepDetail(button, openHints); break;
+        case 'answer': toggleStepDetail(button, openAnswers); break;
+        case 'projector': {
+          const enlarged = stage.classList.toggle('projector-mode');
+          button.setAttribute('aria-pressed', enlarged);
+          break;
+        }
+        case 'refresh': {
+          const url = new URL(window.location.href);
+          url.searchParams.set('_r', Date.now());
+          window.location.replace(url);
+          break;
+        }
+        case 'sketch':
+          toggleSketchPad();
+          if (sketchVisible && event.detail > 0) workspace.scrollIntoView({ block: 'start' });
+          break;
+        case 'eraser': erasing = !erasing; updateSketchControls(); break;
+        case 'undo-sketch': undoSketch(); break;
+        case 'clear-sketch': clearSketch(); break;
+        case 'custom': openCustomEditor(); break;
+        case 'close-custom': if (allowDiscard()) dialog.close(); break;
+        case 'add-step': addEditorSteps([{}]); break;
+        case 'paste-steps': pasteEditorSteps(); break;
+        case 'remove-step':
+          if (byId('customStepFields').children.length > 1) {
+            button.closest('fieldset').remove();
+            renumberEditorSteps();
+            queuePreview();
+            byId('addCustomStepBtn').focus();
+          }
+          break;
+        case 'delete-custom': deleteCustomString(); break;
+        case 'export-custom': exportCustomStrings(); break;
+        case 'import-custom': byId('customImport').click(); break;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Deferred KaTeX scripts have finished by DOMContentLoaded.
+      byId('mathStatus').hidden = typeof window.renderMathInElement === 'function';
+      readCustomLibrary();
+      renderLibrary();
+      presentString(activeString);
+
+      document.addEventListener('click', handleAction);
+      document.addEventListener('keydown', handlePresentationKey);
+      byId('customStringForm').addEventListener('submit', saveCustomString);
+      byId('customStringForm').addEventListener('input', queuePreview);
+      byId('customLibrary').addEventListener('change', event => {
+        if (allowDiscard()) loadEditor(event.target.value);
+        else event.target.value = editingId;
+      });
+      byId('customImport').addEventListener('change', importCustomStrings);
+      dialog.addEventListener('cancel', event => { if (!allowDiscard()) event.preventDefault(); });
+      dialog.addEventListener('close', () => clearTimeout(previewTimer));
+      byId('sketchBackground').addEventListener('change', updateSketchBackground);
+      canvas.addEventListener('pointerdown', startStroke);
+      canvas.addEventListener('pointermove', extendStroke);
+      for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, finishStroke);
+      if ('ResizeObserver' in window) new ResizeObserver(resizeSketch).observe(canvas);
+      window.addEventListener('resize', resizeSketch);
+    }, { once: true });
   </script>
 </body>
 </html>
