@@ -30,13 +30,47 @@
       <a href="index.html" class="text-sm font-bold text-blue-600">← Learning Hub</a>
       <h1 class="text-3xl font-black text-blue-600">MPM2D Math Drill Center</h1>
     </div>
-    <div class="comic bg-white px-4 py-2 text-sm font-bold flex gap-4 items-center">
+    <div class="comic bg-white px-4 py-2 text-sm font-bold flex flex-wrap gap-3 items-center">
       <span title="Student">👤 <span id="studentLabel"></span> <button id="changeStudent" class="text-xs text-blue-600 underline">change</button></span>
       <span title="Active work time this session">⏱️ <span id="sessTime">0:00</span></span>
       <span title="Current streak">🔥 <span id="streak">0</span></span>
       <span title="Today correct">✅ <span id="todayCorrect">0</span></span>
+      <button id="formulaBtn" type="button" class="btn bg-indigo-100 text-indigo-900 px-2.5 py-1 text-xs">📐 Formulas</button>
     </div>
   </header>
+
+  <details id="formulaDrawer" class="comic bg-white p-4 mb-5 hidden text-xs sm:text-sm">
+    <summary class="font-black text-indigo-700 cursor-pointer">📐 MPM2D Quick Formula &amp; Strategy Sheet (click to close)</summary>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+      <div class="p-2.5 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="font-black text-blue-800 mb-1">Quadratics</div>
+        <div>• Vertex Form: <code>y = a(x − h)² + k</code>, Vertex <code>(h, k)</code></div>
+        <div>• Axis of Symmetry: <code>x = −b / (2a)</code></div>
+        <div>• Quadratic Formula: <code>x = (−b ± √(b² − 4ac)) / (2a)</code></div>
+        <div>• Discriminant: <code>D = b² − 4ac</code> (&gt;0: 2 roots, =0: 1, &lt;0: 0)</div>
+      </div>
+      <div class="p-2.5 bg-amber-50 rounded-lg border border-amber-200">
+        <div class="font-black text-amber-800 mb-1">Linear Systems</div>
+        <div>• Slope-Intercept: <code>y = mx + b</code></div>
+        <div>• <code>m₁ ≠ m₂</code> → 1 solution</div>
+        <div>• <code>m₁ = m₂, b₁ ≠ b₂</code> → No solution (∥)</div>
+        <div>• <code>m₁ = m₂, b₁ = b₂</code> → Infinitely many</div>
+      </div>
+      <div class="p-2.5 bg-green-50 rounded-lg border border-green-200">
+        <div class="font-black text-green-800 mb-1">Analytic Geometry</div>
+        <div>• Slope: <code>m = (y₂ − y₁)/(x₂ − x₁)</code>, <code>m_⊥ = −1/m</code></div>
+        <div>• Midpoint: <code>((x₁+x₂)/2, (y₁+y₂)/2)</code></div>
+        <div>• Distance: <code>d = √((x₂−x₁)² + (y₂−y₁)²)</code></div>
+        <div>• Circle: <code>x² + y² = r²</code> (centre (0,0))</div>
+      </div>
+      <div class="p-2.5 bg-purple-50 rounded-lg border border-purple-200">
+        <div class="font-black text-purple-800 mb-1">Trigonometry (DEG mode)</div>
+        <div>• <b>SOH-CAH-TOA:</b> <code>sin=O/H</code>, <code>cos=A/H</code>, <code>tan=O/A</code></div>
+        <div>• Sine Law: <code>a/sin(A) = b/sin(B)</code></div>
+        <div>• Cosine Law: <code>c² = a² + b² − 2ab·cos(C)</code></div>
+      </div>
+    </div>
+  </details>
 
   <div class="grid md:grid-cols-3 gap-5">
     <!-- Main practice -->
@@ -76,13 +110,37 @@
       </section>
 
       <section id="card" class="comic bg-white p-5">
-        <div class="flex justify-between items-center mb-1">
-          <span id="qSkill" class="text-xs font-black bg-blue-100 text-blue-800 px-3 py-1 border-2 border-slate-800 rounded-full"></span>
-          <span id="qLevel" class="text-xs font-bold text-slate-500"></span>
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="qSkill" class="text-xs font-black bg-blue-100 text-blue-800 px-3 py-1 border-2 border-slate-800 rounded-full"></span>
+            <select id="tierMode" title="Adaptive difficulty (Low Floor → High Ceiling)" class="text-xs font-black border-2 border-slate-800 rounded-full px-2 py-0.5 bg-amber-50 cursor-pointer">
+              <option value="auto">🤖 Auto Tier</option>
+              <option value="warmup">🌱 Warm-up (Low Floor)</option>
+              <option value="core">🎯 Core (MPM2D)</option>
+              <option value="challenge">🚀 Challenge (High Ceiling)</option>
+            </select>
+            <span id="qTierBadge" class="text-xs font-bold text-slate-600"></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="speakBtn" type="button" title="Read question aloud (UDL)" class="text-xs font-bold px-2 py-0.5 border-2 border-slate-800 rounded-full bg-slate-100 hover:bg-slate-200">🔊 Read</button>
+            <span id="qLevel" class="text-xs font-bold text-slate-500"></span>
+          </div>
         </div>
         <div id="qExp" class="text-xs text-slate-500 italic mb-2"></div>
         <div id="qPrompt" class="font-bold text-slate-600"></div>
         <div id="qExpr" class="math text-3xl md:text-4xl font-bold my-4 text-center"></div>
+
+        <!-- Interactive Visual Simulation Lab (Area Model / Algebra Tiles / Completing Square / Parabola) -->
+        <div id="visLabWrap" class="hidden my-3 p-3 bg-indigo-50/70 rounded-xl border-2 border-slate-800">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <span id="visLabTitle" class="text-xs font-black text-indigo-900">👁️ Visual Simulation</span>
+            <div class="flex gap-1.5">
+              <button id="visRevealBtn" type="button" class="btn bg-white px-2.5 py-0.5 text-xs">Reveal / Step</button>
+              <button id="visToggleBtn" type="button" class="btn bg-indigo-200 px-2.5 py-0.5 text-xs">Hide Visual</button>
+            </div>
+          </div>
+          <div id="visLabBody" class="flex flex-col items-center"></div>
+        </div>
 
         <div id="diagramWrap" class="hidden my-3 flex justify-center"></div>
 
@@ -108,6 +166,18 @@
           <input id="answer" autocomplete="off" spellcheck="false"
             class="hidden w-full p-3 border-4 border-slate-800 rounded-lg text-xl math focus:outline-none focus:ring-4 focus:ring-blue-300"
             placeholder="e.g. (x+3)(x-2)  or  2x^2+5x-3  or  2x^{2}+5x-3">
+          <div id="mathKeypad" class="flex flex-wrap gap-1.5 mt-2">
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="^2">x²</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="(">(</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key=")">)</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="+">+</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="-">−</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="\sqrt{}">√</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="/">/</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key=",">,</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="\pm">±</button>
+            <button type="button" class="btn bg-slate-100 px-2.5 py-0.5 text-xs" data-key="no solution">no solution</button>
+          </div>
           <div id="inputHint" class="text-xs text-slate-500 mt-1">Type math directly (use <b>^</b> for powers like x², or click the keyboard icon on the right). LaTeX commands like <code>\cdot</code> also work.</div>
           <div id="preview" class="math text-lg text-slate-600 mt-1 min-h-[28px]"></div>
         </div>
@@ -354,28 +424,39 @@ function topFactors(n) {
 // Each generator returns {expr, target(fn), answer (string), hints[], steps[]}
 const SKILLS = {
   // ---------- EXPANSION ----------
-  e_mono: { mode: 'expand', name: 'Monomial × Polynomial', gen() {
-    const k = rndNZ(-6, 6), a = rndNZ(-5, 5), b = rndNZ(-9, 9), d = rnd(0, 1);
+  e_mono: { mode: 'expand', name: 'Monomial × Polynomial', gen(tier = 'core') {
+    const k = tier === 'warmup' ? rnd(2, 5) : rndNZ(-6, 6);
+    const a = tier === 'warmup' ? rnd(1, 3) : rndNZ(-5, 5);
+    const b = tier === 'warmup' ? rnd(1, 6) : rndNZ(-9, 9);
+    const d = tier === 'warmup' ? 1 : rnd(0, 1);
     const left = mono(k, d), inner = lin(a, b), res = mulP(Array.from({length: d+1},(_, i)=> i===d?k:0), [b, a]);
     return { expr: left + paren(inner), co: res,
+      vis: { type: 'area1d', mode: 'expand', k: left, c1: mono(a, 1), c2: String(b), p1: mono(k * a, d + 1), p2: mono(k * b, d) },
       hints: ['Use the <b>distributive property</b>: multiply the outside term by <i>every</i> term inside the brackets.',
               `Multiply ${left} × ${mono(a,1)} and then ${left} × ${b}. Watch the signs!`,
               `${left}·${mono(a,1)} = ${mono(k*a,d+1)}. Now do ${left}·(${b}) = ?`],
       steps: [`${left}(${inner})`, `= ${left}·${paren(mono(a,1))} + ${left}·(${b})`, `= ${poly(res)}`] };
   }},
-  e_binom: { mode: 'expand', name: 'Binomial × Binomial', gen() {
-    const a = pick([1,1,1,2,3]), b = rndNZ(-9, 9), c = pick([1,1,2,3,-1]), d = rndNZ(-9, 9);
+  e_binom: { mode: 'expand', name: 'Binomial × Binomial', gen(tier = 'core') {
+    const a = tier === 'warmup' ? 1 : tier === 'challenge' ? pick([2,3,-2]) : pick([1,1,1,2,3]);
+    const b = tier === 'warmup' ? rnd(1, 5) : rndNZ(-9, 9);
+    const c = tier === 'warmup' ? 1 : tier === 'challenge' ? pick([2,3,-1,-2]) : pick([1,1,2,3,-1]);
+    const d = tier === 'warmup' ? rnd(1, 5) : rndNZ(-9, 9);
     const res = mulP([b, a], [d, c]);
     return { expr: paren(lin(a,b)) + paren(lin(c,d)), co: res,
+      vis: { type: 'area', mode: 'expand', r: [a, b], c: [c, d], res },
       hints: ['Use <b>FOIL</b>: First, Outer, Inner, Last — every term in the first bracket times every term in the second.',
               `First: ${mono(a,1)}·${mono(c,1)} = ${mono(a*c,2)}. Outer: ${mono(a,1)}·(${d}) = ${mono(a*d,1)}. Now find Inner and Last.`,
               `Inner: (${b})·${mono(c,1)} = ${mono(b*c,1)}. Last: (${b})(${d}) = ${b*d}. Add the like terms ${mono(a*d,1)} and ${mono(b*c,1)}.`],
       steps: [`${paren(lin(a,b))}${paren(lin(c,d))}`, `= ${mono(a*c,2)} ${a*d<0?'−':'+'} ${mono(Math.abs(a*d),1)} ${b*c<0?'−':'+'} ${mono(Math.abs(b*c),1)} ${b*d<0?'−':'+'} ${Math.abs(b*d)}`, `= ${poly(res)}`] };
   }},
-  e_special: { mode: 'expand', name: 'Special Products', gen() {
-    const a = pick([1,1,2,3]), b = rndNZ(-8, 8), type = pick(['sq','sq','dos']);
+  e_special: { mode: 'expand', name: 'Special Products', gen(tier = 'core') {
+    const a = tier === 'warmup' ? 1 : pick([1,1,2,3]);
+    const b = tier === 'warmup' ? rnd(1, 5) : rndNZ(-8, 8);
+    const type = pick(['sq','sq','dos']);
     if (type === 'sq') { const res = mulP([b,a],[b,a]);
       return { expr: paren(lin(a,b)) + '^2', co: res,
+        vis: { type: 'area', mode: 'expand', r: [a, b], c: [a, b], res },
         hints: ['This is a <b>perfect square</b>: (a + b)² = a² + 2ab + b². It is NOT a² + b²!',
                 `Here the first term is ${mono(a,1)} and the second term is ${b}.`,
                 `a² = ${mono(a*a,2)}, 2ab = 2·${mono(a,1)}·(${b}) = ${mono(2*a*b,1)}, b² = ${b*b}.`],
@@ -383,6 +464,7 @@ const SKILLS = {
     }
     const B = Math.abs(b), res = mulP([B,a],[-B,a]);
     return { expr: paren(lin(a,B)) + paren(lin(a,-B)), co: res,
+      vis: { type: 'area', mode: 'expand', r: [a, B], c: [a, -B], res },
       hints: ['Notice the brackets are the same except for the sign: (a + b)(a − b) = a² − b².',
               'The middle terms cancel out! You only need to square each term.',
               `(${mono(a,1)})² − (${B})² = ?`],
@@ -407,24 +489,34 @@ const SKILLS = {
     const outer = Array.from({length: d+1}, (_, i) => i===d ? g : 0);
     const res = mulP(outer, inner);
     return { expr: poly(res), co: res, factor: true,
+      vis: { type: 'area1d', mode: 'factor', k: mono(g, d), c1: mono(inner[1], 1), c2: String(inner[0]), p1: mono(res[d+1], d+1), p2: mono(res[d], d) },
       hints: ['Find the <b>greatest common factor</b> (GCF) of all the terms — both the number part and the variable part.',
               `The GCF of the coefficients ${res.filter(v=>v).map(Math.abs).join(', ')} is ${g}. ${d ? 'Every term also contains at least one x.' : ''}`,
               `GCF = ${mono(g,d)}. Divide each term by ${mono(g,d)} and write it in brackets.`],
       steps: [`GCF = ${mono(g,d)}`, `${poly(res)} = ${mono(g,d)}(${poly(inner)})`] };
   }},
-  f_simple: { mode: 'factor', name: 'Simple Trinomial x²+bx+c', gen() {
-    const r = rndNZ(-9,9), s = rndNZ(-9,9), res = mulP([r,1],[s,1]);
+  f_simple: { mode: 'factor', name: 'Simple Trinomial x²+bx+c', gen(tier = 'core') {
+    const r = tier === 'warmup' ? rnd(1, 6) : rndNZ(-9,9);
+    const s = tier === 'warmup' ? rnd(1, 6) : rndNZ(-9,9);
+    const res = mulP([r,1],[s,1]);
     return { expr: poly(res), co: res, factor: true,
+      vis: { type: 'area', mode: 'factor', r: [1, r], c: [1, s], res },
       hints: [`Find two numbers that <b>multiply</b> to ${res[0]} and <b>add</b> to ${res[1]}.`,
               `${res[0] > 0 ? 'The product is positive, so both numbers have the same sign' : 'The product is negative, so the numbers have opposite signs'}. List factor pairs of ${Math.abs(res[0])}.`,
               `The numbers are ${r} and ${s}. Write (x + __)(x + __).`],
       steps: [`Need m·n = ${res[0]}, m + n = ${res[1]}`, `m = ${r}, n = ${s}`, `${poly(res)} = ${paren(lin(1,r))}${paren(lin(1,s))}`] };
   }},
-  f_complex: { mode: 'factor', name: 'Complex Trinomial ax²+bx+c', gen() {
+  f_complex: { mode: 'factor', name: 'Complex Trinomial ax²+bx+c', gen(tier = 'core') {
     let a, b, c, d;
-    do { a = pick([2,3,5,2,3]); c = pick([1,1,2,3]); b = rndNZ(-7,7); d = rndNZ(-7,7); } while (gcd(a,b)!==1 || gcd(c,d)!==1 || a*c===1);
+    do {
+      a = tier === 'warmup' ? 2 : tier === 'challenge' ? pick([3,4,5,6]) : pick([2,3,5,2,3]);
+      c = tier === 'warmup' ? 1 : pick([1,1,2,3]);
+      b = tier === 'warmup' ? rnd(1, 5) : rndNZ(-7,7);
+      d = tier === 'warmup' ? rnd(1, 5) : rndNZ(-7,7);
+    } while (gcd(a,b)!==1 || gcd(c,d)!==1 || a*c===1);
     const res = mulP([b,a],[d,c]), m = a*d, n = b*c;
     return { expr: poly(res), co: res, factor: true,
+      vis: { type: 'area', mode: 'factor', r: [a, b], c: [c, d], res },
       hints: [`Use <b>decomposition</b>: multiply a·c = ${res[2]}·${res[0]} = ${res[2]*res[0]}. Find two numbers that multiply to ${res[2]*res[0]} and add to ${res[1]}.`,
               `The two numbers are ${m} and ${n}. Split the middle term: ${mono(res[2],2)} ${m<0?'−':'+'} ${mono(Math.abs(m),1)} ${n<0?'−':'+'} ${mono(Math.abs(n),1)} ${res[0]<0?'−':'+'} ${Math.abs(res[0])}.`,
               `Group in pairs and common-factor each pair. You should get a common bracket.`],
@@ -434,6 +526,7 @@ const SKILLS = {
     let a, b; do { a = pick([1,1,2,3,4,5]); b = rnd(1,9); } while (gcd(a,b) !== 1);
     if (Math.random() < .5) { const res = [-b*b, 0, a*a];
       return { expr: poly(res), co: res, factor: true,
+        vis: { type: 'area', mode: 'factor', r: [a, -b], c: [a, b], res },
         hints: ['Two terms with a <b>minus</b> sign and both perfect squares? That is a <b>difference of squares</b>: a² − b² = (a − b)(a + b).',
                 `${mono(a*a,2)} = (${mono(a,1)})² and ${b*b} = (${b})².`,
                 `So a = ${mono(a,1)} and b = ${b}.`],
@@ -441,6 +534,7 @@ const SKILLS = {
     }
     const s = pick([1,-1]), res = mulP([s*b,a],[s*b,a]);
     return { expr: poly(res), co: res, factor: true,
+      vis: { type: 'area', mode: 'factor', r: [a, s*b], c: [a, s*b], res },
       hints: ['Check if the first and last terms are perfect squares — this may be a <b>perfect square trinomial</b>: a² ± 2ab + b² = (a ± b)².',
               `${mono(a*a,2)} = (${mono(a,1)})², ${b*b} = (${b})². Is the middle term 2·${mono(a,1)}·${b} = ${mono(2*a*b,1)}?`,
               `Yes! The middle sign is ${s>0?'+':'−'}, so the answer is (${mono(a,1)} ${s>0?'+':'−'} ${b})².`],
@@ -449,6 +543,7 @@ const SKILLS = {
   f_full: { mode: 'factor', name: 'Factor Fully (GCF first)', gen() {
     const g = pick([2,3,4,5,-2,-3]), r = rndNZ(-7,7), s = rndNZ(-7,7), inner = mulP([r,1],[s,1]), res = inner.map(v => v*g);
     return { expr: poly(res), co: res, factor: true,
+      vis: { type: 'area', mode: 'factor', r: [1, r], c: [1, s], res: inner, gcf: g },
       hints: ['<b>Always look for a common factor first!</b> Then try to factor what is left.',
               `Take out ${g}: ${poly(res)} = ${g}(${poly(inner)}).`,
               `Now factor the trinomial ${poly(inner)}: two numbers that multiply to ${inner[0]} and add to ${inner[1]}.`],
@@ -461,6 +556,7 @@ const SKILLS = {
     const roots = Math.abs(r1 - r2) < 1e-9 ? [r1] : [r1, r2];
     const fmtFrac = (n, den) => { const g = gcd(n, den); n /= g; den /= g; if (den < 0) { n = -n; den = -den; } return den === 1 ? `${n}` : `${n}/${den}`; };
     return { expr: `${paren(lin(a,b))}${paren(lin(c,d))} = 0`, roots, solve: true,
+      vis: { type: 'parabola', a: a * c, b: a * d + b * c, c: b * d, roots },
       hints: ['Use the <b>Zero Product Property</b>: if A · B = 0, then either A = 0 or B = 0.',
               `Set each bracket equal to 0: ${lin(a,b)} = 0  or  ${lin(c,d)} = 0.`,
               `Solve each linear equation for x. Watch the signs when moving terms across the = sign!`],
@@ -476,6 +572,7 @@ const SKILLS = {
     const moveC = Math.random() < 0.35;
     const expr = moveC ? `${poly([0, res[1], res[2]])} = ${-res[0]}` : `${poly(res)} = 0`;
     return { expr, roots, solve: true,
+      vis: { type: 'parabola', a: res[2], b: res[1], c: res[0], roots },
       hints: [moveC ? `First move all terms to one side so the equation equals 0: ${poly(res)} = 0.` : 'Factor the left-hand side into two brackets.',
               `Factored form: ${paren(lin(a,b))}${paren(lin(c,d))} = 0.`,
               `Set each bracket equal to 0: ${lin(a,b)} = 0  or  ${lin(c,d)} = 0.`],
@@ -485,6 +582,7 @@ const SKILLS = {
     if (Math.random() < 0.5) {
       const h = rndNZ(-7,7), k = rnd(1,9), rhs = k * k;
       return { expr: `${paren(lin(1,h))}^2 = ${rhs}`, roots: [-h + k, -h - k], solve: true,
+        vis: { type: 'parabola', a: 1, b: 2 * h, c: h * h - rhs, roots: [-h + k, -h - k] },
         hints: ['Take the square root of both sides — remember there are <b>two</b> roots: + and −!',
                 `${lin(1,h)} = ±${k}  (since √${rhs} = ${k}).`,
                 `Solve both: ${lin(1,h)} = ${k}  and  ${lin(1,h)} = −${k}.`],
@@ -492,6 +590,7 @@ const SKILLS = {
     }
     const a = pick([1,2,3,4]), k = rnd(1,8), c = a * k * k;
     return { expr: `${mono(a,2)} − ${c} = 0`, roots: [k, -k], solve: true,
+      vis: { type: 'parabola', a, b: 0, c: -c, roots: [k, -k] },
       hints: ['Isolate x² first, then take ± the square root of both sides.',
               `${mono(a,2)} = ${c}` + (a > 1 ? `  →  x² = ${k * k}.` : '.'),
               `x = ±√${k * k}. Don't forget the negative root!`],
@@ -503,6 +602,7 @@ const SKILLS = {
     if (noSol) {
       a = pick([1,2,3]); b = rnd(-4,4); c = Math.ceil((b*b)/(4*a)) + rnd(1,5); D = b*b - 4*a*c;
       return { expr: `${poly([c,b,a])} = 0`, roots: [], solve: true,
+        vis: { type: 'parabola', a, b, c, roots: [] },
         hints: [`Use the quadratic formula: x = (−b ± √(b² − 4ac)) / (2a), with a = ${a}, b = ${b}, c = ${c}.`,
                 `Compute the discriminant: b² − 4ac = (${b})² − 4(${a})(${c}) = ${D}.`,
                 'Since the discriminant is negative, you cannot take the real square root of a negative number. Type "no solution".'],
@@ -511,6 +611,7 @@ const SKILLS = {
     do { a = pick([1,1,2,3]); b = rndNZ(-7,7); c = rndNZ(-6,6); D = b*b - 4*a*c; } while (D <= 0 || Number.isInteger(Math.sqrt(D)));
     const r1 = (-b + Math.sqrt(D)) / (2 * a), r2 = (-b - Math.sqrt(D)) / (2 * a);
     return { expr: `${poly([c,b,a])} = 0`, roots: [r1, r2], solve: true,
+      vis: { type: 'parabola', a, b, c, roots: [r1, r2] },
       hints: [`Use the quadratic formula: x = (−b ± √(b² − 4ac)) / (2a), with a = ${a}, b = ${b}, c = ${c}.`,
               `Discriminant: b² − 4ac = (${b})² − 4(${a})(${c}) = ${D}.`,
               `x = (${-b} ± √${D}) / ${2 * a}. You can enter exact form with √ or decimals rounded to 2 decimal places.`],
@@ -529,6 +630,7 @@ const SKILLS = {
     desc.push(`translated ${Math.abs(k)} units ${k > 0 ? 'up' : 'down'}`);
     const co = mulP([a], mulP([-h, 1], [-h, 1])); co[0] += k;
     return { expr: desc.join(', '), co, vertexForm: true, h, k, a,
+      vis: { type: 'parabola', a, b: co[1], c: co[0], h, k },
       prompt: 'Write the vertex form y = a(x − h)² + k for y = x² after:',
       hints: ['Vertex form is <b>y = a(x − h)² + k</b>. Reflection/stretch goes in <b>a</b>, horizontal shift in <b>h</b>, vertical shift in <b>k</b>.',
               `a = ${a === 0.5 ? '1/2' : a === -0.5 ? '−1/2' : a}, h = ${h} (remember: inside the bracket is x − h, so ${h > 0 ? 'right ' + h + ' is (x − ' + h + ')' : 'left ' + Math.abs(h) + ' is (x + ' + Math.abs(h) + ')'}), k = ${k}.`,
@@ -539,7 +641,9 @@ const SKILLS = {
     const a = pick([-3,-2,-1,1,2,3]), h = rndNZ(-8,8), k = rndNZ(-8,8);
     const aStr = a === 1 ? '' : a === -1 ? '−' : String(a);
     const eq = `y = ${aStr}${paren(lin(1, -h))}^2 ${k < 0 ? '−' : '+'} ${Math.abs(k)}`;
+    const co = mulP([a], mulP([-h, 1], [-h, 1])); co[0] += k;
     return { expr: eq, point: [h, k], isVertex: true,
+      vis: { type: 'parabola', a, b: co[1], c: co[0], h, k },
       prompt: 'State the vertex (h, k) of this parabola:',
       hints: ['Compare with <b>y = a(x − h)² + k</b>. The vertex is <b>(h, k)</b>.',
               `Watch the sign inside the bracket! ${paren(lin(1, -h))} means h = ${h}.`,
@@ -803,6 +907,7 @@ const SKILLS = {
     const aStr = a === 1 ? '' : a === -1 ? '−' : String(a);
     const vf = `y = ${aStr}${paren(lin(1, -h))}^2 ${k < 0 ? '−' : '+'} ${Math.abs(k)}`;
     return { expr: `y = ${poly(co)}`, co, vertexForm: true, h, k, a,
+      vis: { type: 'cts', a, halfB, sq, k, b, c },
       prompt: 'Complete the square to rewrite in vertex form y = a(x − h)² + k:',
       hints: [a === 1 ? `Take half the x-coefficient (${b}/2 = ${halfB}) and square it (${sq}). Add and subtract ${sq}.`
                       : `First factor ${a} out of the x² and x terms: y = ${a}(x² ${b / a < 0 ? '−' : '+'} ${Math.abs(b / a)}x) ${c < 0 ? '−' : '+'} ${Math.abs(c)}.`,
@@ -1057,6 +1162,7 @@ const SKILLS = {
     }
     const D = b * b - 4 * a * c;
     return { expr: `${poly([c, b, a])} = 0`, choice: kind,
+      vis: { type: 'parabola', a, b, c },
       choices: [{ val: '2', label: '2 distinct real roots' }, { val: '1', label: '1 real root (equal)' }, { val: '0', label: '0 real roots (none)' }],
       prompt: 'Use the discriminant D = b² − 4ac to determine how many real roots the equation has:',
       hints: [`Identify a = ${a}, b = ${b}, c = ${c}.`,
@@ -1848,8 +1954,160 @@ function renderLevelled() {
   });
 }
 
+/* ================= UDL Controls & Interactive Visual Lab ================= */
+let visStep = 0, visOpen = true;
+$('formulaBtn').onclick = () => {
+  const d = $('formulaDrawer');
+  const hidden = d.classList.toggle('hidden');
+  d.open = !hidden;
+};
+$('speakBtn').onclick = () => {
+  if (!('speechSynthesis' in window) || !q) return;
+  window.speechSynthesis.cancel();
+  const txt = `${$('qPrompt').textContent} ${String(q.expr || '').replace(/\^2/g, ' squared').replace(/\^(\d+)/g, ' to the power of $1').replace(/−/g, ' minus ')}`;
+  const u = new SpeechSynthesisUtterance(txt);
+  u.rate = 0.95;
+  window.speechSynthesis.speak(u);
+};
+$('mathKeypad').querySelectorAll('[data-key]').forEach(btn => btn.onclick = () => {
+  if (done) return;
+  const k = btn.dataset.key;
+  if (useMathField) {
+    const mf = $('mathAnswer');
+    if (typeof mf.executeCommand === 'function') mf.executeCommand(['insert', k]);
+    else setAnswer(getAnswer() + k);
+    mf.focus();
+  } else {
+    const inp = $('answer');
+    const s = inp.selectionStart ?? inp.value.length, e = inp.selectionEnd ?? inp.value.length;
+    inp.value = inp.value.slice(0, s) + k + inp.value.slice(e);
+    inp.selectionStart = inp.selectionEnd = s + k.length;
+    inp.dispatchEvent(new Event('input'));
+    inp.focus();
+  }
+  markActive();
+});
+
+function pickTier(skillId) {
+  const sel = $('tierMode').value;
+  if (sel !== 'auto') return sel;
+  const m = masteryOf(skillId);
+  const s = store.skills[skillId];
+  if (!s || s.attempts < 2 || m < 40) return 'warmup';
+  if (m >= 80 || store.streak >= 4) return 'challenge';
+  return 'core';
+}
+$('tierMode').onchange = () => { if (mode !== 'beauty' && mode !== 'levelled') newQuestion(); };
+
+function renderVisualLab() {
+  const wrap = $('visLabWrap'), body = $('visLabBody');
+  if (!q || !q.vis) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  body.classList.toggle('hidden', !visOpen);
+  $('visToggleBtn').textContent = visOpen ? 'Hide Visual' : 'Show Visual';
+  if (!visOpen) return;
+
+  const v = q.vis;
+  if (v.type === 'area1d') {
+    $('visLabTitle').textContent = v.mode === 'expand' ? '👁️ Distributive Area Model (1 × 2 Box)' : '👁️ Reverse Area Model (GCF)';
+    const showOut = v.mode === 'expand' || visStep >= 1;
+    const showIn = v.mode === 'factor' || visStep >= 1;
+    $('visRevealBtn').classList.remove('hidden');
+    body.innerHTML = `<svg viewBox="0 0 320 115" class="w-full max-w-[320px] bg-white rounded-lg border border-slate-300">
+      <text x="135" y="22" font-size="14" font-weight="bold" text-anchor="middle" fill="#1d4ed8">${showOut ? pretty(v.c1) : '?'}</text>
+      <text x="235" y="22" font-size="14" font-weight="bold" text-anchor="middle" fill="#1d4ed8">${showOut ? pretty(v.c2) : '?'}</text>
+      <text x="45" y="68" font-size="14" font-weight="bold" text-anchor="end" fill="#7c3aed">${showOut ? pretty(v.k) : '?'}</text>
+      <rect x="65" y="32" width="110" height="58" fill="#dbeafe" stroke="#1e293b" stroke-width="2"/>
+      <rect x="175" y="32" width="110" height="58" fill="#fef3c7" stroke="#1e293b" stroke-width="2"/>
+      <text x="120" y="66" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">${showIn ? pretty(v.p1) : '?'}</text>
+      <text x="230" y="66" font-size="15" font-weight="bold" text-anchor="middle" fill="#1e293b">${showIn ? pretty(v.p2) : '?'}</text>
+    </svg>
+    <div class="text-xs text-slate-600 mt-1">${v.mode === 'expand' ? 'Click "Reveal / Step" to see each box product.' : 'Click "Reveal / Step" to reveal the GCF and bracket dimensions.'}</div>`;
+  } else if (v.type === 'area') {
+    const [a, b] = v.r, [c, d] = v.c;
+    const isExp = v.mode === 'expand';
+    $('visLabTitle').textContent = isExp ? '👁️ Binomial Area Model (Box Method)' : '👁️ Factoring Area Model' + (v.gcf ? ` (after GCF ${v.gcf})` : '');
+    $('visRevealBtn').classList.remove('hidden');
+    const showSides = isExp || visStep >= 2;
+    const showTL = !isExp || visStep >= 1;
+    const showMids = !isExp || visStep >= 2;
+    const showBR = !isExp || visStep >= 3;
+    const tl = mono(a * c, 2), tr = mono(a * d, 1), bl = mono(b * c, 1), br = String(b * d);
+    const tileNote = (a === 1 && c === 1 && Math.abs(b) <= 6 && Math.abs(d) <= 6)
+      ? `<div class="text-xs text-indigo-800 mt-1">Algebra Tiles: 1 <span class="px-1 bg-blue-200 rounded font-bold">x²</span> tile, ${Math.abs(a*d) + Math.abs(b*c)} <span class="px-1 bg-green-200 rounded font-bold">x</span> strips${(a*d)*(b*c) < 0 ? ' (with zero pairs!)' : ''}, ${Math.abs(b*d)} <span class="px-1 bg-yellow-200 rounded font-bold">1</span> unit tiles</div>`
+      : '';
+    body.innerHTML = `<svg viewBox="0 0 320 165" class="w-full max-w-[320px] bg-white rounded-lg border border-slate-300">
+      <text x="135" y="22" font-size="14" font-weight="bold" text-anchor="middle" fill="#1d4ed8">${showSides ? pretty(mono(c, 1)) : '?'}</text>
+      <text x="235" y="22" font-size="14" font-weight="bold" text-anchor="middle" fill="#1d4ed8">${showSides ? (d < 0 ? '− ' + Math.abs(d) : '+ ' + d) : '?'}</text>
+      <text x="58" y="66" font-size="14" font-weight="bold" text-anchor="end" fill="#7c3aed">${showSides ? pretty(mono(a, 1)) : '?'}</text>
+      <text x="58" y="122" font-size="14" font-weight="bold" text-anchor="end" fill="#7c3aed">${showSides ? (b < 0 ? '− ' + Math.abs(b) : '+ ' + b) : '?'}</text>
+      <rect x="70" y="32" width="115" height="54" fill="#dbeafe" stroke="#1e293b" stroke-width="2"/>
+      <rect x="185" y="32" width="105" height="54" fill="#dcfce7" stroke="#1e293b" stroke-width="2"/>
+      <rect x="70" y="86" width="115" height="54" fill="#dcfce7" stroke="#1e293b" stroke-width="2"/>
+      <rect x="185" y="86" width="105" height="54" fill="#fef3c7" stroke="#1e293b" stroke-width="2"/>
+      <text x="127" y="64" font-size="14" font-weight="bold" text-anchor="middle">${showTL ? pretty(tl) : '?'}</text>
+      <text x="237" y="64" font-size="14" font-weight="bold" text-anchor="middle" fill="#15803d">${showMids ? pretty(tr) : '?'}</text>
+      <text x="127" y="118" font-size="14" font-weight="bold" text-anchor="middle" fill="#15803d">${showMids ? pretty(bl) : '?'}</text>
+      <text x="237" y="118" font-size="14" font-weight="bold" text-anchor="middle" fill="#b45309">${showBR ? pretty(br) : '?'}</text>
+    </svg>${tileNote}
+    <div class="text-xs text-slate-600 mt-1">${isExp ? 'Green diagonal boxes are like terms — add them together!' : 'Outer edges give the two binomial factors.'}</div>`;
+  } else if (v.type === 'cts') {
+    $('visLabTitle').textContent = '👁️ Completing the Square (Geometric Visual)';
+    $('visRevealBtn').classList.remove('hidden');
+    const hb = v.halfB, hbStr = hb < 0 ? `−${Math.abs(hb)}` : `+${hb}`;
+    const showCorner = visStep >= 1;
+    body.innerHTML = `<svg viewBox="0 0 280 185" class="w-full max-w-[280px] bg-white rounded-lg border border-slate-300">
+      <rect x="45" y="25" width="95" height="95" fill="#dbeafe" stroke="#1e293b" stroke-width="2"/>
+      <text x="92" y="77" font-size="16" font-weight="bold" text-anchor="middle">x²</text>
+      <rect x="140" y="25" width="55" height="95" fill="#dcfce7" stroke="#1e293b" stroke-width="2"/>
+      <text x="167" y="77" font-size="13" font-weight="bold" text-anchor="middle" fill="#15803d">${hbStr}x</text>
+      <rect x="45" y="120" width="95" height="50" fill="#dcfce7" stroke="#1e293b" stroke-width="2"/>
+      <text x="92" y="149" font-size="13" font-weight="bold" text-anchor="middle" fill="#15803d">${hbStr}x</text>
+      <rect x="140" y="120" width="55" height="50" fill="${showCorner ? '#f3e8ff' : '#f8fafc'}" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="4 3"/>
+      <text x="167" y="149" font-size="13" font-weight="bold" text-anchor="middle" fill="#7c3aed">${showCorner ? v.sq : '? = ('+hb+')²'}</text>
+      <text x="92" y="17" font-size="12" font-weight="bold" text-anchor="middle" fill="#1d4ed8">x</text>
+      <text x="167" y="17" font-size="12" font-weight="bold" text-anchor="middle" fill="#1d4ed8">${hbStr}</text>
+    </svg>
+    <div class="text-xs text-slate-600 mt-1">Split ${v.b / v.a}x into two equal ${hbStr}x strips. Add &amp; subtract the missing corner (${hb})² = ${v.sq}!</div>`;
+  } else if (v.type === 'parabola') {
+    $('visLabTitle').textContent = '👁️ Live Parabola Graph (vs. y = x² dashed)';
+    $('visRevealBtn').classList.add('hidden');
+    const a = v.a || 1, b = v.b || 0, c = v.c || 0;
+    const h = v.h !== undefined ? v.h : -b / (2 * a);
+    const k = v.k !== undefined ? v.k : a * h * h + b * h + c;
+    const S = 260, minX = -8, maxX = 8, minY = -10, maxY = 10;
+    const px = x => 20 + ((x - minX) / (maxX - minX)) * (S - 40);
+    const py = y => S - 20 - ((y - minY) / (maxY - minY)) * (S - 40);
+    let gHtml = `<line x1="${px(minX)}" y1="${py(0)}" x2="${px(maxX)}" y2="${py(0)}" stroke="#1e293b" stroke-width="1.5"/>`;
+    gHtml += `<line x1="${px(0)}" y1="${py(minY)}" x2="${px(0)}" y2="${py(maxY)}" stroke="#1e293b" stroke-width="1.5"/>`;
+    // Reference y = x^2
+    let refP = '', curP = '';
+    for (let x = minX; x <= maxX; x += 0.25) {
+      const yr = x * x;
+      if (yr <= maxY + 2) refP += (refP ? ' L ' : 'M ') + px(x).toFixed(1) + ' ' + py(yr).toFixed(1);
+      const yc = a * x * x + b * x + c;
+      if (yc >= minY - 3 && yc <= maxY + 3) curP += (curP ? ' L ' : 'M ') + px(x).toFixed(1) + ' ' + py(yc).toFixed(1);
+    }
+    gHtml += `<path d="${refP}" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    if (curP) gHtml += `<path d="${curP}" fill="none" stroke="#2563eb" stroke-width="2.8"/>`;
+    if (k >= minY && k <= maxY && h >= minX && h <= maxX) {
+      gHtml += `<circle cx="${px(h).toFixed(1)}" cy="${py(k).toFixed(1)}" r="4.5" fill="#7c3aed" stroke="white" stroke-width="1.5"/>`;
+    }
+    if (v.roots) {
+      for (const r of v.roots) if (r >= minX && r <= maxX) {
+        gHtml += `<circle cx="${px(r).toFixed(1)}" cy="${py(0).toFixed(1)}" r="4.5" fill="#dc2626" stroke="white" stroke-width="1.5"/>`;
+      }
+    }
+    body.innerHTML = `<svg viewBox="0 0 ${S} ${S}" class="w-full max-w-[260px] bg-white rounded-lg border border-slate-300">${gHtml}</svg>
+      <div class="text-xs text-slate-600 mt-1">Dashed grey = <code>y = x²</code> · Blue = this quadratic · Purple = vertex · Red = roots (x-intercepts)</div>`;
+  }
+}
+$('visRevealBtn').onclick = () => { visStep++; renderVisualLab(); };
+$('visToggleBtn').onclick = () => { visOpen = !visOpen; renderVisualLab(); };
+
 function newQuestion() {
   if (mode === 'beauty') return;
+  visStep = 0;
   if (mode === 'levelled') {
     const genFn = LEVELLED_TASKS[lvlExp][lvlTier];
     q = genFn();
@@ -1860,15 +2118,18 @@ function newQuestion() {
     const tierInfo = LEVEL_TIERS[lvlTier - 1];
     $('qSkill').textContent = `${tierInfo.pep} ${tierInfo.name} (${tierInfo.pct})`;
     $('qLevel').textContent = LEVELLED_META[lvlExp].label;
+    $('qTierBadge').textContent = '';
     $('qExp').textContent = `🎯 Overall Expectation: ${LEVELLED_META[lvlExp].desc}`;
   } else {
     // Adaptive: weight weaker skills more
     const ids = available(), w = ids.map(id => 110 - masteryOf(id)), tot = w.reduce((a, b) => a + b, 0);
     let r = Math.random() * tot; qId = ids[ids.length - 1];
     for (let i = 0; i < ids.length; i++) { r -= w[i]; if (r <= 0) { qId = ids[i]; break; } }
-    q = SKILLS[qId].gen(); q.factor = SKILLS[qId].mode === 'factor'; q.solve = SKILLS[qId].mode === 'solve';
+    const tier = pickTier(qId);
+    q = SKILLS[qId].gen(tier); q.factor = SKILLS[qId].mode === 'factor'; q.solve = SKILLS[qId].mode === 'solve';
     $('qSkill').textContent = SKILLS[qId].name;
     $('qLevel').textContent = `Mastery ${masteryOf(qId)}%`;
+    $('qTierBadge').textContent = tier === 'warmup' ? '🌱 Warm-up' : tier === 'challenge' ? '🚀 Challenge' : '🎯 Core';
     $('qExp').textContent = SKILL_EXP[qId] ? `🎯 ${SKILL_EXP[qId]}` : '';
   }
   hintsShown = 0; attemptedWrong = false; done = false; graphPts = [];
@@ -1877,7 +2138,8 @@ function newQuestion() {
   $('qExpr').className = isText ? 'text-lg md:text-xl font-bold my-4 text-center text-slate-800 whitespace-pre-line' : 'math text-2xl md:text-3xl font-bold my-4 text-center whitespace-pre-line';
   $('qExpr').textContent = isText ? q.expr : pretty(q.expr);
 
-  // Show/hide diagram, graph, choices, and answer box
+  // Show/hide visual lab, diagram, graph, choices, and answer box
+  renderVisualLab();
   $('diagramWrap').classList.toggle('hidden', !q.svg);
   $('diagramWrap').innerHTML = q.svg || '';
   $('graphWrap').classList.toggle('hidden', !q.lines);
