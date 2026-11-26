@@ -29,10 +29,10 @@
     .projector-mode .step-note { font-size: clamp(1rem, 1.6vw, 1.25rem); }
     .step-card { background: #f8fafc; }
     .step-card[aria-current="step"] { background: #fffbeb; box-shadow: 0 0 0 2px #f59e0b; }
-    .sketch-surface { position: relative; aspect-ratio: 3 / 2; }
+    .sketch-surface { position: relative; aspect-ratio: 3 / 2; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     .sketch-surface > svg, .sketch-surface > canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
     .sketch-surface svg { pointer-events: none; }
-    #sketchCanvas { touch-action: none; cursor: crosshair; }
+    #sketchCanvas { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: crosshair; }
     .pen-swatch { display: grid; place-items: center; min-width: 2.75rem; min-height: 2.75rem; border-radius: .5rem; }
     .pen-swatch span { display: block; width: 1.25rem; height: 1.25rem; border: 1px solid #1e293b; border-radius: 50%; }
     .pen-swatch[aria-pressed="true"] { background: #dbeafe; box-shadow: inset 0 0 0 2px #1d4ed8; }
@@ -4726,21 +4726,35 @@
       ink.fill();
     }
 
+    function drawStrokePath(points) {
+      if (!points.length) return;
+      if (points.length === 1) {
+        drawDot(points[0], ink.lineWidth);
+        return;
+      }
+      ink.beginPath();
+      ink.moveTo(points[0].x, points[0].y);
+      if (points.length === 2) {
+        ink.lineTo(points[1].x, points[1].y);
+      } else {
+        for (let i = 1; i < points.length - 1; i++) {
+          const midX = (points[i].x + points[i + 1].x) / 2;
+          const midY = (points[i].y + points[i + 1].y) / 2;
+          ink.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+        }
+        const last = points[points.length - 1];
+        ink.lineTo(last.x, last.y);
+      }
+      ink.stroke();
+    }
+
     function redrawSketch() {
       if (!view || !ink) return;
       ink.clearRect(0, 0, canvas.width, canvas.height);
       withSketchView(() => {
         for (const stroke of strokes) {
           setInk(stroke);
-          const [first, ...rest] = stroke.points;
-          if (!rest.length) {
-            drawDot(first, stroke.width);
-            continue;
-          }
-          ink.beginPath();
-          ink.moveTo(first.x, first.y);
-          for (const point of rest) ink.lineTo(point.x, point.y);
-          ink.stroke();
+          drawStrokePath(stroke.points);
         }
       });
     }
@@ -4748,23 +4762,23 @@
     function sketchPoint(event) {
       const rect = canvas.getBoundingClientRect();
       return {
-        x: (event.clientX - rect.left - view.x) / view.scale,
-        y: (event.clientY - rect.top - view.y) / view.scale
+        x: Math.max(0, Math.min(DRAW_WIDTH, (event.clientX - rect.left - view.x) / view.scale)),
+        y: Math.max(0, Math.min(DRAW_HEIGHT, (event.clientY - rect.top - view.y) / view.scale))
       };
     }
 
     function startStroke(event) {
-      if (!sketchVisible || !ink || pointerStroke || event.button !== 0) return;
+      if (!sketchVisible || !ink || pointerStroke) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
       if (!view) resizeSketch();
       if (!view) return;
       const point = sketchPoint(event);
-      if (point.x < 0 || point.y < 0 || point.x > DRAW_WIDTH || point.y > DRAW_HEIGHT) return;
       event.preventDefault();
       const width = Number(byId('penWidth').value);
       const stroke = { colour: penColour, width: erasing ? width * 4 : width, erase: erasing, points: [point] };
       pointerStroke = { id: event.pointerId, stroke };
       strokes.push(stroke);
-      canvas.setPointerCapture(event.pointerId);
+      try { canvas.setPointerCapture(event.pointerId); } catch {}
       withSketchView(() => {
         setInk(stroke);
         drawDot(point, stroke.width);
@@ -4773,17 +4787,36 @@
 
     function extendStroke(event) {
       if (!pointerStroke || event.pointerId !== pointerStroke.id) return;
+      event.preventDefault();
       const stroke = pointerStroke.stroke;
-      const next = sketchPoint(event);
-      const previous = stroke.points[stroke.points.length - 1];
-      if (next.x === previous.x && next.y === previous.y) return;
-      stroke.points.push(next);
+      const prevLen = stroke.points.length;
+      const events = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [event];
+      const samples = events.length ? events : [event];
+      for (const sample of samples) {
+        const next = sketchPoint(sample);
+        const previous = stroke.points[stroke.points.length - 1];
+        if (next.x === previous.x && next.y === previous.y) continue;
+        stroke.points.push(next);
+      }
+      if (stroke.points.length === prevLen) return;
       withSketchView(() => {
         setInk(stroke);
-        ink.beginPath();
-        ink.moveTo(previous.x, previous.y);
-        ink.lineTo(next.x, next.y);
-        ink.stroke();
+        for (let i = prevLen; i < stroke.points.length; i++) {
+          if (i === 1) {
+            ink.beginPath();
+            ink.moveTo(stroke.points[0].x, stroke.points[0].y);
+            ink.lineTo(stroke.points[1].x, stroke.points[1].y);
+            ink.stroke();
+          } else {
+            const p0 = stroke.points[i - 2];
+            const p1 = stroke.points[i - 1];
+            const p2 = stroke.points[i];
+            ink.beginPath();
+            ink.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+            ink.quadraticCurveTo(p1.x, p1.y, (p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+            ink.stroke();
+          }
+        }
       });
     }
 
@@ -4793,7 +4826,9 @@
       const pointerId = pointerStroke.id;
       pointerStroke = null;
       sketchHistory.push({ type: 'stroke' });
-      if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+      try {
+        if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+      } catch {}
       updateSketchControls();
     }
 
@@ -5209,9 +5244,12 @@
       dialog.addEventListener('cancel', event => { if (!allowDiscard()) event.preventDefault(); });
       dialog.addEventListener('close', () => clearTimeout(previewTimer));
       byId('sketchBackground').addEventListener('change', updateSketchBackground);
+      canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
       canvas.addEventListener('pointerdown', startStroke);
       canvas.addEventListener('pointermove', extendStroke);
       for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, finishStroke);
+      for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, finishStroke);
       if ('ResizeObserver' in window) new ResizeObserver(resizeSketch).observe(canvas);
       window.addEventListener('resize', resizeSketch);
     }, { once: true });
