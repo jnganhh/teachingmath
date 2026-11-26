@@ -1741,8 +1741,8 @@ function record(id, correct, hintsUsed, input) {
 const $ = id => document.getElementById(id);
 
 /* ================= Student identity, Apps Script email & Firebase Firestore ================= */
-// Paste your Google Apps Script Web App URL here (see google-apps-script.gs in this repo)
-const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/gapps.yrdsb.ca/s/AKfycbxqBtV5pWjvNGX0xod_u0yOE-kB1GSmKdeji_TXg153UblqDkKa6zt3T8OR0C3ex_U/exec';
+// Optional: configure a reporting endpoint in runtime settings if needed
+const APPS_SCRIPT_URL = '';
 // Optional: paste your Firebase Web App config here (Spark free tier) to also log to Firestore + Teacher Dashboard
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyCRaUzNdJR7r5QL_v65kSIkch7IedxarSk',
@@ -1802,7 +1802,6 @@ async function syncToFirestore(reason = 'milestone') {
   await db.collection('mpm2d_students').doc(key).set(payload, { merge: true });
   return true;
 }
-
 const MILESTONE = 20;
 const totalCorrect = () => Object.values(store.skills).reduce((a, s) => a + s.correct, 0);
 function askStudent() {

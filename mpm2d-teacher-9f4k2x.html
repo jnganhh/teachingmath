@@ -807,9 +807,17 @@
     const STORAGE_KEY = 'mpm2d_growing_success_tracker_v1';
     let fileHandle = null;
 
+    function getTorontoDateStr(d = new Date()) {
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(d);
+      } catch (e) {
+        return d.toISOString().slice(0, 10);
+      }
+    }
+
     const DEFAULT_STATE = {
       currentPeriod: 'P1',
-      activeDate: new Date().toISOString().slice(0, 10),
+      activeDate: getTorontoDateStr(),
       currentView: 'daily',
       periods: {
         P1: {
@@ -864,10 +872,13 @@
 
     const undoStack = [];
     let isUndoing = false;
-    let lastSavedSnapshot = localStorage.getItem(STORAGE_KEY) || '';
+    let localEditSeq = 0;
+    let lastSavedSnapshot = '';
+    try { lastSavedSnapshot = localStorage.getItem(STORAGE_KEY) || ''; } catch (e) {}
 
     async function saveState() {
       try {
+        localEditSeq++;
         const serialized = JSON.stringify(state, null, 2);
         if (!isUndoing && lastSavedSnapshot && lastSavedSnapshot !== serialized) {
           undoStack.push(lastSavedSnapshot);
@@ -944,11 +955,35 @@
       el.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span> ${msg} (${time})`;
     }
 
+    function readDayRecord(date, studentId) {
+      const rec = state.records?.[date]?.[studentId];
+      if (!rec) {
+        return {
+          attendance: '',
+          homework: '',
+          phoneCount: 0,
+          tallies: { ans: 0, brd: 0, hlp: 0, chk: 0 },
+          observations: [],
+          hallPasses: [],
+          sixCs: []
+        };
+      }
+      return {
+        attendance: rec.attendance !== undefined ? rec.attendance : '',
+        homework: rec.homework || '',
+        phoneCount: rec.phoneCount || 0,
+        tallies: rec.tallies || { ans: 0, brd: 0, hlp: 0, chk: 0 },
+        observations: rec.observations || [],
+        hallPasses: Array.isArray(rec.hallPasses) ? rec.hallPasses : [],
+        sixCs: Array.isArray(rec.sixCs) ? rec.sixCs : []
+      };
+    }
+
     function getStudentDayRecord(date, studentId) {
       if (!state.records[date]) state.records[date] = {};
       if (!state.records[date][studentId]) {
         state.records[date][studentId] = {
-          attendance: 'P',
+          attendance: '',
           homework: '', // 'Done' | 'Part' | 'Miss' | ''
           phoneCount: 0,
           tallies: { ans: 0, brd: 0, hlp: 0, chk: 0 },
@@ -985,19 +1020,23 @@
       Office: '🏢',
       Other: '✏️'
     };
-    let pendingHallPassStudentId = null;
+    let pendingHallPassContext = null;
 
     function toggleRoomPass(studentId) {
-      const rec = getStudentDayRecord(state.activeDate, studentId);
-      const passes = rec.hallPasses || [];
+      const targetDate = state.activeDate;
+      const existing = readDayRecord(targetDate, studentId);
+      const passes = existing.hallPasses || [];
       const active = passes.length > 0 && passes[passes.length - 1].inTs === null ? passes[passes.length - 1] : null;
       if (active) {
-        active.inTs = Date.now();
-        rec.hallPasses = passes;
+        const rec = getStudentDayRecord(targetDate, studentId);
+        const recPasses = rec.hallPasses || [];
+        if (recPasses.length > 0 && recPasses[recPasses.length - 1].inTs === null) {
+          recPasses[recPasses.length - 1].inTs = Date.now();
+        }
         saveState();
         renderCurrentView();
       } else {
-        pendingHallPassStudentId = studentId;
+        pendingHallPassContext = { studentId, date: targetDate };
         const stu = state.periods[state.currentPeriod].students.find(s => s.id === studentId);
         const nameEl = document.getElementById('hpReasonStudentName');
         if (nameEl) nameEl.textContent = stu ? stu.name : 'Student';
@@ -1008,15 +1047,15 @@
     }
 
     function closeHallPassReasonModal() {
-      pendingHallPassStudentId = null;
+      pendingHallPassContext = null;
       document.getElementById('hallPassReasonModal').classList.add('hidden');
     }
 
     function confirmHallPassOut(reason) {
-      if (!pendingHallPassStudentId) return;
-      const studentId = pendingHallPassStudentId;
+      if (!pendingHallPassContext) return;
+      const { studentId, date } = pendingHallPassContext;
       const note = (document.getElementById('hpCustomReasonNote')?.value || '').trim();
-      const rec = getStudentDayRecord(state.activeDate, studentId);
+      const rec = getStudentDayRecord(date, studentId);
       if (!Array.isArray(rec.hallPasses)) rec.hallPasses = [];
       rec.hallPasses.push({
         outTs: Date.now(),
@@ -1096,7 +1135,7 @@
     }
 
     function setToday() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getTorontoDateStr();
       document.getElementById('activeDate').value = today;
       changeDate(today);
     }
@@ -1242,14 +1281,20 @@
 
     function pickRandomStudent() {
       const students = state.periods[state.currentPeriod].students;
-      const present = students.filter(s => {
-        const rec = getStudentDayRecord(state.activeDate, s.id);
+      let present = students.filter(s => {
+        const rec = readDayRecord(state.activeDate, s.id);
         return rec.attendance === 'P' || rec.attendance === 'L';
       });
+      if (present.length === 0) {
+        present = students.filter(s => {
+          const rec = readDayRecord(state.activeDate, s.id);
+          return rec.attendance !== 'A' && rec.attendance !== 'E';
+        });
+      }
       if (present.length === 0) return;
 
       const scored = present.map(s => {
-        const rec = getStudentDayRecord(state.activeDate, s.id);
+        const rec = readDayRecord(state.activeDate, s.id);
         const total = Object.values(rec.tallies).reduce((a, b) => a + b, 0);
         return { student: s, total, rand: Math.random() };
       });
@@ -1396,7 +1441,7 @@
     }
 
     function buildLookForDirectGridHTML(studentId) {
-      const rec = getStudentDayRecord(state.activeDate, studentId);
+      const rec = readDayRecord(state.activeDate, studentId);
       const checkedIds = new Set((rec.observations || []).map(o => o.lookForId));
 
       const groupsHTML = Object.values(GROWING_SUCCESS_SKILLS).map(skill => {
@@ -1451,7 +1496,7 @@
 
       let pCount = 0, lCount = 0, aCount = 0, hwDoneCount = 0, phoneSum = 0, tallySum = 0, obsSum = 0, outNowCount = 0;
       allStudents.forEach(s => {
-        const rec = getStudentDayRecord(state.activeDate, s.id);
+        const rec = readDayRecord(state.activeDate, s.id);
         if (rec.attendance === 'P') pCount++;
         else if (rec.attendance === 'L') lCount++;
         else if (rec.attendance === 'A') aCount++;
@@ -1573,7 +1618,7 @@
     function renderStudentModalBody(studentId) {
       const container = document.getElementById('modalStudentBody');
       if (!container) return;
-      const rec = getStudentDayRecord(state.activeDate, studentId);
+      const rec = readDayRecord(state.activeDate, studentId);
 
       const attButtons = [
         { code: 'P', label: 'Present' },
@@ -1736,7 +1781,7 @@
       }
 
       grid.innerHTML = students.map(s => {
-        const rec = getStudentDayRecord(state.activeDate, s.id);
+        const rec = readDayRecord(state.activeDate, s.id);
         const totalTallies = Object.values(rec.tallies || {}).reduce((a, b) => a + b, 0);
         const obsCount = (rec.observations || []).length;
         const pVal = rec.phoneCount || 0;
@@ -1744,8 +1789,9 @@
         const attColor = rec.attendance === 'P' ? 'bg-emerald-100 text-emerald-900 border-emerald-700'
           : rec.attendance === 'L' ? 'bg-amber-100 text-amber-900 border-amber-700'
           : rec.attendance === 'A' ? 'bg-red-100 text-red-900 border-red-700'
-          : 'bg-slate-200 text-slate-800 border-slate-500';
-        const attText = rec.attendance === 'P' ? 'Present' : rec.attendance === 'L' ? 'Late' : rec.attendance === 'A' ? 'Absent' : 'Excused';
+          : rec.attendance === 'E' ? 'bg-slate-200 text-slate-800 border-slate-500'
+          : 'bg-slate-100 text-slate-500 border-slate-300';
+        const attText = rec.attendance === 'P' ? 'Present' : rec.attendance === 'L' ? 'Late' : rec.attendance === 'A' ? 'Absent' : rec.attendance === 'E' ? 'Excused' : 'Unmarked';
 
         const hwBadge = rec.homework === 'Done' ? `<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold">✓ HW</span>`
           : rec.homework === 'Part' ? `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">~ HW</span>`
@@ -1787,7 +1833,7 @@
                 <button onclick="adjustTally('${s.id}', 'brd', 1)" class="px-2 py-0.5 text-xs font-black text-emerald-800 hover:bg-emerald-200 rounded-r" title="+1 Whiteboard Task (VNPS)">+</button>
               </div>
               <div class="flex items-center gap-1">
-                <button onclick="cycleAttendance('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-slate-50 hover:bg-slate-200" title="Cycle Present / Late / Absent">${rec.attendance}</button>
+                <button onclick="cycleAttendance('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-slate-50 hover:bg-slate-200" title="Cycle Present / Late / Absent / Excused">${rec.attendance || '—'}</button>
                 <button onclick="adjustTally('${s.id}', 'ans', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-blue-50 text-blue-900 hover:bg-blue-100" title="+1 Answered Question">+1</button>
                 <button onclick="adjustPhoneCount('${s.id}', 1)" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 bg-red-50 text-red-900 hover:bg-red-100" title="+1 Mobile Device Flag">📵</button>
                 <button onclick="toggleRoomPass('${s.id}')" class="flex-1 py-1 text-[10px] font-black rounded border border-slate-800 ${activePass ? 'bg-orange-600 text-white' : 'bg-orange-50 text-orange-900 hover:bg-orange-100'}" title="${activePass ? 'Mark Returned to Room' : 'Mark Left Room'}">${activePass ? '↩️ In' : '🚪 Out'}</button>
@@ -1799,9 +1845,10 @@
     }
 
     function cycleAttendance(studentId) {
-      const rec = getStudentDayRecord(state.activeDate, studentId);
+      const rec = readDayRecord(state.activeDate, studentId);
       const order = ['P', 'L', 'A', 'E'];
-      const next = order[(order.indexOf(rec.attendance) + 1) % order.length];
+      const idx = order.indexOf(rec.attendance);
+      const next = idx === -1 ? 'P' : order[(idx + 1) % order.length];
       setAttendance(studentId, next);
     }
 
@@ -2036,10 +2083,15 @@
       const includeLate = document.getElementById('groupIncludeLate')?.checked ?? true;
       const allStudents = state.periods[state.currentPeriod].students;
 
-      const eligible = allStudents.filter(s => {
-        const rec = getStudentDayRecord(state.activeDate, s.id);
+      let eligible = allStudents.filter(s => {
+        const rec = readDayRecord(state.activeDate, s.id);
         return rec.attendance === 'P' || (includeLate && rec.attendance === 'L');
       });
+
+      const anyMarked = allStudents.some(s => readDayRecord(state.activeDate, s.id).attendance !== '');
+      if (eligible.length === 0 && !anyMarked) {
+        eligible = [...allStudents];
+      }
 
       const grid = document.getElementById('randomGroupsGrid');
       const infoEl = document.getElementById('groupsRepeatInfo');
@@ -2061,15 +2113,11 @@
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
 
-        const groups = [];
-        for (let i = 0; i < shuffled.length; i += size) {
-          groups.push(shuffled.slice(i, i + size));
-        }
-        // Balance last group if it has only 1 student and there's more than 1 group
-        if (groups.length > 1 && groups[groups.length - 1].length === 1) {
-          const lone = groups.pop()[0];
-          groups[groups.length - 1].push(lone);
-        }
+        const numGroups = Math.max(1, Math.ceil(shuffled.length / size));
+        const groups = Array.from({ length: numGroups }, () => []);
+        shuffled.forEach((stu, idx) => {
+          groups[idx % numGroups].push(stu);
+        });
 
         let score = 0;
         groups.forEach(g => {
@@ -2157,7 +2205,7 @@
       }
 
       tbody.innerHTML = students.map(s => {
-        const rec = getStudentDayRecord(state.activeDate, s.id);
+        const rec = readDayRecord(state.activeDate, s.id);
         const attButtons = [
           { code: 'P', label: 'Present', title: 'Present' },
           { code: 'L', label: 'Late', title: 'Late' },
@@ -2348,7 +2396,7 @@
 
       let p = 0, l = 0, a = 0, hwDone = 0, hwMiss = 0, phoneDay = 0, tSum = 0, oSum = 0;
       students.forEach(s => {
-        const r = getStudentDayRecord(state.activeDate, s.id);
+        const r = readDayRecord(state.activeDate, s.id);
         if (r.attendance === 'P') p++;
         else if (r.attendance === 'L') l++;
         else if (r.attendance === 'A') a++;
@@ -2392,7 +2440,7 @@
 
       const tbody = document.getElementById('historyTableBody');
       tbody.innerHTML = students.map(s => {
-        const r = getStudentDayRecord(state.activeDate, s.id);
+        const r = readDayRecord(state.activeDate, s.id);
         const hwBadge = r.homework === 'Done'
           ? '<span class="px-2 py-0.5 rounded font-black text-xs hw-Done">✓ Done</span>'
           : r.homework === 'Part'
@@ -2967,7 +3015,11 @@
         });
       });
 
-      const csvContent = rows.map(r => r.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const csvContent = rows.map(r => r.map(field => {
+        let s = String(field);
+        if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return `"${s.replace(/"/g, '""')}"`;
+      }).join(',')).join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -3094,6 +3146,7 @@
       if (!autoSync || !url) return;
       clearTimeout(cloudSyncTimer);
       cloudSyncTimer = setTimeout(() => {
+        cloudSyncTimer = null;
         pushToGoogleCloud(false);
       }, 2000);
     }
@@ -3117,6 +3170,12 @@
 
     let lastSyncedTimestamp = '';
     let isPushing = false;
+    let isPulling = false;
+
+    function isTrackerLocked() {
+      const overlay = document.getElementById('teacherLockOverlay');
+      return overlay && !overlay.classList.contains('hidden');
+    }
 
     async function pushToGoogleCloud(manualClick) {
       const url = getActiveCloudUrl();
@@ -3180,7 +3239,8 @@
     }
 
     async function pullFromGoogleCloud(silentOnLoad) {
-      if (isPushing && silentOnLoad) return;
+      if (isPulling) return;
+      if ((isPushing || cloudSyncTimer) && silentOnLoad) return;
       const url = getActiveCloudUrl();
       const statusEl = document.getElementById('cloudSyncStatus');
       const pullBtn = document.getElementById('cloudPullQuickBtn');
@@ -3196,7 +3256,9 @@
         return;
       }
 
+      const seqAtStart = localEditSeq;
       try {
+        isPulling = true;
         if (!silentOnLoad && pullBtn) pullBtn.innerHTML = '<span>⏳</span> Pulling...';
         if (!silentOnLoad && statusEl) {
           statusEl.classList.remove('hidden');
@@ -3207,13 +3269,19 @@
         const res = await fetch(`${url}${sep}_t=${Date.now()}`, { cache: 'no-store', redirect: 'follow' });
         const data = await res.json();
         if (data && data.ok && data.state && data.state.periods) {
+          if (silentOnLoad && (seqAtStart !== localEditSeq || cloudSyncTimer)) {
+            return;
+          }
           // Only overwrite if manual pull OR cloud timestamp changed
           if (!silentOnLoad || !lastSyncedTimestamp || data.lastUpdated !== lastSyncedTimestamp) {
             lastSyncedTimestamp = data.lastUpdated || '';
             // Keep activePeriod tab local so switching devices doesn't unexpectedly jump tabs unless desired
             const currentTab = state.currentView || 'daily';
             state = { ...data.state, currentView: currentTab };
+            undoStack.length = 0;
+            updateUndoButton();
             const serialized = JSON.stringify(state, null, 2);
+            lastSavedSnapshot = serialized;
             localStorage.setItem(STORAGE_KEY, serialized);
             saveToIndexedDB(serialized);
             renderCurrentView();
@@ -3238,22 +3306,24 @@
           statusEl.classList.remove('hidden');
           statusEl.textContent = `❌ Could not pull from Google Cloud: ${err.message}`;
         }
+      } finally {
+        isPulling = false;
       }
     }
 
     // Automatically pull fresh changes when switching between iPad and MacBook (tab focus / wake) + every 20s when open
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && getActiveCloudUrl() && !cloudSyncTimer) {
+      if (document.visibilityState === 'visible' && !isTrackerLocked() && getActiveCloudUrl() && !cloudSyncTimer) {
         pullFromGoogleCloud(true);
       }
     });
     window.addEventListener('focus', () => {
-      if (getActiveCloudUrl() && !cloudSyncTimer) {
+      if (!isTrackerLocked() && getActiveCloudUrl() && !cloudSyncTimer) {
         pullFromGoogleCloud(true);
       }
     });
     setInterval(() => {
-      if (document.visibilityState === 'visible' && getActiveCloudUrl() && !cloudSyncTimer && !isPushing) {
+      if (document.visibilityState === 'visible' && !isTrackerLocked() && getActiveCloudUrl() && !cloudSyncTimer && !isPushing && !isPulling) {
         pullFromGoogleCloud(true);
       }
     }, 20000);

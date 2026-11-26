@@ -421,12 +421,16 @@
 
     function addVote(label, delta) {
       votes[label] = Math.max(0, (votes[label] || 0) + delta);
-      renderStage();
+      const badge = document.getElementById(`voteBadge-${label}`);
+      if (badge) badge.textContent = `Votes: ${votes[label]}`;
     }
 
     function resetVotes() {
       votes = { A: 0, B: 0, C: 0, D: 0 };
-      renderStage();
+      ['A', 'B', 'C', 'D'].forEach(lbl => {
+        const badge = document.getElementById(`voteBadge-${lbl}`);
+        if (badge) badge.textContent = 'Votes: 0';
+      });
     }
 
     function toggleReasons() {
@@ -461,8 +465,8 @@
             <div class="flex items-center justify-between">
               <span class="w-8 h-8 rounded-full bg-slate-900 text-white text-sm font-black flex items-center justify-center">${item.label}</span>
               <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-                <button onclick="addVote('${item.label}', -1)" class="px-2 py-0.5 text-xs font-black rounded bg-white border-2 border-slate-800 hover:bg-slate-100">−</button>
-                <span class="px-2.5 py-0.5 text-xs font-mono font-black rounded bg-white border-2 border-slate-800">Votes: ${v}</span>
+                <button onclick="addVote('${item.label}', -1)" class="px-2 py-0.5 text-xs font-black rounded bg-white border-2 border-slate-800 hover:bg-slate-100" aria-label="Remove vote for ${item.label}">−</button>
+                <span id="voteBadge-${item.label}" class="px-2.5 py-0.5 text-xs font-mono font-black rounded bg-white border-2 border-slate-800">Votes: ${v}</span>
               </div>
             </div>
             <div class="${exprClass} font-black text-center text-slate-900 my-4 break-words">${item.expr}</div>
