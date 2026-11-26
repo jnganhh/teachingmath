@@ -5,24 +5,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isTeacherOf(classId) {
+    // Teacher signs in on teacher-dashboard.html with Google (non-anonymous).
+    // Add the teacher's email as a document ID under /teachers/{email} in Firebase Console.
+    function isTeacher() {
       return signedIn()
-        && exists(/databases/$(database)/documents/classes/$(classId)/teachers/$(request.auth.uid));
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/teachers/$(request.auth.token.email));
     }
 
-    function isMemberOf(classId) {
-      return signedIn()
-        && exists(/databases/$(database)/documents/classes/$(classId)/members/$(request.auth.uid));
-    }
-
-    function validSummary(data, uid, classId) {
+    function validStudentSummary(data) {
       return data.keys().hasOnly([
-          'uid', 'name', 'cls', 'course', 'practiceType', 'lastMode',
+          'ownerUid', 'name', 'cls', 'course', 'practiceType', 'lastMode',
           'modesPracticed', 'totalCorrect', 'totalAttempts', 'bestStreak',
           'activeMin', 'levelled', 'skills', 'lastReason', 'updatedAt'
         ])
-        && data.uid == uid
-        && data.cls == classId
+        && data.ownerUid == request.auth.uid
         && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
         && data.cls is string && data.cls.size() >= 1 && data.cls.size() <= 40
         && data.totalCorrect is int && data.totalCorrect >= 0
@@ -32,30 +30,20 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
-    match /classes/{classId} {
-      allow read: if isTeacherOf(classId) || isMemberOf(classId);
-      allow write: if false;
+    // Students use silent Anonymous Auth (zero login prompt, no school Google account needed).
+    // Students can only write their own document and cannot read/list other students' data.
+    match /mpm2d_students/{docId} {
+      allow get: if isTeacher() || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow list: if isTeacher();
+      allow create: if signedIn() && validStudentSummary(request.resource.data);
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && validStudentSummary(request.resource.data);
+      allow delete: if false;
+    }
 
-      match /teachers/{teacherUid} {
-        allow read: if signedIn() && request.auth.uid == teacherUid;
-        allow write: if false;
-      }
-
-      match /members/{memberUid} {
-        allow read: if (signedIn() && request.auth.uid == memberUid) || isTeacherOf(classId);
-        allow write: if isTeacherOf(classId);
-      }
-
-      match /summaries/{studentUid} {
-        allow get: if (signedIn() && request.auth.uid == studentUid && isMemberOf(classId))
-          || isTeacherOf(classId);
-        allow list: if isTeacherOf(classId);
-        allow create, update: if signedIn()
-          && request.auth.uid == studentUid
-          && isMemberOf(classId)
-          && validSummary(request.resource.data, studentUid, classId);
-        allow delete: if false;
-      }
+    match /teachers/{email} {
+      allow read, write: if false;
     }
 
     match /{document=**} {

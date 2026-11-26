@@ -6,6 +6,7 @@
 <title>MPM2D Teacher Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script defer src="./firebase-config.js"></script>
 <style>
@@ -23,7 +24,9 @@
       <h1 class="text-3xl font-black text-blue-600">📊 MPM2D Teacher Dashboard</h1>
       <div id="statusBanner" role="status" aria-live="polite" class="text-xs font-bold text-slate-500 mt-1">Loading…</div>
     </div>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
+      <button id="signInBtn" class="btn bg-blue-500 text-white px-3 py-2 text-sm hidden">🔑 Teacher Sign-In</button>
+      <button id="signOutBtn" class="btn bg-white px-3 py-2 text-sm hidden">Sign Out</button>
       <button id="refreshBtn" class="btn bg-white px-3 py-2 text-sm">🔄 Refresh</button>
       <button id="csvBtn" class="btn bg-green-400 px-3 py-2 text-sm">📥 Export CSV</button>
     </div>
@@ -254,6 +257,22 @@ $('saveCfgBtn').onclick = () => {
   } catch (e) { alert('Could not parse strict config JSON. Paste valid JSON with apiKey and projectId.'); }
 };
 $('refreshBtn').onclick = loadData;
+$('signInBtn').onclick = async () => {
+  const cfg = getConfig();
+  if (!cfg) return;
+  if (!firebase.apps.length) firebase.initializeApp(cfg);
+  try {
+    await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    loadData();
+  } catch (e) {
+    $('statusBanner').textContent = `Sign-in failed: ${e?.message || 'Cancelled'}`;
+  }
+};
+$('signOutBtn').onclick = async () => {
+  if (typeof firebase !== 'undefined' && firebase.auth) await firebase.auth().signOut();
+  $('signOutBtn').classList.add('hidden');
+  loadData();
+};
 $('classFilter').onchange = render;
 $('searchInput').oninput = render;
 $('csvBtn').onclick = () => {
@@ -277,7 +296,18 @@ $('csvBtn').onclick = () => {
   a.click();
 };
 
-window.addEventListener('load', loadData);
+window.addEventListener('load', () => {
+  const cfg = getConfig();
+  if (cfg && typeof firebase !== 'undefined' && firebase.auth) {
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    firebase.auth().onAuthStateChanged(u => {
+      const isTeacher = u && !u.isAnonymous;
+      $('signInBtn').classList.toggle('hidden', !!isTeacher);
+      $('signOutBtn').classList.toggle('hidden', !isTeacher);
+    });
+  }
+  loadData();
+});
 </script>
 </body>
 </html>

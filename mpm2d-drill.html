@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://unpkg.com/mathlive"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
   .comic { border: 3px solid #1e293b; box-shadow: 5px 5px 0 #1e293b; border-radius: 14px; }
@@ -1760,10 +1761,21 @@ function getDb() {
   _fsDb = firebase.firestore();
   return _fsDb;
 }
+async function ensureAnonUid() {
+  if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') return null;
+  try {
+    const auth = firebase.auth();
+    if (auth.currentUser) return auth.currentUser.uid;
+    const cred = await auth.signInAnonymously();
+    return cred?.user?.uid || null;
+  } catch { return null; }
+}
 async function syncToFirestore(reason = 'milestone') {
   const db = getDb();
   if (!db || !store.student?.name) return false;
-  const key = studentDocId(store.student.name, store.student.cls);
+  const uid = await ensureAnonUid();
+  const baseKey = studentDocId(store.student.name, store.student.cls);
+  const key = uid ? `${baseKey}_${uid.slice(0, 8)}` : baseKey;
   const skillsSummary = {};
   for (const [id, S] of Object.entries(SKILLS)) {
     const k = store.skills[id];
@@ -1771,6 +1783,7 @@ async function syncToFirestore(reason = 'milestone') {
   }
   const modesPracticed = [...new Set(Object.keys(skillsSummary).map(id => SKILLS[id]?.mode).filter(Boolean))];
   const payload = {
+    ...(uid ? { ownerUid: uid } : {}),
     name: store.student.name,
     cls: store.student.cls,
     course: 'MPM2D',
