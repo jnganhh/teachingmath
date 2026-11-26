@@ -714,7 +714,9 @@
       // MHF4U (Polynomials, Rationals, Logarithms)
       mhf4u: {
         mode: 'poly', // 'poly' | 'rational' | 'log'
-        // Polynomial: a(x-r1)^m1 (x-r2)^m2 (x-r3)^m3
+        // Polynomial: factored roots or LaTeX/equation input
+        polyType: 'factored', // 'factored' | 'latex'
+        polyLatex: '0.25(x + 2)(x - 1)^2(x - 3)',
         pa: 0.25,
         rootsSpec: '-2:1, 1:2, 3:1',
         // Rational: LaTeX input, (ra*x + rb) / (rc*x + rd), or quadratic denom
@@ -1353,10 +1355,26 @@
       `;
       if (m.mode === 'poly') {
         html += `
-          <div class="form-grid">
-            <div class="field"><label>Leading Coeff a</label><input type="text" value="${m.pa}" oninput="state.mhf4u.pa=parseFrac(this.value,0.25); render()"></div>
-            <div class="field"><label>Roots (root:multiplicity)</label><input type="text" value="${esc(m.rootsSpec)}" placeholder="-2:1, 1:2, 3:1" oninput="state.mhf4u.rootsSpec=this.value; render()"></div>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${m.polyType==='factored'?'active':''}" onclick="state.mhf4u.polyType='factored'; buildControls(); render();">Factored (Roots)</button>
+            <button type="button" class="pill-btn ${m.polyType==='latex'?'active':''}" onclick="state.mhf4u.polyType='latex'; buildControls(); render();">LaTeX / Equation</button>
           </div>
+          ${m.polyType === 'latex' ? `
+            <div class="field full">
+              <label>LaTeX or Equation (e.g. 0.25(x+2)(x-1)^2(x-3) or x^3 - 4x)</label>
+              <input type="text" style="font-family:var(--mono);" value="${esc(m.polyLatex)}" placeholder="0.25(x + 2)(x - 1)^2(x - 3)" oninput="state.mhf4u.polyLatex=this.value; render()">
+            </div>
+            <div class="preset-row">
+              <button type="button" class="preset-chip" onclick="state.mhf4u.polyLatex='0.25(x+2)(x-1)^2(x-3)';buildControls();render();">Quartic Bounce</button>
+              <button type="button" class="preset-chip" onclick="state.mhf4u.polyLatex='x^3 - 4x';buildControls();render();">x³ - 4x</button>
+              <button type="button" class="preset-chip" onclick="state.mhf4u.polyLatex='-0.5x^4 + 2x^2';buildControls();render();">-0.5x⁴ + 2x²</button>
+            </div>
+          ` : `
+            <div class="form-grid">
+              <div class="field"><label>Leading Coeff a</label><input type="text" value="${m.pa}" oninput="state.mhf4u.pa=parseFrac(this.value,0.25); render()"></div>
+              <div class="field"><label>Roots (root:multiplicity)</label><input type="text" value="${esc(m.rootsSpec)}" placeholder="-2:1, 1:2, 3:1" oninput="state.mhf4u.rootsSpec=this.value; render()"></div>
+            </div>
+          `}
         `;
       } else if (m.mode === 'rational') {
         html += `
@@ -2822,25 +2840,71 @@
       let extraSamples = [];
 
       if (m.mode === 'poly') {
-        const res = evalPolyRoots();
-        if (res.error) {
-          errMsg = res.error;
-        } else {
-          const roots = res.roots;
-          evalFn = x => {
-            let y = m.pa;
-            roots.forEach(rt => { y *= Math.pow(x - rt.r, rt.mult); });
-            return y;
-          };
-          if (Math.abs(m.pa) > 1e-9) {
-            roots.forEach(rt => {
-              keyPts.push({ x: rt.r, y: 0 });
-              extraSamples.push(rt.r);
-            });
-            if (roots.length > 0) keyPts.push({ x: 0, y: evalFn(0) });
+        if (m.polyType === 'latex') {
+          let expr = String(m.polyLatex || '').trim()
+            .replace(/^\$+|\$+$/g, '').replace(/^\\\[|\\\]$/g, '').replace(/^\\\(|\\\)$/g, '')
+            .replace(/^(?:y|f\s*\(\s*x\s*\))\s*=\s*/i, '').trim();
+          const comp = compileMathExpr(expr);
+          if (comp.error) {
+            errMsg = comp.error;
+          } else {
+            evalFn = comp.fn;
+            // Find sign-change roots and even-multiplicity touch roots in [xMin, xMax]
+            const N = 400;
+            const found = [];
+            for (let i = 0; i < N; i++) {
+              const a = xMin + (i / N) * (xMax - xMin), b = xMin + ((i + 1) / N) * (xMax - xMin);
+              const fa = evalFn(a), fb = evalFn(b);
+              if (Math.abs(fa) < 1e-6) found.push(a);
+              else if (fa * fb < 0) {
+                let lo = a, hi = b, flo = fa;
+                for (let it = 0; it < 28; it++) {
+                  const mid = (lo + hi) / 2, fm = evalFn(mid);
+                  if (flo * fm <= 0) { hi = mid; } else { lo = mid; flo = fm; }
+                }
+                found.push((lo + hi) / 2);
+              } else if (i > 0 && i < N - 1) {
+                const prev = evalFn(xMin + ((i - 1) / N) * (xMax - xMin));
+                if (Math.abs(fa) <= Math.abs(prev) && Math.abs(fa) <= Math.abs(fb) && Math.abs(fa) < 0.08) {
+                  // Refine local extremum near zero
+                  let lo = xMin + ((i - 1) / N) * (xMax - xMin), hi = b;
+                  for (let it = 0; it < 24; it++) {
+                    const m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+                    if (Math.abs(evalFn(m1)) < Math.abs(evalFn(m2))) hi = m2; else lo = m1;
+                  }
+                  const xm = (lo + hi) / 2;
+                  if (Math.abs(evalFn(xm)) < 1e-4) found.push(xm);
+                }
+              }
+            }
+            found.sort((a, b) => a - b);
+            const dedup = found.filter((r, idx) => idx === 0 || Math.abs(r - found[idx - 1]) > 1e-2);
+            dedup.forEach(r => { keyPts.push({ x: r, y: 0 }); extraSamples.push(r); });
+            const y0 = evalFn(0);
+            if (isFinite(y0)) keyPts.push({ x: 0, y: y0 });
+            eqText = `y = ${expr}`;
           }
-          const facStr = roots.map(rt => `(x ${rt.r >= 0 ? '- ' + fmtNum(rt.r) : '+ ' + fmtNum(-rt.r)})${rt.mult > 1 ? '^' + rt.mult : ''}`).join('');
-          eqText = roots.length === 0 ? `y = ${fmtNum(m.pa)}` : `y = ${fmtNum(m.pa)}${facStr}`;
+        } else {
+          const res = evalPolyRoots();
+          if (res.error) {
+            errMsg = res.error;
+          } else {
+            const roots = res.roots;
+            evalFn = x => {
+              let y = m.pa;
+              roots.forEach(rt => { y *= Math.pow(x - rt.r, rt.mult); });
+              return y;
+            };
+            if (Math.abs(m.pa) > 1e-9) {
+              roots.forEach(rt => {
+                keyPts.push({ x: rt.r, y: 0 });
+                extraSamples.push(rt.r);
+              });
+              if (roots.length > 0) keyPts.push({ x: 0, y: evalFn(0) });
+            }
+            const facStr = roots.map(rt => `(x ${rt.r >= 0 ? '- ' + fmtNum(rt.r) : '+ ' + fmtNum(-rt.r)})${rt.mult > 1 ? '^' + rt.mult : ''}`).join('');
+            eqText = roots.length === 0 ? `y = ${fmtNum(m.pa)}` : `y = ${fmtNum(m.pa)}${facStr}`;
+          }
         }
       } else if (m.mode === 'rational') {
         if (m.ratType === 'latex') {
