@@ -502,8 +502,8 @@
             <div class="field">
               <label for="styleMode">Ink Style</label>
               <select id="styleMode" onchange="render()">
-                <option value="exam" selected>Exam Print (B&amp;W)</option>
-                <option value="color">Color Key (Blue/Red)</option>
+                <option value="color" selected>Meaningful Color</option>
+                <option value="exam">Exam Print (B&amp;W)</option>
               </select>
             </div>
             <div class="field">
@@ -558,6 +558,7 @@
         <div class="svg-frame" id="svgPreview"></div>
       </div>
 
+      <div id="colorLegend" style="padding: 8px 16px; border-top: 1px solid var(--border); background: #f8fafc; font-size: 12px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;"></div>
       <div class="status-bar">
         <span id="statusInfo">Vector SVG • Ready to paste</span>
         <span>Tip: <b>Copy SVG Image</b> works in Word/rich editors; <b>Copy SVG Code</b> works in Figma/Inkscape/HTML; use <b>Download .SVG</b> for Insert → Picture.</span>
@@ -744,6 +745,12 @@
       return Object.is(r, -0) ? '0' : String(r);
     }
 
+    function isUnknownLabel(lbl) {
+      const s = String(lbl || '').trim();
+      if (!s) return false;
+      return !/\d/.test(s) || s.includes('?');
+    }
+
     function getGlobalStyle() {
       const mode = document.getElementById('styleMode').value;
       const [w, h] = document.getElementById('canvasPreset').value.split('x').map(Number);
@@ -754,9 +761,13 @@
       return {
         w, h, sw, fs, whiteBg, isColor,
         ink: '#0f172a',
-        primary: isColor ? '#1d4ed8' : '#0f172a',
-        secondary: isColor ? '#dc2626' : '#0f172a',
-        tertiary: isColor ? '#059669' : '#334155',
+        primary: isColor ? '#1d4ed8' : '#0f172a',    // Cobalt Blue: Given / Curve / Tri 1
+        secondary: isColor ? '#dc2626' : '#0f172a',  // Crimson Red: Unknown / Target / Vertex
+        tertiary: isColor ? '#059669' : '#334155',   // Emerald: Angles / Zeros / Asymptotes / Tri 2
+        accent4: isColor ? '#7c3aed' : '#0f172a',    // Violet: Transversal / Given Point / CAST
+        accent5: isColor ? '#d97706' : '#0f172a',    // Amber: y-intercept / Highlight
+        fillSoft1: isColor ? 'rgba(29, 78, 216, 0.06)' : 'none',
+        fillSoft2: isColor ? 'rgba(5, 150, 105, 0.06)' : 'none',
         gridMinor: '#cbd5e1',
         gridAxis: '#334155',
         muted: '#475569',
@@ -1293,7 +1304,10 @@
         const { pts, cx, cy } = fitPolygonToCanvas(rotPts, cfg.w, cfg.h, 54);
         const [C, A, B] = pts;
 
-        inner += `<polygon points="${C.x.toFixed(1)},${C.y.toFixed(1)} ${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += `<polygon points="${C.x.toFixed(1)},${C.y.toFixed(1)} ${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)}" fill="${cfg.fillSoft1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += drawUnknownEdgeOverlay(C, A, t.labelBase, cfg);
+        inner += drawUnknownEdgeOverlay(C, B, t.labelHeight, cfg);
+        inner += drawUnknownEdgeOverlay(A, B, t.labelHyp, cfg);
 
         if (t.showRightAngle) {
           inner += drawRightAngleBox(C, A, B, 14, cfg.ink, Math.max(1.3, cfg.sw * 0.75));
@@ -1305,9 +1319,9 @@
         }
 
         // Edge labels with outward normal
-        if (t.labelBase) inner += drawEdgeLabel(C, A, { x: cx, y: cy }, t.labelBase, cfg);
-        if (t.labelHeight) inner += drawEdgeLabel(C, B, { x: cx, y: cy }, t.labelHeight, cfg);
-        if (t.labelHyp) inner += drawEdgeLabel(A, B, { x: cx, y: cy }, t.labelHyp, cfg);
+        if (t.labelBase) inner += drawEdgeLabel(C, A, { x: cx, y: cy }, t.labelBase, cfg, cfg.primary);
+        if (t.labelHeight) inner += drawEdgeLabel(C, B, { x: cx, y: cy }, t.labelHeight, cfg, cfg.primary);
+        if (t.labelHyp) inner += drawEdgeLabel(A, B, { x: cx, y: cy }, t.labelHyp, cfg, cfg.primary);
 
         // Vertex labels
         pts.forEach(p => {
@@ -1382,15 +1396,18 @@
         const { pts, cx, cy } = fitPolygonToCanvas(rawPts, cfg.w, cfg.h, 54);
         const [A, B, C] = pts;
 
-        inner += `<polygon points="${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)} ${C.x.toFixed(1)},${C.y.toFixed(1)}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += `<polygon points="${A.x.toFixed(1)},${A.y.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)} ${C.x.toFixed(1)},${C.y.toFixed(1)}" fill="${cfg.fillSoft1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += drawUnknownEdgeOverlay(C, B, t.obLabelA, cfg);
+        inner += drawUnknownEdgeOverlay(C, A, t.obLabelB, cfg);
+        inner += drawUnknownEdgeOverlay(A, B, t.obLabelC, cfg);
 
         if (t.obAngLabelA) inner += drawAngleArcAndLabel(A, C, B, t.obAngLabelA, cfg);
         if (t.obAngLabelB) inner += drawAngleArcAndLabel(B, A, C, t.obAngLabelB, cfg);
         if (t.obAngLabelC) inner += drawAngleArcAndLabel(C, B, A, t.obAngLabelC, cfg);
 
-        if (t.obLabelA) inner += drawEdgeLabel(C, B, { x: cx, y: cy }, t.obLabelA, cfg);
-        if (t.obLabelB) inner += drawEdgeLabel(C, A, { x: cx, y: cy }, t.obLabelB, cfg);
-        if (t.obLabelC) inner += drawEdgeLabel(A, B, { x: cx, y: cy }, t.obLabelC, cfg);
+        if (t.obLabelA) inner += drawEdgeLabel(C, B, { x: cx, y: cy }, t.obLabelA, cfg, cfg.primary);
+        if (t.obLabelB) inner += drawEdgeLabel(C, A, { x: cx, y: cy }, t.obLabelB, cfg, cfg.primary);
+        if (t.obLabelC) inner += drawEdgeLabel(A, B, { x: cx, y: cy }, t.obLabelC, cfg, cfg.primary);
 
         if (t.tickA) inner += drawTickMark(C, B, cfg);
         if (t.tickB) inner += drawTickMark(C, A, cfg);
@@ -1485,16 +1502,23 @@
         const [A1, B1, C1] = f1.pts;
         const [A2, B2, C2] = f2.pts;
 
-        inner += `<polygon points="${A1.x.toFixed(1)},${A1.y.toFixed(1)} ${B1.x.toFixed(1)},${B1.y.toFixed(1)} ${C1.x.toFixed(1)},${C1.y.toFixed(1)}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
-        inner += `<polygon points="${A2.x.toFixed(1)},${A2.y.toFixed(1)} ${B2.x.toFixed(1)},${B2.y.toFixed(1)} ${C2.x.toFixed(1)},${C2.y.toFixed(1)}" fill="none" stroke="${cfg.secondary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += `<polygon points="${A1.x.toFixed(1)},${A1.y.toFixed(1)} ${B1.x.toFixed(1)},${B1.y.toFixed(1)} ${C1.x.toFixed(1)},${C1.y.toFixed(1)}" fill="${cfg.fillSoft1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += `<polygon points="${A2.x.toFixed(1)},${A2.y.toFixed(1)} ${B2.x.toFixed(1)},${B2.y.toFixed(1)} ${C2.x.toFixed(1)},${C2.y.toFixed(1)}" fill="${cfg.fillSoft2}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
 
-        if (s1[0]) inner += drawEdgeLabel(C1, B1, { x: f1.cx, y: f1.cy }, s1[0], cfg);
-        if (s1[1]) inner += drawEdgeLabel(C1, A1, { x: f1.cx, y: f1.cy }, s1[1], cfg);
-        if (s1[2]) inner += drawEdgeLabel(A1, B1, { x: f1.cx, y: f1.cy }, s1[2], cfg);
+        inner += drawUnknownEdgeOverlay(C1, B1, s1[0], cfg);
+        inner += drawUnknownEdgeOverlay(C1, A1, s1[1], cfg);
+        inner += drawUnknownEdgeOverlay(A1, B1, s1[2], cfg);
+        inner += drawUnknownEdgeOverlay(C2, B2, s2[0], cfg);
+        inner += drawUnknownEdgeOverlay(C2, A2, s2[1], cfg);
+        inner += drawUnknownEdgeOverlay(A2, B2, s2[2], cfg);
 
-        if (s2[0]) inner += drawEdgeLabel(C2, B2, { x: f2.cx, y: f2.cy }, s2[0], cfg);
-        if (s2[1]) inner += drawEdgeLabel(C2, A2, { x: f2.cx, y: f2.cy }, s2[1], cfg);
-        if (s2[2]) inner += drawEdgeLabel(A2, B2, { x: f2.cx, y: f2.cy }, s2[2], cfg);
+        if (s1[0]) inner += drawEdgeLabel(C1, B1, { x: f1.cx, y: f1.cy }, s1[0], cfg, cfg.primary);
+        if (s1[1]) inner += drawEdgeLabel(C1, A1, { x: f1.cx, y: f1.cy }, s1[1], cfg, cfg.primary);
+        if (s1[2]) inner += drawEdgeLabel(A1, B1, { x: f1.cx, y: f1.cy }, s1[2], cfg, cfg.primary);
+
+        if (s2[0]) inner += drawEdgeLabel(C2, B2, { x: f2.cx, y: f2.cy }, s2[0], cfg, cfg.tertiary);
+        if (s2[1]) inner += drawEdgeLabel(C2, A2, { x: f2.cx, y: f2.cy }, s2[1], cfg, cfg.tertiary);
+        if (s2[2]) inner += drawEdgeLabel(A2, B2, { x: f2.cx, y: f2.cy }, s2[2], cfg, cfg.tertiary);
 
         const vLabels1 = (t.simVerts1 || 'A,B,C').split(',').map(x => x.trim());
         const vLabels2 = (t.simVerts2 || 'D,E,F').split(',').map(x => x.trim());
@@ -1558,18 +1582,19 @@
       const ex = V.x + r * Math.cos(a2);
       const ey = V.y + r * Math.sin(a2);
 
-      let out = `<path d="M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r.toFixed(1)} ${r.toFixed(1)} 0 0 ${sweep} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${cfg.ink}" stroke-width="${Math.max(1.2, cfg.sw * 0.7)}" />`;
+      const arcColor = cfg.isColor ? (isUnknownLabel(label) ? cfg.secondary : cfg.tertiary) : cfg.ink;
+      let out = `<path d="M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r.toFixed(1)} ${r.toFixed(1)} 0 0 ${sweep} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${arcColor}" stroke-width="${Math.max(1.3, cfg.sw * 0.75)}" />`;
       if (label) {
         const mid = a1 + diff / 2;
         const lr = r + cfg.fs * 0.95;
         const lx = V.x + lr * Math.cos(mid);
         const ly = V.y + lr * Math.sin(mid) + cfg.fs * 0.32;
-        out += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs - 1}" fill="${cfg.ink}">${esc(label)}</text>`;
+        out += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="${cfg.isColor ? '700' : '400'}" font-size="${cfg.fs - 1}" fill="${arcColor}">${esc(label)}</text>`;
       }
       return out;
     }
 
-    function drawEdgeLabel(P1, P2, centroid, label, cfg) {
+    function drawEdgeLabel(P1, P2, centroid, label, cfg, baseColor = null) {
       const mx = (P1.x + P2.x) / 2;
       const my = (P1.y + P2.y) / 2;
       let nx = -(P2.y - P1.y);
@@ -1583,7 +1608,15 @@
       const dist = cfg.fs * 1.15 + 4;
       const lx = mx + nx * dist;
       const ly = my + ny * dist + cfg.fs * 0.35;
-      return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(label)}</text>`;
+      const unk = isUnknownLabel(label);
+      const col = cfg.isColor ? (unk ? cfg.secondary : (baseColor || cfg.ink)) : cfg.ink;
+      const fw = cfg.isColor && unk ? 'font-weight="700"' : '';
+      return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" ${fw} font-size="${cfg.fs}" fill="${col}">${esc(label)}</text>`;
+    }
+
+    function drawUnknownEdgeOverlay(P1, P2, label, cfg) {
+      if (!cfg.isColor || !isUnknownLabel(label)) return '';
+      return `<line x1="${P1.x.toFixed(1)}" y1="${P1.y.toFixed(1)}" x2="${P2.x.toFixed(1)}" y2="${P2.y.toFixed(1)}" stroke="${cfg.secondary}" stroke-width="${(cfg.sw + 0.4).toFixed(1)}" stroke-linecap="round" />`;
     }
 
     function drawVertexLabel(P, centroid, label, cfg) {
@@ -1640,7 +1673,7 @@
         const tx1 = cx - dx * tLen, ty1 = cy - dy * tLen;
         const tx2 = cx + dx * tLen, ty2 = cy + dy * tLen;
 
-        inner += `<line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="${cfg.secondary}" stroke-width="${cfg.sw}" marker-start="url(#arrow-line-rev)" marker-end="url(#arrow-line)" />`;
+        inner += `<line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="${cfg.accent4}" stroke-width="${cfg.sw}" marker-start="url(#arrow-line-rev)" marker-end="url(#arrow-line)" />`;
 
         // Intersection points
         const ix1 = cx + ((y1 - cy) / dy) * dx;
@@ -1655,16 +1688,17 @@
           { ox: 26, oy: 22 },   // BR
         ];
 
+        const angColor = lbl => cfg.isColor ? (isUnknownLabel(lbl) ? cfg.secondary : cfg.tertiary) : cfg.ink;
         labelsTop.forEach((lbl, idx) => {
           if (lbl) {
             const o = offsets[idx];
-            inner += `<text x="${(ix1 + o.ox).toFixed(1)}" y="${(y1 + o.oy).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(lbl)}</text>`;
+            inner += `<text x="${(ix1 + o.ox).toFixed(1)}" y="${(y1 + o.oy).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="${cfg.isColor ? '700' : '400'}" font-size="${cfg.fs}" fill="${angColor(lbl)}">${esc(lbl)}</text>`;
           }
         });
         labelsBot.forEach((lbl, idx) => {
           if (lbl) {
             const o = offsets[idx];
-            inner += `<text x="${(ix2 + o.ox).toFixed(1)}" y="${(y2 + o.oy).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${cfg.fs}" fill="${cfg.ink}">${esc(lbl)}</text>`;
+            inner += `<text x="${(ix2 + o.ox).toFixed(1)}" y="${(y2 + o.oy).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="${cfg.isColor ? '700' : '400'}" font-size="${cfg.fs}" fill="${angColor(lbl)}">${esc(lbl)}</text>`;
           }
         });
 
@@ -1847,17 +1881,25 @@
         }
       }
 
-      // Key points
+      // Key points (semantic colors: Vertex=Red, Zero=Emerald, y-int=Amber, Point=Violet)
       if (p.showKeyPoints) {
+        const ptColor = tag => {
+          if (!cfg.isColor) return cfg.ink;
+          if (tag === 'Vertex') return cfg.secondary;
+          if (tag === 'Zero') return cfg.tertiary;
+          if (tag === 'y-int') return cfg.accent5;
+          return cfg.accent4;
+        };
         specialPts.forEach(pt => {
           if (pt.x >= xMin && pt.x <= xMax && pt.y >= yMin && pt.y <= yMax) {
             const px = grid.toX(pt.x);
             const py = grid.toY(pt.y);
-            inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+            const col = ptColor(pt.tag);
+            inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.8" fill="${col}" stroke="#ffffff" stroke-width="1.3" />`;
             if (p.showPointCoords) {
               const lbl = `(${fmtNum(pt.x)}, ${fmtNum(pt.y)})`;
               const dy = pt.y >= k ? -10 : 16;
-              inner += `<text x="${(px + 6).toFixed(1)}" y="${(py + dy).toFixed(1)}" font-family="Arial, sans-serif" font-weight="700" font-size="${Math.max(10, cfg.fs - 2)}" fill="${cfg.ink}">${lbl}</text>`;
+              inner += `<text x="${(px + 6).toFixed(1)}" y="${(py + dy).toFixed(1)}" font-family="Arial, sans-serif" font-weight="700" font-size="${Math.max(10, cfg.fs - 2)}" fill="${col}">${lbl}</text>`;
             }
           }
         });
@@ -2175,6 +2217,43 @@
       document.getElementById('svgPreview').innerHTML = currentSvgString;
       document.getElementById('svgCodeOutput').textContent = currentSvgString;
       document.getElementById('statusInfo').textContent = `Vector SVG • ${cfg.w}×${cfg.h}px • ${(currentSvgString.length / 1024).toFixed(1)} KB`;
+      updateColorLegend(cfg);
+    }
+
+    function updateColorLegend(cfg) {
+      const el = document.getElementById('colorLegend');
+      if (!el) return;
+      if (!cfg.isColor) {
+        el.style.display = 'none';
+        return;
+      }
+      el.style.display = 'flex';
+      const dot = (c, lbl) => `<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:${c};display:inline-block;"></span><b>${lbl}</b></span>`;
+      let items = [];
+      if (state.category === 'triangle') {
+        if (state.tri.mode === 'similar') {
+          items = [dot(cfg.primary, 'Triangle 1'), dot(cfg.tertiary, 'Triangle 2 / Angles'), dot(cfg.secondary, 'Unknown Side')];
+        } else {
+          items = [dot(cfg.primary, 'Given Sides'), dot(cfg.tertiary, 'Given Angles'), dot(cfg.secondary, 'Unknown (Find)')];
+        }
+      } else if (state.category === 'lines') {
+        if (state.lines.mode === 'transversal') {
+          items = [dot(cfg.primary, 'Parallel Lines'), dot(cfg.accent4, 'Transversal'), dot(cfg.tertiary, 'Given Angle'), dot(cfg.secondary, 'Unknown Angle')];
+        } else {
+          items = [dot(cfg.primary, 'Line 1'), dot(cfg.secondary, 'Line 2'), dot(cfg.ink, 'Intersection / 90°')];
+        }
+      } else if (state.category === 'parabola') {
+        items = [dot(cfg.primary, 'Parabola'), dot(cfg.secondary, 'Vertex'), dot(cfg.tertiary, 'Zeros / Axis'), dot(cfg.accent5, 'y-intercept'), dot(cfg.accent4, 'Given Point')];
+      } else if (state.category === 'functions') {
+        items = [dot(cfg.primary, 'Transformed'), dot(cfg.muted, 'Parent (Dashed)'), dot(cfg.tertiary, 'Asymptotes'), dot(cfg.secondary, 'Key Points')];
+      } else if (state.category === 'sinusoid') {
+        items = [dot(cfg.primary, 'Wave'), dot(cfg.tertiary, 'Midline (y = c)'), dot(cfg.secondary, 'Key 5 Points')];
+      } else if (state.category === 'unitcircle') {
+        items = [dot(cfg.primary, 'Terminal Arm'), dot(cfg.secondary, 'Principal ∠'), dot(cfg.tertiary, 'Reference ∠ / Triangle')];
+      } else {
+        items = [dot(cfg.gridAxis, 'Axes'), dot(cfg.gridMinor, 'Grid')];
+      }
+      el.innerHTML = `<span style="color:var(--text-muted);font-weight:700;">Color Meaning:</span>` + items.join('');
     }
 
     // ===========================
