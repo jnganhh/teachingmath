@@ -465,8 +465,8 @@
     <div class="topbar-left">
       <a href="index.html" class="back-link">← Hub</a>
       <div class="title-group">
-        <h1>MPM2D &amp; MCR3U Test Paper SVG Generator <span class="badge">Vector SVG</span></h1>
-        <p>Print-ready diagrams for Grade 10 (MPM2D) &amp; Grade 11 (MCR3U) math tests</p>
+        <h1>MPM2D · MCR3U · MHF4U · MCV4U SVG Generator <span class="badge">Vector SVG</span></h1>
+        <p>Print-ready diagrams for Grade 10–12 Ontario math tests</p>
       </div>
     </div>
     <div class="action-buttons">
@@ -485,6 +485,8 @@
         <button type="button" class="cat-tab" data-cat="functions" onclick="setCategory('functions')">Functions (3U)</button>
         <button type="button" class="cat-tab" data-cat="sinusoid" onclick="setCategory('sinusoid')">Sinusoidal (3U)</button>
         <button type="button" class="cat-tab" data-cat="unitcircle" onclick="setCategory('unitcircle')">Unit Circle (3U)</button>
+        <button type="button" class="cat-tab" data-cat="mhf4u" onclick="setCategory('mhf4u')">MHF4U (4U)</button>
+        <button type="button" class="cat-tab" data-cat="mcv4u" onclick="setCategory('mcv4u')">MCV4U (4U)</button>
         <button type="button" class="cat-tab" data-cat="grid" onclick="setCategory('grid')">Blank Grid</button>
       </div>
 
@@ -709,6 +711,46 @@
         showVertex: true,
         showGridNumbers: true,
       },
+      // MHF4U (Polynomials, Rationals, Logarithms)
+      mhf4u: {
+        mode: 'poly', // 'poly' | 'rational' | 'log'
+        // Polynomial: a(x-r1)^m1 (x-r2)^m2 (x-r3)^m3
+        pa: 0.25,
+        rootsSpec: '-2:1, 1:2, 3:1',
+        // Rational: (ra*x + rb) / (rc*x + rd) or quadratic denom
+        ratType: 'lin_lin', // 'lin_lin' | 'quad_den'
+        ra: 2, rb: -2, rc: 1, rd: -3,
+        qdA: 4, qdR1: -2, qdR2: 2,
+        // Log: la * log_lb(lk*(x - ld)) + lc
+        la: 1, lb: 2, lk: 1, ld: 1, lc: 0,
+        xMin: -6, xMax: 6, yMin: -6, yMax: 6,
+        showCurve: true,
+        showAsymptotes: true,
+        showKeyPoints: true,
+        showGridNumbers: true,
+      },
+      // MCV4U (Calculus: Tangents/Secants, Limits; Vectors: 2D Addition/Dot)
+      mcv4u: {
+        mode: 'tangent', // 'tangent' | 'limit' | 'vectors'
+        // Tangent & Secant: ca*x^3 + cb*x^2 + cc*x + cd
+        ca: 0.25, cb: 0, cc: -1, cd: 1,
+        x1: 2, x2: -1,
+        showTangent: true,
+        showSecant: false,
+        // Limits
+        limitType: 'hole', // 'hole' | 'jump'
+        limX0: 2, limY0: 3, limFillY: 1,
+        // 2D Vectors
+        ux: 4, uy: 1,
+        vx: 1, vy: 3,
+        vecOp: 'add', // 'add' | 'sub'
+        showResultant: true,
+        showGuides: true,
+        showAngleArc: true,
+        // Grid bounds
+        xMin: -6, xMax: 6, yMin: -6, yMax: 6,
+        showGridNumbers: true,
+      },
       // Blank Grid state
       grid: {
         xMin: -6, xMax: 6, yMin: -6, yMax: 6,
@@ -854,6 +896,10 @@
         container.innerHTML = buildSinusoidControls();
       } else if (state.category === 'unitcircle') {
         container.innerHTML = buildUnitCircleControls();
+      } else if (state.category === 'mhf4u') {
+        container.innerHTML = buildMhf4uControls();
+      } else if (state.category === 'mcv4u') {
+        container.innerHTML = buildMcv4uControls();
       } else {
         container.innerHTML = buildGridControls();
       }
@@ -1281,6 +1327,145 @@
           <label class="check-label"><input type="checkbox" ${q.showGridNumbers?'checked':''} onchange="state.quadlinear.showGridNumbers=this.checked; render()"> Axis numbers</label>
         </div>
       `;
+    }
+
+    function buildMhf4uControls() {
+      const m = state.mhf4u;
+      let html = `
+        <div>
+          <p class="section-title">MHF4U Advanced Functions</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${m.mode==='poly'?'active':''}" onclick="state.mhf4u.mode='poly'; buildControls(); render();">Polynomial</button>
+            <button type="button" class="pill-btn ${m.mode==='rational'?'active':''}" onclick="state.mhf4u.mode='rational'; buildControls(); render();">Rational</button>
+            <button type="button" class="pill-btn ${m.mode==='log'?'active':''}" onclick="state.mhf4u.mode='log'; buildControls(); render();">Logarithmic</button>
+          </div>
+        </div>
+      `;
+      if (m.mode === 'poly') {
+        html += `
+          <div class="form-grid">
+            <div class="field"><label>Leading Coeff a</label><input type="text" value="${m.pa}" oninput="state.mhf4u.pa=parseFrac(this.value,0.25); render()"></div>
+            <div class="field"><label>Roots (root:multiplicity)</label><input type="text" value="${esc(m.rootsSpec)}" placeholder="-2:1, 1:2, 3:1" oninput="state.mhf4u.rootsSpec=this.value; render()"></div>
+          </div>
+        `;
+      } else if (m.mode === 'rational') {
+        html += `
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${m.ratType==='lin_lin'?'active':''}" onclick="state.mhf4u.ratType='lin_lin'; buildControls(); render();">(ax + b) / (cx + d)</button>
+            <button type="button" class="pill-btn ${m.ratType==='quad_den'?'active':''}" onclick="state.mhf4u.ratType='quad_den'; buildControls(); render();">a / ((x - r₁)(x - r₂))</button>
+          </div>
+          ${m.ratType === 'lin_lin' ? `
+            <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+              <div class="field"><label>a</label><input type="number" step="0.5" value="${m.ra}" oninput="state.mhf4u.ra=parseFloat(this.value)||0; render()"></div>
+              <div class="field"><label>b</label><input type="number" step="0.5" value="${m.rb}" oninput="state.mhf4u.rb=parseFloat(this.value)||0; render()"></div>
+              <div class="field"><label>c</label><input type="number" step="0.5" value="${m.rc}" oninput="state.mhf4u.rc=parseFloat(this.value)||0; render()"></div>
+              <div class="field"><label>d</label><input type="number" step="0.5" value="${m.rd}" oninput="state.mhf4u.rd=parseFloat(this.value)||0; render()"></div>
+            </div>
+          ` : `
+            <div class="form-grid-3">
+              <div class="field"><label>a</label><input type="number" step="0.5" value="${m.qdA}" oninput="state.mhf4u.qdA=parseFloat(this.value)||0; render()"></div>
+              <div class="field"><label>r₁ (VA₁)</label><input type="number" step="0.5" value="${m.qdR1}" oninput="state.mhf4u.qdR1=parseFloat(this.value)||0; render()"></div>
+              <div class="field"><label>r₂ (VA₂)</label><input type="number" step="0.5" value="${m.qdR2}" oninput="state.mhf4u.qdR2=parseFloat(this.value)||0; render()"></div>
+            </div>
+          `}
+        `;
+      } else {
+        html += `
+          <div class="form-grid" style="grid-template-columns: repeat(5, 1fr);">
+            <div class="field"><label>a</label><input type="text" value="${m.la}" oninput="state.mhf4u.la=parseFrac(this.value,1); render()"></div>
+            <div class="field"><label>Base b</label><input type="text" value="${m.lb}" oninput="state.mhf4u.lb=Math.max(0.1,parseFrac(this.value,2)); render()"></div>
+            <div class="field"><label>k</label><input type="text" value="${m.lk}" oninput="state.mhf4u.lk=parseFrac(this.value,1); render()"></div>
+            <div class="field"><label>d (VA)</label><input type="number" step="0.5" value="${m.ld}" oninput="state.mhf4u.ld=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>c</label><input type="number" step="0.5" value="${m.lc}" oninput="state.mhf4u.lc=parseFloat(this.value)||0; render()"></div>
+          </div>
+        `;
+      }
+      html += `
+        <div id="mhf4uReadout" class="info-box"></div>
+        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="field"><label>x min</label><input type="number" value="${m.xMin}" oninput="state.mhf4u.xMin=+this.value||-6; render()"></div>
+          <div class="field"><label>x max</label><input type="number" value="${m.xMax}" oninput="state.mhf4u.xMax=+this.value||6; render()"></div>
+          <div class="field"><label>y min</label><input type="number" value="${m.yMin}" oninput="state.mhf4u.yMin=+this.value||-6; render()"></div>
+          <div class="field"><label>y max</label><input type="number" value="${m.yMax}" oninput="state.mhf4u.yMax=+this.value||6; render()"></div>
+        </div>
+        <div class="check-row">
+          <label class="check-label"><input type="checkbox" ${m.showCurve?'checked':''} onchange="state.mhf4u.showCurve=this.checked; render()"> Show curve</label>
+          <label class="check-label"><input type="checkbox" ${m.showAsymptotes?'checked':''} onchange="state.mhf4u.showAsymptotes=this.checked; render()"> Asymptotes</label>
+          <label class="check-label"><input type="checkbox" ${m.showKeyPoints?'checked':''} onchange="state.mhf4u.showKeyPoints=this.checked; render()"> Key points</label>
+          <label class="check-label"><input type="checkbox" ${m.showGridNumbers?'checked':''} onchange="state.mhf4u.showGridNumbers=this.checked; render()"> Axis numbers</label>
+        </div>
+      `;
+      return html;
+    }
+
+    function buildMcv4uControls() {
+      const c = state.mcv4u;
+      let html = `
+        <div>
+          <p class="section-title">MCV4U Calculus &amp; Vectors</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${c.mode==='tangent'?'active':''}" onclick="state.mcv4u.mode='tangent'; buildControls(); render();">Tangent &amp; Secant</button>
+            <button type="button" class="pill-btn ${c.mode==='limit'?'active':''}" onclick="state.mcv4u.mode='limit'; buildControls(); render();">Limits (Hole / Jump)</button>
+            <button type="button" class="pill-btn ${c.mode==='vectors'?'active':''}" onclick="state.mcv4u.mode='vectors'; buildControls(); render();">2D Vectors</button>
+          </div>
+        </div>
+      `;
+      if (c.mode === 'tangent') {
+        html += `
+          <p class="section-title" style="margin-top:4px;">Curve: f(x) = ax³ + bx² + cx + d</p>
+          <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="field"><label>a</label><input type="text" value="${c.ca}" oninput="state.mcv4u.ca=parseFrac(this.value,0); render()"></div>
+            <div class="field"><label>b</label><input type="number" step="0.5" value="${c.cb}" oninput="state.mcv4u.cb=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>c</label><input type="number" step="0.5" value="${c.cc}" oninput="state.mcv4u.cc=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>d</label><input type="number" step="0.5" value="${c.cd}" oninput="state.mcv4u.cd=parseFloat(this.value)||0; render()"></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Tangent Point x₁</label><input type="number" step="0.5" value="${c.x1}" oninput="state.mcv4u.x1=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Secant Point x₂</label><input type="number" step="0.5" value="${c.x2}" oninput="state.mcv4u.x2=parseFloat(this.value)||0; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${c.showTangent?'checked':''} onchange="state.mcv4u.showTangent=this.checked; render()"> Tangent line</label>
+            <label class="check-label"><input type="checkbox" ${c.showSecant?'checked':''} onchange="state.mcv4u.showSecant=this.checked; render()"> Secant line</label>
+            <label class="check-label"><input type="checkbox" ${c.showGridNumbers?'checked':''} onchange="state.mcv4u.showGridNumbers=this.checked; render()"> Axis numbers</label>
+          </div>
+        `;
+      } else if (c.mode === 'limit') {
+        html += `
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${c.limitType==='hole'?'active':''}" onclick="state.mcv4u.limitType='hole'; buildControls(); render();">Removable (Hole)</button>
+            <button type="button" class="pill-btn ${c.limitType==='jump'?'active':''}" onclick="state.mcv4u.limitType='jump'; buildControls(); render();">Jump Discontinuity</button>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>x₀</label><input type="number" step="0.5" value="${c.limX0}" oninput="state.mcv4u.limX0=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>Limit y₀ (open)</label><input type="number" step="0.5" value="${c.limY0}" oninput="state.mcv4u.limY0=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>f(x₀) (filled)</label><input type="number" step="0.5" value="${c.limFillY}" oninput="state.mcv4u.limFillY=parseFloat(this.value)||0; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${c.showGridNumbers?'checked':''} onchange="state.mcv4u.showGridNumbers=this.checked; render()"> Axis numbers</label>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${c.vecOp==='add'?'active':''}" onclick="state.mcv4u.vecOp='add'; buildControls(); render();">u + v</button>
+            <button type="button" class="pill-btn ${c.vecOp==='sub'?'active':''}" onclick="state.mcv4u.vecOp='sub'; buildControls(); render();">u - v</button>
+          </div>
+          <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="field"><label>uₓ</label><input type="number" step="0.5" value="${c.ux}" oninput="state.mcv4u.ux=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>uᵧ</label><input type="number" step="0.5" value="${c.uy}" oninput="state.mcv4u.uy=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>vₓ</label><input type="number" step="0.5" value="${c.vx}" oninput="state.mcv4u.vx=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>vᵧ</label><input type="number" step="0.5" value="${c.vy}" oninput="state.mcv4u.vy=parseFloat(this.value)||0; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${c.showResultant?'checked':''} onchange="state.mcv4u.showResultant=this.checked; render()"> Resultant</label>
+            <label class="check-label"><input type="checkbox" ${c.showGuides?'checked':''} onchange="state.mcv4u.showGuides=this.checked; render()"> Parallelogram guides</label>
+            <label class="check-label"><input type="checkbox" ${c.showAngleArc?'checked':''} onchange="state.mcv4u.showAngleArc=this.checked; render()"> Angle θ</label>
+            <label class="check-label"><input type="checkbox" ${c.showGridNumbers?'checked':''} onchange="state.mcv4u.showGridNumbers=this.checked; render()"> Axis numbers</label>
+          </div>
+        `;
+      }
+      html += `<div id="mcv4uReadout" class="info-box"></div>`;
+      return html;
     }
 
     // ===========================
@@ -2403,6 +2588,231 @@
     }
 
     // ===========================
+    // MHF4U Renderer (Poly, Rational, Log)
+    // ===========================
+    function renderMhf4uSVG(cfg) {
+      const m = state.mhf4u;
+      const xMin = m.xMin, xMax = Math.max(m.xMin + 2, m.xMax);
+      const yMin = m.yMin, yMax = Math.max(m.yMin + 2, m.yMax);
+      const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 1, 1, m.showGridNumbers, true, 'x', 'y');
+      let inner = grid.svg;
+
+      const evalPolyRoots = () => {
+        return String(m.rootsSpec || '').split(',').map(p => {
+          const [rStr, multStr] = p.split(':').map(s => (s || '').trim());
+          const r = Number(rStr);
+          const mult = multStr ? Math.max(1, parseInt(multStr, 10) || 1) : 1;
+          return isFinite(r) && rStr !== '' ? { r, mult } : null;
+        }).filter(Boolean);
+      };
+
+      let evalFn = () => null;
+      let vaList = [], haList = [], keyPts = [], eqText = '';
+
+      if (m.mode === 'poly') {
+        const roots = evalPolyRoots();
+        evalFn = x => {
+          let y = m.pa;
+          roots.forEach(rt => { y *= Math.pow(x - rt.r, rt.mult); });
+          return y;
+        };
+        roots.forEach(rt => keyPts.push({ x: rt.r, y: 0 }));
+        if (roots.length > 0) keyPts.push({ x: 0, y: evalFn(0) });
+        const facStr = roots.map(rt => `(x ${rt.r >= 0 ? '- ' + fmtNum(rt.r) : '+ ' + fmtNum(-rt.r)})${rt.mult > 1 ? '^' + rt.mult : ''}`).join('');
+        eqText = `y = ${fmtNum(m.pa)}${facStr || '1'}`;
+      } else if (m.mode === 'rational') {
+        if (m.ratType === 'lin_lin') {
+          evalFn = x => {
+            const den = m.rc * x + m.rd;
+            return Math.abs(den) > 0.04 ? (m.ra * x + m.rb) / den : null;
+          };
+          if (Math.abs(m.rc) > 1e-9) {
+            vaList.push(-m.rd / m.rc);
+            haList.push(m.ra / m.rc);
+          }
+          if (Math.abs(m.ra) > 1e-9) keyPts.push({ x: -m.rb / m.ra, y: 0 });
+          if (Math.abs(m.rd) > 1e-9) keyPts.push({ x: 0, y: m.rb / m.rd });
+          eqText = `y = (${fmtNum(m.ra)}x ${m.rb >= 0 ? '+ ' + fmtNum(m.rb) : '- ' + fmtNum(-m.rb)}) / (${fmtNum(m.rc)}x ${m.rd >= 0 ? '+ ' + fmtNum(m.rd) : '- ' + fmtNum(-m.rd)})`;
+        } else {
+          evalFn = x => {
+            const den = (x - m.qdR1) * (x - m.qdR2);
+            return Math.abs(den) > 0.05 ? m.qdA / den : null;
+          };
+          vaList.push(m.qdR1, m.qdR2);
+          haList.push(0);
+          const xm = (m.qdR1 + m.qdR2) / 2;
+          const ym = evalFn(xm);
+          if (ym !== null) keyPts.push({ x: xm, y: ym });
+          eqText = `y = ${fmtNum(m.qdA)} / ((x - ${fmtNum(m.qdR1)})(x - ${fmtNum(m.qdR2)}))`;
+        }
+      } else {
+        const kSafe = Math.abs(m.lk) < 1e-6 ? 1 : m.lk;
+        const bSafe = m.lb <= 0 || Math.abs(m.lb - 1) < 1e-6 ? 2 : m.lb;
+        evalFn = x => {
+          const arg = kSafe * (x - m.ld);
+          return arg > 0.02 ? m.la * (Math.log(arg) / Math.log(bSafe)) + m.lc : null;
+        };
+        vaList.push(m.ld);
+        keyPts.push({ x: m.ld + 1 / kSafe, y: m.lc });
+        eqText = `y = ${fmtNum(m.la)} log_${fmtNum(bSafe)}(${fmtNum(kSafe)}(x - ${fmtNum(m.ld)})) + ${fmtNum(m.lc)}`;
+      }
+
+      const ro = document.getElementById('mhf4uReadout');
+      if (ro) ro.textContent = eqText;
+
+      if (m.showAsymptotes) {
+        vaList.forEach(vx => {
+          if (vx >= xMin && vx <= xMax) {
+            const px = grid.toX(vx).toFixed(1);
+            inner += `<line x1="${px}" y1="${grid.padY.toFixed(1)}" x2="${px}" y2="${(grid.padY + grid.plotH).toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+          }
+        });
+        haList.forEach(hy => {
+          if (hy >= yMin && hy <= yMax) {
+            const py = grid.toY(hy).toFixed(1);
+            inner += `<line x1="${grid.padX.toFixed(1)}" y1="${py}" x2="${(grid.padX + grid.plotW).toFixed(1)}" y2="${py}" stroke="${cfg.accent5}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+          }
+        });
+      }
+
+      if (m.showCurve) {
+        let segments = [[]];
+        let prevY = null;
+        for (let i = 0; i <= 260; i++) {
+          const x = xMin + (i / 260) * (xMax - xMin);
+          const y = evalFn(x);
+          const jumpBreak = prevY !== null && y !== null && Math.abs(y - prevY) > (yMax - yMin) * 0.6;
+          if (y === null || !isFinite(y) || y < yMin - 0.3 || y > yMax + 0.3 || jumpBreak) {
+            if (segments[segments.length - 1].length > 0) segments.push([]);
+          } else {
+            segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+          }
+          prevY = y;
+        }
+        segments.forEach(seg => {
+          if (seg.length > 1) {
+            inner += `<polyline points="${seg.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" stroke-linejoin="round" />`;
+          }
+        });
+      }
+
+      if (m.showKeyPoints) {
+        keyPts.forEach(pt => {
+          if (pt.x >= xMin && pt.x <= xMax && pt.y >= yMin && pt.y <= yMax) {
+            inner += `<circle cx="${grid.toX(pt.x).toFixed(1)}" cy="${grid.toY(pt.y).toFixed(1)}" r="4.5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          }
+        });
+      }
+      return inner;
+    }
+
+    // ===========================
+    // MCV4U Renderer (Tangent/Secant, Limits, 2D Vectors)
+    // ===========================
+    function renderMcv4uSVG(cfg) {
+      const c = state.mcv4u;
+      const xMin = c.xMin, xMax = Math.max(c.xMin + 2, c.xMax);
+      const yMin = c.yMin, yMax = Math.max(c.yMin + 2, c.yMax);
+      const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 1, 1, c.showGridNumbers, true, 'x', 'y');
+      let inner = grid.svg;
+      const ro = document.getElementById('mcv4uReadout');
+
+      if (c.mode === 'tangent') {
+        const f = x => c.ca * x * x * x + c.cb * x * x + c.cc * x + c.cd;
+        const df = x => 3 * c.ca * x * x + 2 * c.cb * x + c.cc;
+        const segments = [[]];
+        for (let i = 0; i <= 220; i++) {
+          const x = xMin + (i / 220) * (xMax - xMin);
+          const y = f(x);
+          if (y >= yMin - 0.15 && y <= yMax + 0.15) {
+            segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+          } else if (segments[segments.length - 1].length > 0) {
+            segments.push([]);
+          }
+        }
+        segments.forEach(seg => {
+          if (seg.length > 1) inner += `<polyline points="${seg.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" stroke-linejoin="round" />`;
+        });
+
+        const clipId = 'mcv-clip-' + Math.floor(Math.random() * 100000);
+        inner += `<defs><clipPath id="${clipId}"><rect x="${grid.padX.toFixed(1)}" y="${grid.padY.toFixed(1)}" width="${grid.plotW.toFixed(1)}" height="${grid.plotH.toFixed(1)}" /></clipPath></defs>`;
+
+        const y1 = f(c.x1), mTan = df(c.x1);
+        const y2 = f(c.x2), mSec = Math.abs(c.x2 - c.x1) > 1e-6 ? (y2 - y1) / (c.x2 - c.x1) : mTan;
+
+        if (c.showSecant && Math.abs(c.x2 - c.x1) > 1e-6) {
+          const lx1 = xMin - 1, ly1 = y1 + mSec * (lx1 - c.x1);
+          const lx2 = xMax + 1, ly2 = y1 + mSec * (lx2 - c.x1);
+          inner += `<g clip-path="url(#${clipId})"><line x1="${grid.toX(lx1).toFixed(1)}" y1="${grid.toY(ly1).toFixed(1)}" x2="${grid.toX(lx2).toFixed(1)}" y2="${grid.toY(ly2).toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" stroke-dasharray="5,3" /></g>`;
+          if (c.x2 >= xMin && c.x2 <= xMax && y2 >= yMin && y2 <= yMax) {
+            inner += `<circle cx="${grid.toX(c.x2).toFixed(1)}" cy="${grid.toY(y2).toFixed(1)}" r="4.5" fill="${cfg.tertiary}" stroke="#ffffff" stroke-width="1.2" />`;
+          }
+        }
+        if (c.showTangent) {
+          const lx1 = xMin - 1, ly1 = y1 + mTan * (lx1 - c.x1);
+          const lx2 = xMax + 1, ly2 = y1 + mTan * (lx2 - c.x1);
+          inner += `<g clip-path="url(#${clipId})"><line x1="${grid.toX(lx1).toFixed(1)}" y1="${grid.toY(ly1).toFixed(1)}" x2="${grid.toX(lx2).toFixed(1)}" y2="${grid.toY(ly2).toFixed(1)}" stroke="${cfg.secondary}" stroke-width="${cfg.sw}" /></g>`;
+        }
+        if (c.x1 >= xMin && c.x1 <= xMax && y1 >= yMin && y1 <= yMax) {
+          inner += `<circle cx="${grid.toX(c.x1).toFixed(1)}" cy="${grid.toY(y1).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.3" />`;
+        }
+        if (ro) ro.textContent = `Tangent at (${fmtNum(c.x1)}, ${fmtNum(y1)}), slope f'(${fmtNum(c.x1)}) = ${fmtNum(mTan)}` + (c.showSecant ? ` | Secant slope = ${fmtNum(mSec)}` : '');
+      } else if (c.mode === 'limit') {
+        const x0 = c.limX0, y0 = c.limY0, yf = c.limFillY;
+        const drawSeg = (xa, xb, fn) => {
+          const pts = [];
+          for (let i = 0; i <= 80; i++) {
+            const x = xa + (i / 80) * (xb - xa);
+            const y = fn(x);
+            if (y >= yMin - 0.1 && y <= yMax + 0.1) pts.push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+          }
+          if (pts.length > 1) inner += `<polyline points="${pts.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" />`;
+        };
+        if (c.limitType === 'hole') {
+          const fn = x => 0.25 * (x - x0) * (x - x0) + (x - x0) * 0.6 + y0;
+          drawSeg(xMin, x0 - 0.06, fn);
+          drawSeg(x0 + 0.06, xMax, fn);
+          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(y0).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
+          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(yf).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          if (ro) ro.textContent = `lim(x→${fmtNum(x0)}) f(x) = ${fmtNum(y0)},  f(${fmtNum(x0)}) = ${fmtNum(yf)}`;
+        } else {
+          drawSeg(xMin, x0 - 0.05, x => y0 - 0.35 * (x - x0));
+          drawSeg(x0 + 0.05, xMax, x => yf + 0.3 * (x - x0));
+          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(y0).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
+          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(yf).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          if (ro) ro.textContent = `Left limit = ${fmtNum(y0)},  Right limit = ${fmtNum(yf)} (Jump)`;
+        }
+      } else {
+        // 2D Vectors
+        const ox = grid.toX(0), oy = grid.toY(0);
+        const ux = grid.toX(c.ux), uy = grid.toY(c.uy);
+        const vx = grid.toX(c.vx), vy = grid.toY(c.vy);
+        const rxVal = c.vecOp === 'add' ? c.ux + c.vx : c.ux - c.vx;
+        const ryVal = c.vecOp === 'add' ? c.uy + c.vy : c.uy - c.vy;
+        const rx = grid.toX(rxVal), ry = grid.toY(ryVal);
+
+        if (c.showGuides && c.vecOp === 'add') {
+          inner += `<line x1="${ux.toFixed(1)}" y1="${uy.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${cfg.muted}" stroke-width="1.3" stroke-dasharray="4,3" />`;
+          inner += `<line x1="${vx.toFixed(1)}" y1="${vy.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${cfg.muted}" stroke-width="1.3" stroke-dasharray="4,3" />`;
+        }
+        inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ux.toFixed(1)}" y2="${uy.toFixed(1)}" stroke="${cfg.primary}" stroke-width="${cfg.sw + 0.4}" marker-end="url(#arrow-line)" />`;
+        inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${vx.toFixed(1)}" y2="${vy.toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw + 0.4}" marker-end="url(#arrow-vec-em)" />`;
+        if (c.showResultant) {
+          inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${cfg.secondary}" stroke-width="${cfg.sw + 0.6}" marker-end="url(#arrow-vec-red)" />`;
+          inner += `<text x="${(rx + 8).toFixed(1)}" y="${(ry - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.secondary}">${c.vecOp==='add'?'u + v':'u - v'}</text>`;
+        }
+        inner += `<text x="${(ux + 7).toFixed(1)}" y="${(uy - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.primary}">u</text>`;
+        inner += `<text x="${(vx + 7).toFixed(1)}" y="${(vy - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.tertiary}">v</text>`;
+
+        const magU = Math.hypot(c.ux, c.uy), magV = Math.hypot(c.vx, c.vy);
+        const dotUV = c.ux * c.vx + c.uy * c.vy;
+        const theta = (magU > 0 && magV > 0) ? (Math.acos(Math.max(-1, Math.min(1, dotUV / (magU * magV)))) * 180) / Math.PI : 0;
+        if (ro) ro.textContent = `u·v = ${fmtNum(dotUV)} | θ = ${fmtNum(theta)}° | ${c.vecOp==='add'?'u+v':'u-v'} = (${fmtNum(rxVal)}, ${fmtNum(ryVal)})`;
+      }
+      return inner;
+    }
+
+    // ===========================
     // Master Render
     // ===========================
     function render() {
@@ -2417,6 +2827,8 @@
       else if (state.category === 'functions') content = renderFunctionsSVG(cfg);
       else if (state.category === 'sinusoid') content = renderSinusoidSVG(cfg);
       else if (state.category === 'unitcircle') content = renderUnitCircleSVG(cfg);
+      else if (state.category === 'mhf4u') content = renderMhf4uSVG(cfg);
+      else if (state.category === 'mcv4u') content = renderMcv4uSVG(cfg);
       else content = renderBlankGridSVG(cfg);
 
       const bgRect = cfg.whiteBg
@@ -2436,6 +2848,12 @@
           </marker>
           <marker id="arrow-line-rev" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M 10 1 L 0 5 L 10 9 z" fill="${cfg.primary}" />
+          </marker>
+          <marker id="arrow-vec-em" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="${cfg.tertiary}" />
+          </marker>
+          <marker id="arrow-vec-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="${cfg.secondary}" />
           </marker>
           <marker id="arrow-curve" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
             <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="${cfg.primary}" />
@@ -2480,6 +2898,12 @@
         items = [dot(cfg.primary, 'Parabola'), dot(cfg.secondary, 'Vertex'), dot(cfg.tertiary, 'Zeros / Axis'), dot(cfg.accent5, 'y-intercept'), dot(cfg.accent4, 'Given Point')];
       } else if (state.category === 'quadlinear') {
         items = [dot(cfg.primary, 'Parabola'), dot(cfg.accent4, 'Line'), dot(cfg.secondary, 'Intersections'), dot(cfg.tertiary, 'Vertex')];
+      } else if (state.category === 'mhf4u') {
+        items = [dot(cfg.primary, 'Curve'), dot(cfg.tertiary, 'Vertical Asymptote'), dot(cfg.accent5, 'Horizontal Asymptote'), dot(cfg.secondary, 'Key Points')];
+      } else if (state.category === 'mcv4u') {
+        if (state.mcv4u.mode === 'vectors') items = [dot(cfg.primary, 'Vector u'), dot(cfg.tertiary, 'Vector v'), dot(cfg.secondary, 'Resultant')];
+        else if (state.mcv4u.mode === 'limit') items = [dot(cfg.primary, 'Curve / Open Limit'), dot(cfg.secondary, 'Filled f(x₀)')];
+        else items = [dot(cfg.primary, 'f(x)'), dot(cfg.secondary, 'Tangent'), dot(cfg.tertiary, 'Secant')];
       } else if (state.category === 'functions') {
         items = [dot(cfg.primary, 'Transformed'), dot(cfg.muted, 'Parent (Dashed)'), dot(cfg.tertiary, 'Asymptotes'), dot(cfg.secondary, 'Key Points')];
       } else if (state.category === 'sinusoid') {
