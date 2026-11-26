@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MathQuest: MPM2D &amp; MCR3U Interactive Card Match</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="./firebase-config.js"></script>
+  <style>
+    :root {
+      --ink: #1e293b;
+    }
+    body {
+      background: radial-gradient(circle at top left, #fef9c3 0%, #eff6ff 48%, #f5f3ff 100%);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .comic-card {
+      border: 3px solid #1e293b;
+      box-shadow: 5px 5px 0px #1e293b;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+    }
+    .comic-card:hover:not(.no-lift) {
+      transform: translate(-2px, -2px);
+      box-shadow: 7px 7px 0px #1e293b;
+    }
+    .comic-btn {
+      border: 2.5px solid #1e293b;
+      box-shadow: 3px 3px 0px #1e293b;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .comic-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #1e293b;
+    }
+    /* 3D Flip Card for Memory Mode */
+    .flip-scene {
+      perspective: 900px;
+    }
+    .flip-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .flip-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .flip-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .flip-back {
+      transform: rotateY(180deg);
+    }
+    @keyframes popMatch {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+    .animate-match {
+      animation: popMatch 0.35s ease;
+    }
+    @keyframes shakeErr {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+    .animate-shake {
+      animation: shakeErr 0.3s ease;
+    }
+    .katex { font-size: 1.05em; }
+  </style>
+</head>
+<body class="min-h-screen p-3 md:p-6">
+
+  <!-- Top Navigation & Status Bar -->
+  <header class="max-w-6xl mx-auto mb-5">
+    <div class="bg-white rounded-2xl p-4 comic-card no-lift flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="comic-btn bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-sm font-black no-underline text-slate-800">
+          ← Hub
+        </a>
+        <div>
+          <h1 class="text-xl md:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+            <span>🃏 MathQuest Card Match</span>
+            <span class="text-xs font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border-2 border-slate-800">MPM2D · MCR3U</span>
+          </h1>
+          <p class="text-xs md:text-sm text-slate-600 font-semibold">Match expressions, graphs, &amp; solutions across 3 arcade modes</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="studentBtn" class="comic-btn bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg text-xs md:text-sm font-black">
+          👤 <span id="studentLabel">Sign In</span>
+        </button>
+        <button id="soundBtn" class="comic-btn bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs md:text-sm font-black" title="Toggle Sound">
+          🔊 Sound
+        </button>
+        <button id="syncBtn" class="comic-btn bg-emerald-400 hover:bg-emerald-500 text-slate-900 px-3 py-1.5 rounded-lg text-xs md:text-sm font-black">
+          📤 Submit Report
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+    <!-- Left Control Panel -->
+    <aside class="lg:col-span-4 space-y-4">
+
+      <!-- Course & Unit Selector -->
+      <section class="bg-white rounded-2xl p-4 comic-card no-lift">
+        <h2 class="text-sm font-black uppercase tracking-wider text-slate-500 mb-3">1. Choose Course &amp; Unit</h2>
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          <button data-course="MPM2D" class="course-btn comic-btn py-2 px-2 rounded-xl text-xs font-black bg-blue-600 text-white">MPM2D (10)</button>
+          <button data-course="MCR3U" class="course-btn comic-btn py-2 px-2 rounded-xl text-xs font-black bg-slate-100 text-slate-800">MCR3U (11)</button>
+          <button data-course="MIXED" class="course-btn comic-btn py-2 px-2 rounded-xl text-xs font-black bg-slate-100 text-slate-800">Mixed Quest</button>
+        </div>
+
+        <label for="unitSelect" class="block text-xs font-black text-slate-700 mb-1">Topic / Unit</label>
+        <select id="unitSelect" class="w-full p-2.5 rounded-xl border-2 border-slate-800 font-bold text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </select>
+      </section>
+
+      <!-- Game Mode Selector -->
+      <section class="bg-white rounded-2xl p-4 comic-card no-lift">
+        <h2 class="text-sm font-black uppercase tracking-wider text-slate-500 mb-3">2. Choose Game Mode</h2>
+        <div class="space-y-2">
+          <button data-mode="memory" class="mode-btn w-full text-left p-3 rounded-xl comic-btn bg-indigo-600 text-white flex items-center justify-between">
+            <div>
+              <div class="font-black text-sm">🧠 Classic Memory Flip</div>
+              <div class="text-xs opacity-90">Flip cards to find matching math pairs</div>
+            </div>
+            <span class="text-lg">🃏</span>
+          </button>
+          <button data-mode="speed" class="mode-btn w-full text-left p-3 rounded-xl comic-btn bg-slate-100 text-slate-800 flex items-center justify-between">
+            <div>
+              <div class="font-black text-sm">⚡ Speed Match</div>
+              <div class="text-xs text-slate-600">Click or drag-drop pairs before time runs out</div>
+            </div>
+            <span class="text-lg">⏱️</span>
+          </button>
+          <button data-mode="boss" class="mode-btn w-full text-left p-3 rounded-xl comic-btn bg-slate-100 text-slate-800 flex items-center justify-between">
+            <div>
+              <div class="font-black text-sm">🐉 Boss Challenge</div>
+              <div class="text-xs text-slate-600">Deal combo damage &amp; defeat multi-wave bosses</div>
+            </div>
+            <span class="text-lg">⚔️</span>
+          </button>
+        </div>
+
+        <div class="mt-3 flex items-center justify-between gap-2">
+          <label for="pairCountSelect" class="text-xs font-black text-slate-700">Pairs per round:</label>
+          <select id="pairCountSelect" class="p-1.5 rounded-lg border-2 border-slate-800 font-bold text-xs bg-slate-50">
+            <option value="6">6 Pairs (12 cards)</option>
+            <option value="8">8 Pairs (16 cards)</option>
+          </select>
+        </div>
+
+        <button id="newGameBtn" class="mt-4 w-full comic-btn bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-black py-3 rounded-xl text-base">
+          🚀 Start New Round
+        </button>
+      </section>
+
+      <!-- Live Stats & Break Timer -->
+      <section class="bg-white rounded-2xl p-4 comic-card no-lift">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-black uppercase tracking-wider text-slate-500">Your Quest Stats</h2>
+          <span id="syncStatus" class="text-xs font-bold text-slate-500">Local only</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-blue-50 border-2 border-slate-800 rounded-xl p-2">
+            <div class="text-xl font-black text-blue-700" id="statCorrect">0</div>
+            <div class="text-[11px] font-bold text-slate-600">Total Matches</div>
+          </div>
+          <div class="bg-amber-50 border-2 border-slate-800 rounded-xl p-2">
+            <div class="text-xl font-black text-amber-700" id="statStreak">0</div>
+            <div class="text-[11px] font-bold text-slate-600">Best Streak</div>
+          </div>
+          <div class="bg-emerald-50 border-2 border-slate-800 rounded-xl p-2">
+            <div class="text-xl font-black text-emerald-700" id="statAccuracy">100%</div>
+            <div class="text-[11px] font-bold text-slate-600">Accuracy</div>
+          </div>
+          <div class="bg-purple-50 border-2 border-slate-800 rounded-xl p-2">
+            <div class="text-xl font-black text-purple-700" id="statXP">0</div>
+            <div class="text-[11px] font-bold text-slate-600">Total XP</div>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t-2 border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600">
+          <span>Active Time: <strong id="activeTimeLabel" class="text-slate-900">0m</strong></span>
+          <label class="flex items-center gap-1">
+            Break every
+            <select id="breakSelect" class="border border-slate-400 rounded px-1 py-0.5 text-xs font-bold">
+              <option value="15">15m</option>
+              <option value="20" selected>20m</option>
+              <option value="30">30m</option>
+              <option value="0">Off</option>
+            </select>
+          </label>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Right Game Arena -->
+    <section class="lg:col-span-8 space-y-4">
+
+      <!-- HUD Bar -->
+      <div class="bg-white rounded-2xl p-4 comic-card no-lift flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-black text-sm">
+            Score: <span id="hudScore" class="text-yellow-300">0</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-xl bg-orange-100 border-2 border-slate-800 font-black text-sm text-orange-900">
+            🔥 Streak: <span id="hudStreak">0</span> (<span id="hudMult">1x</span>)
+          </div>
+          <div id="timerPill" class="px-3 py-1.5 rounded-xl bg-sky-100 border-2 border-slate-800 font-black text-sm text-sky-900">
+            ⏱️ <span id="hudTimer">0:00</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="hintBtn" class="comic-btn bg-amber-300 hover:bg-amber-200 px-3 py-1.5 rounded-xl text-xs md:text-sm font-black">
+            💡 Hint (-15 pts)
+          </button>
+        </div>
+      </div>
+
+      <!-- Boss Bar (only visible in Boss Challenge mode) -->
+      <div id="bossBanner" class="hidden bg-gradient-to-r from-rose-900 via-purple-900 to-indigo-900 text-white rounded-2xl p-4 comic-card no-lift">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+          <div class="flex items-center gap-3">
+            <span id="bossEmoji" class="text-4xl">🐉</span>
+            <div>
+              <div class="text-xs font-black uppercase tracking-wider text-rose-300">Wave <span id="bossWave">1</span> Boss</div>
+              <div id="bossName" class="text-lg font-black">Lord Parabola</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-300 mr-1">Shields:</span>
+            <span id="bossHearts" class="text-xl tracking-widest">❤️❤️❤️</span>
+          </div>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-4 border-2 border-white/40 overflow-hidden">
+          <div id="bossHpBar" class="bg-gradient-to-r from-rose-500 to-amber-400 h-full transition-all duration-300" style="width: 100%"></div>
+        </div>
+        <div class="flex justify-between text-xs font-bold mt-1 text-slate-200">
+          <span>Boss HP: <span id="bossHpText">100 / 100</span></span>
+          <span>Combo multipliers deal CRITICAL hits!</span>
+        </div>
+      </div>
+
+      <!-- Feedback / Worked Tip Banner -->
+      <div id="feedbackBar" class="bg-white rounded-2xl px-4 py-3 comic-card no-lift flex items-center justify-between gap-3 min-h-[56px]">
+        <div id="feedbackText" class="text-sm font-bold text-slate-700">
+          Pick a course, unit, and game mode — then match the cards!
+        </div>
+        <span id="roundProgress" class="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 border-2 border-slate-800 whitespace-nowrap">
+          0 / 6 Matched
+        </span>
+      </div>
+
+      <!-- Board Container -->
+      <div id="boardContainer" class="bg-white/80 backdrop-blur rounded-2xl p-4 comic-card no-lift min-h-[420px]">
+        <!-- Cards render here -->
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Round Summary / Mistake Review Modal -->
+  <div id="summaryModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 comic-card no-lift max-h-[90vh] overflow-y-auto">
+      <div class="text-center mb-4">
+        <div id="summaryEmoji" class="text-5xl mb-2">🏆</div>
+        <h2 id="summaryTitle" class="text-2xl font-black text-slate-900">Quest Complete!</h2>
+        <p id="summarySub" class="text-sm font-bold text-slate-600 mt-1"></p>
+      </div>
+      <div id="summaryStars" class="text-center text-3xl mb-4">⭐⭐⭐</div>
+      <div id="summaryStats" class="grid grid-cols-3 gap-2 text-center mb-4"></div>
+      <div id="summaryReview" class="space-y-2 mb-5"></div>
+      <div class="flex gap-3">
+        <button id="playAgainBtn" class="flex-1 comic-btn bg-yellow-400 hover:bg-yellow-300 py-3 rounded-xl font-black">
+          🔄 Play Again
+        </button>
+        <button id="closeSummaryBtn" class="comic-btn bg-slate-100 hover:bg-slate-200 px-4 py-3 rounded-xl font-black">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Sign-in Modal -->
+  <div id="studentModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-4 z-50">
+    <form id="studentForm" class="bg-white rounded-2xl max-w-md w-full p-6 comic-card no-lift">
+      <h2 class="text-xl font-black mb-1">Student Sign-In</h2>
+      <p class="text-xs font-semibold text-slate-600 mb-4">Your progress saves locally and syncs to your teacher's dashboard when you submit or hit 20 matches.</p>
+      <label class="block text-xs font-black mb-1">Full Name</label>
+      <input id="stuName" required maxlength="80" placeholder="e.g. Alex Chen" class="w-full p-2.5 border-2 border-slate-800 rounded-xl font-bold mb-3" />
+      <label class="block text-xs font-black mb-1">Class / Period</label>
+      <input id="stuClass" required maxlength="40" placeholder="e.g. MPM2D-01 or MCR3U-02" class="w-full p-2.5 border-2 border-slate-800 rounded-xl font-bold mb-4" />
+      <div class="flex gap-2">
+        <button type="submit" class="flex-1 comic-btn bg-blue-600 text-white py-2.5 rounded-xl font-black">Save &amp; Continue</button>
+        <button type="button" id="cancelStudentBtn" class="comic-btn bg-slate-100 px-4 py-2.5 rounded-xl font-black">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Break Reminder Modal -->
+  <div id="breakModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 comic-card no-lift text-center">
+      <div class="text-4xl mb-2">🧘</div>
+      <h2 class="text-xl font-black mb-2">Time for a Quick Brain Break!</h2>
+      <p class="text-sm font-semibold text-slate-600 mb-4">You've been actively practicing! Stand up, stretch, and rest your eyes for 30 seconds.</p>
+      <button id="resumeBreakBtn" class="comic-btn bg-emerald-400 hover:bg-emerald-500 px-6 py-2.5 rounded-xl font-black">
+        I'm Ready to Resume
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. CURRICULUM CARD DECKS (MPM2D & MCR3U)
+    // Every pair has: id, course, unit, prompt (LaTeX/text), match (LaTeX/text),
+    // hint (strategy clue), tip (why it matches).
+    // =========================================================================
+    const UNITS = {
+      MPM2D: [
+        { id: 'mpm2d_all', name: 'All MPM2D Units' },
+        { id: 'mpm2d_quad', name: 'Quadratics & Factoring' },
+        { id: 'mpm2d_linear', name: 'Linear Systems & Analytic Geo' },
+        { id: 'mpm2d_trig', name: 'Right-Triangle Trigonometry' }
+      ],
+      MCR3U: [
+        { id: 'mcr3u_all', name: 'All MCR3U Units' },
+        { id: 'mcr3u_inv', name: 'Functions & Inverses' },
+        { id: 'mcr3u_trans', name: 'Transformations & Exponentials' },
+        { id: 'mcr3u_trig', name: 'Trigonometry & Sinusoids' }
+      ],
+      MIXED: [
+        { id: 'mixed_all', name: 'MPM2D + MCR3U Mega Mix' }
+      ]
+    };
+
+    const CARD_DECK = [
+      // --- MPM2D: Quadratics & Factoring ---
+      {
+        id: 'q1', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: '$x^2 - 5x + 6$', match: '$(x - 2)(x - 3)$',
+        hint: 'Find two numbers that multiply to $+6$ and add to $-5$.',
+        tip: '$(-2)(-3) = 6$ and $-2 + (-3) = -5$.'
+      },
+      {
+        id: 'q2', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: '$x^2 - 9$', match: '$(x - 3)(x + 3)$',
+        hint: 'Difference of squares: $a^2 - b^2 = (a-b)(a+b)$.',
+        tip: '$x^2 - 3^2$ factors into $(x-3)(x+3)$.'
+      },
+      {
+        id: 'q3', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: '$x^2 + 6x + 9$', match: '$(x + 3)^2$',
+        hint: 'Check if it is a perfect square trinomial: $(x + b)^2$.',
+        tip: 'Half of $6$ is $3$, and $3^2 = 9$, so $(x+3)^2$.'
+      },
+      {
+        id: 'q4', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: '$2x^2 + 7x + 3$', match: '$(2x + 1)(x + 3)$',
+        hint: 'Decomposition: multiply $a \\cdot c = 6$, find factors summing to $7$.',
+        tip: '$(2x+1)(x+3) = 2x^2 + 6x + x + 3 = 2x^2 + 7x + 3$.'
+      },
+      {
+        id: 'q5', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: 'Vertex of $y = 2(x - 4)^2 - 5$', match: '$(4, -5)$',
+        hint: 'In $y = a(x - h)^2 + k$, the vertex is $(h, k)$. Watch the sign of $h$!',
+        tip: '$x - 4$ means $h = 4$, and $k = -5$, so vertex is $(4, -5)$.'
+      },
+      {
+        id: 'q6', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: 'Zeros of $y = (x + 5)(x - 1)$', match: '$x = -5,\\; x = 1$',
+        hint: 'Set each factor equal to $0$ and solve for $x$.',
+        tip: '$x + 5 = 0 \\Rightarrow x = -5$ and $x - 1 = 0 \\Rightarrow x = 1$.'
+      },
+      {
+        id: 'q7', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: '$3x^2 - 12$', match: '$3(x - 2)(x + 2)$',
+        hint: 'Always common-factor first before using difference of squares!',
+        tip: '$3(x^2 - 4) = 3(x - 2)(x + 2)$.'
+      },
+      {
+        id: 'q8', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: 'Axis of symmetry of $y = x^2 - 8x + 7$', match: '$x = 4$',
+        hint: 'Use $x = -\\frac{b}{2a}$ or complete the square.',
+        tip: '$x = -\\frac{-8}{2(1)} = 4$.'
+      },
+      {
+        id: 'q9', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: 'y-intercept of $y = -2(x - 1)^2 + 10$', match: '$(0, 8)$',
+        hint: 'Substitute $x = 0$ into the equation.',
+        tip: '$y = -2(0 - 1)^2 + 10 = -2(1) + 10 = 8$.'
+      },
+      {
+        id: 'q10', course: 'MPM2D', unit: 'mpm2d_quad',
+        prompt: '$x^2 - x - 12$', match: '$(x - 4)(x + 3)$',
+        hint: 'Two numbers multiplying to $-12$ and adding to $-1$.',
+        tip: '$(-4)(3) = -12$ and $-4 + 3 = -1$.'
+      },
+
+      // --- MPM2D: Linear Systems & Analytic Geometry ---
+      {
+        id: 'l1', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: '$\\begin{cases} x + y = 7 \\\\ x - y = 3 \\end{cases}$', match: '$(5, 2)$',
+        hint: 'Add the two equations together to eliminate $y$.',
+        tip: '$2x = 10 \\Rightarrow x = 5$, then $y = 7 - 5 = 2$.'
+      },
+      {
+        id: 'l2', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: 'Midpoint of $(2, -4)$ and $(8, 6)$', match: '$(5, 1)$',
+        hint: 'Average the $x$-coordinates and average the $y$-coordinates.',
+        tip: '$(\\frac{2+8}{2}, \\frac{-4+6}{2}) = (5, 1)$.'
+      },
+      {
+        id: 'l3', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: 'Perpendicular slope to $y = \\frac{2}{3}x - 1$', match: '$m = -\\frac{3}{2}$',
+        hint: 'Perpendicular slopes are negative reciprocals.',
+        tip: 'Flip $\\frac{2}{3}$ and negate it to get $-\\frac{3}{2}$.'
+      },
+      {
+        id: 'l4', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: 'Distance from $(0, 0)$ to $(3, 4)$', match: '$d = 5$',
+        hint: 'Use $d = \\sqrt{(x_2-x_1)^2 + (y_2-y_1)^2}$.',
+        tip: '$\\sqrt{3^2 + 4^2} = \\sqrt{25} = 5$.'
+      },
+      {
+        id: 'l5', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: '$\\begin{cases} y = 2x + 1 \\\\ y = 3x - 2 \\end{cases}$', match: '$(3, 7)$',
+        hint: 'Set $2x + 1 = 3x - 2$ to solve for $x$.',
+        tip: '$x = 3$, and $y = 2(3) + 1 = 7$.'
+      },
+      {
+        id: 'l6', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: 'Circle centered at $(0,0)$ with radius $6$', match: '$x^2 + y^2 = 36$',
+        hint: 'Standard circle equation is $x^2 + y^2 = r^2$.',
+        tip: '$r = 6 \\Rightarrow r^2 = 36$.'
+      },
+      {
+        id: 'l7', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: 'Slope through $(1, 2)$ and $(4, 11)$', match: '$m = 3$',
+        hint: 'Rise over run: $m = \\frac{y_2 - y_1}{x_2 - x_1}$.',
+        tip: '$m = \\frac{11 - 2}{4 - 1} = \\frac{9}{3} = 3$.'
+      },
+      {
+        id: 'l8', course: 'MPM2D', unit: 'mpm2d_linear',
+        prompt: 'Parallel line to $y = -4x + 5$ through $(0, -2)$', match: '$y = -4x - 2$',
+        hint: 'Parallel lines have the same slope; $(0, -2)$ is the y-intercept.',
+        tip: 'Keep $m = -4$ and set $b = -2$.'
+      },
+
+      // --- MPM2D: Right-Triangle Trigonometry ---
+      {
+        id: 't1', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: '$\\sin\\theta$ ratio', match: '$\\frac{\\text{Opposite}}{\\text{Hypotenuse}}$',
+        hint: 'Remember SOH-CAH-TOA!',
+        tip: 'SOH stands for Sine = Opposite / Hypotenuse.'
+      },
+      {
+        id: 't2', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: '$\\cos\\theta$ ratio', match: '$\\frac{\\text{Adjacent}}{\\text{Hypotenuse}}$',
+        hint: 'Remember SOH-CAH-TOA!',
+        tip: 'CAH stands for Cosine = Adjacent / Hypotenuse.'
+      },
+      {
+        id: 't3', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: '$\\tan\\theta$ ratio', match: '$\\frac{\\text{Opposite}}{\\text{Adjacent}}$',
+        hint: 'Remember SOH-CAH-TOA!',
+        tip: 'TOA stands for Tangent = Opposite / Adjacent.'
+      },
+      {
+        id: 't4', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: 'Hypotenuse if legs are $5$ and $12$', match: '$13$',
+        hint: 'Use the Pythagorean Theorem: $a^2 + b^2 = c^2$.',
+        tip: '$5^2 + 12^2 = 25 + 144 = 169 = 13^2$.'
+      },
+      {
+        id: 't5', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: '$\\sin(30^\\circ)$', match: '$0.5$',
+        hint: 'In a $30^\\circ$-$60^\\circ$-$90^\\circ$ triangle, opposite $30^\\circ$ is half the hypotenuse.',
+        tip: '$\\sin(30^\\circ) = \\frac{1}{2} = 0.5$.'
+      },
+      {
+        id: 't6', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: '$\\tan(45^\\circ)$', match: '$1$',
+        hint: 'An isosceles right triangle has equal opposite and adjacent sides.',
+        tip: '$\\frac{\\text{Opp}}{\\text{Adj}} = 1$.'
+      },
+      {
+        id: 't7', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: 'Find $x$: $\\cos(60^\\circ) = \\frac{x}{14}$', match: '$x = 7$',
+        hint: 'Recall $\\cos(60^\\circ) = 0.5$.',
+        tip: '$x = 14 \\times 0.5 = 7$.'
+      },
+      {
+        id: 't8', course: 'MPM2D', unit: 'mpm2d_trig',
+        prompt: 'Angle $\\theta$ when $\\sin\\theta = \\frac{\\sqrt{3}}{2}$ (acute)', match: '$60^\\circ$',
+        hint: 'Use the $30^\\circ$-$60^\\circ$-$90^\\circ$ special triangle.',
+        tip: '$\\sin(60^\\circ) = \\frac{\\sqrt{3}}{2}$.'
+      },
+
+      // --- MCR3U: Functions & Inverses ---
+      {
+        id: 'i1', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'Inverse of $f(x) = 2x - 6$', match: '$f^{-1}(x) = \\frac{x + 6}{2}$',
+        hint: 'Swap $x$ and $y$, then isolate $y$.',
+        tip: '$x = 2y - 6 \\Rightarrow 2y = x + 6 \\Rightarrow y = \\frac{x+6}{2}$.'
+      },
+      {
+        id: 'i2', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'Inverse of $f(x) = \\frac{x + 3}{5}$', match: '$f^{-1}(x) = 5x - 3$',
+        hint: 'Swap $x$ and $y$, multiply by $5$, then subtract $3$.',
+        tip: '$x = \\frac{y+3}{5} \\Rightarrow 5x = y + 3 \\Rightarrow y = 5x - 3$.'
+      },
+      {
+        id: 'i3', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'Range of $f(x) = \\sqrt{x - 2} + 4$', match: '$\\{y \\in \\mathbb{R} \\mid y \\ge 4\\}$',
+        hint: 'Square root output is always $\\ge 0$, then shifted up by $4$.',
+        tip: '$\\sqrt{x-2} \\ge 0 \\Rightarrow y \\ge 4$.'
+      },
+      {
+        id: 'i4', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'Domain of $f(x) = \\frac{1}{x - 7}$', match: '$\\{x \\in \\mathbb{R} \\mid x \\ne 7\\}$',
+        hint: 'Denominator cannot be zero!',
+        tip: '$x - 7 \\ne 0 \\Rightarrow x \\ne 7$.'
+      },
+      {
+        id: 'i5', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'If $(3, -8)$ is on $f(x)$, point on $f^{-1}(x)$ is:', match: '$(-8, 3)$',
+        hint: 'Inverses reflect across $y = x$, swapping $(x, y) \\to (y, x)$.',
+        tip: 'Swap the coordinates: $(3, -8) \\to (-8, 3)$.'
+      },
+      {
+        id: 'i6', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'Evaluate $f(-2)$ for $f(x) = 3x^2 - 4$', match: '$8$',
+        hint: 'Remember $(-2)^2 = +4$.',
+        tip: '$3(-2)^2 - 4 = 3(4) - 4 = 8$.'
+      },
+      {
+        id: 'i7', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'Inverse of $f(x) = x^2 + 1,\\; x \\ge 0$', match: '$f^{-1}(x) = \\sqrt{x - 1}$',
+        hint: 'Restricting $x \\ge 0$ means taking the positive square root.',
+        tip: '$x = y^2 + 1 \\Rightarrow y = \\sqrt{x - 1}$ for $y \\ge 0$.'
+      },
+      {
+        id: 'i8', course: 'MCR3U', unit: 'mcr3u_inv',
+        prompt: 'Vertical Asymptote of $g(x) = \\frac{3}{x + 5} - 2$', match: '$x = -5$',
+        hint: 'Set the denominator equal to zero.',
+        tip: '$x + 5 = 0 \\Rightarrow x = -5$.'
+      },
+
+      // --- MCR3U: Transformations & Exponentials ---
+      {
+        id: 'tr1', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Mapping for $y = 2f(x - 3) + 1$', match: '$(x + 3,\\; 2y + 1)$',
+        hint: 'Horizontal shifts do the opposite of the sign inside $f(x - d)$.',
+        tip: '$d = 3$ adds $3$ to $x$; $a = 2, c = 1$ gives $2y + 1$.'
+      },
+      {
+        id: 'tr2', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Mapping for $y = -f(2x)$', match: '$(\\frac{1}{2}x,\\; -y)$',
+        hint: 'Horizontal stretch/compression uses $\\frac{1}{k}$, and $-f$ reflects in the x-axis.',
+        tip: '$k = 2 \\Rightarrow \\frac{x}{2}$, and $a = -1 \\Rightarrow -y$.'
+      },
+      {
+        id: 'tr3', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Simplify $27^{2/3}$', match: '$9$',
+        hint: 'Take the cube root first, then square it.',
+        tip: '$(\\sqrt[3]{27})^2 = 3^2 = 9$.'
+      },
+      {
+        id: 'tr4', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Solve $2^{x + 1} = 16$', match: '$x = 3$',
+        hint: 'Write $16$ as a power of $2$.',
+        tip: '$2^{x+1} = 2^4 \\Rightarrow x + 1 = 4 \\Rightarrow x = 3$.'
+      },
+      {
+        id: 'tr5', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Horizontal Asymptote of $y = 3(2)^x - 4$', match: '$y = -4$',
+        hint: 'For $y = a\\cdot b^x + c$, the horizontal asymptote is $y = c$.',
+        tip: 'As $x \\to -\\infty$, $3(2)^x \\to 0$, so $y \\to -4$.'
+      },
+      {
+        id: 'tr6', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Simplify $(x^3 y^{-2})^2$', match: '$\\frac{x^6}{y^4}$',
+        hint: 'Multiply exponents and move negative exponents to the denominator.',
+        tip: '$x^{6} y^{-4} = \\frac{x^6}{y^4}$.'
+      },
+      {
+        id: 'tr7', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Simplify $\\sqrt{50} + \\sqrt{8}$', match: '$7\\sqrt{2}$',
+        hint: 'Factor out perfect squares: $50 = 25\\cdot 2$ and $8 = 4\\cdot 2$.',
+        tip: '$5\\sqrt{2} + 2\\sqrt{2} = 7\\sqrt{2}$.'
+      },
+      {
+        id: 'tr8', course: 'MCR3U', unit: 'mcr3u_trans',
+        prompt: 'Initial value & growth of $P(t) = 500(1.08)^t$', match: '$500,\\; +8\\%$',
+        hint: '$P_0$ is the coefficient; $1 + r = 1.08$.',
+        tip: 'Starts at $500$ and grows by $8\\%$ per period.'
+      },
+
+      // --- MCR3U: Trigonometry & Sinusoids ---
+      {
+        id: 'st1', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: 'Exact value of $\\sin(150^\\circ)$', match: '$\\frac{1}{2}$',
+        hint: 'Quadrant II (Sine is positive), reference angle $30^\\circ$.',
+        tip: '$\\sin(150^\\circ) = +\\sin(30^\\circ) = \\frac{1}{2}$.'
+      },
+      {
+        id: 'st2', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: 'Exact value of $\\cos(120^\\circ)$', match: '$-\\frac{1}{2}$',
+        hint: 'Quadrant II (Cosine is negative by CAST), reference angle $60^\\circ$.',
+        tip: '$\\cos(120^\\circ) = -\\cos(60^\\circ) = -\\frac{1}{2}$.'
+      },
+      {
+        id: 'st3', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: 'Exact value of $\\tan(240^\\circ)$', match: '$\\sqrt{3}$',
+        hint: 'Quadrant III (Tangent is positive by CAST), reference angle $60^\\circ$.',
+        tip: '$\\tan(240^\\circ) = +\\tan(60^\\circ) = \\sqrt{3}$.'
+      },
+      {
+        id: 'st4', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: 'Period of $y = 4\\sin(3x) + 2$', match: '$120^\\circ$',
+        hint: 'For degrees, $\\text{Period} = \\frac{360^\\circ}{|k|}$.',
+        tip: '$\\frac{360^\\circ}{3} = 120^\\circ$.'
+      },
+      {
+        id: 'st5', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: 'Amplitude & Axis of $y = -5\\cos(x) + 3$', match: '$a = 5,\\; y = 3$',
+        hint: 'Amplitude is $|a|$ (always positive); equation of axis is $y = c$.',
+        tip: '$|-5| = 5$ and $c = 3 \\Rightarrow y = 3$.'
+      },
+      {
+        id: 'st6', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: '$\\sin^2\\theta + \\cos^2\\theta$', match: '$1$',
+        hint: 'Pythagorean Trigonometric Identity!',
+        tip: 'On the unit circle, $y^2 + x^2 = 1$.'
+      },
+      {
+        id: 'st7', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: 'Range of $y = 3\\sin(2x) - 1$', match: '$[-4, 2]$',
+        hint: 'Min $= c - |a|$, Max $= c + |a|$.',
+        tip: 'Min $= -1 - 3 = -4$, Max $= -1 + 3 = 2$.'
+      },
+      {
+        id: 'st8', course: 'MCR3U', unit: 'mcr3u_trig',
+        prompt: 'Exact value of $\\cos(315^\\circ)$', match: '$\\frac{\\sqrt{2}}{2}$',
+        hint: 'Quadrant IV (Cosine is positive by CAST), reference angle $45^\\circ$.',
+        tip: '$\\cos(315^\\circ) = +\\cos(45^\\circ) = \\frac{\\sqrt{2}}{2}$.'
+      }
+    ];
+
+    const BOSSES = [
+      { name: 'Lord Parabola', emoji: '🐉', hp: 100 },
+      { name: 'Baroness Inverse', emoji: '🧙‍♀️', hp: 130 },
+      { name: 'The Sinusoid Sentinel', emoji: '🤖', hp: 160 },
+      { name: 'Apex Radical Dragon', emoji: '🔥', hp: 200 }
+    ];
+
+    // =========================================================================
+    // 2. SOUND ENGINE (Web Audio API - zero external files)
+    // =========================================================================
+    let soundEnabled = true;
+    let audioCtx = null;
+    function playTone(freq, dur = 0.12, type = 'sine', vol = 0.12) {
+      if (!soundEnabled) return;
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+      } catch {}
+    }
+    const sfx = {
+      flip: () => playTone(440, 0.06, 'triangle', 0.08),
+      match: () => { playTone(523.25, 0.09, 'sine', 0.12); setTimeout(() => playTone(659.25, 0.14, 'sine', 0.12), 70); },
+      miss: () => { playTone(220, 0.12, 'sawtooth', 0.08); setTimeout(() => playTone(185, 0.15, 'sawtooth', 0.08), 90); },
+      win: () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => playTone(f, 0.16, 'triangle', 0.12), i * 90)); }
+    };
+
+    // =========================================================================
+    // 3. PERSISTENT STATE & FIREBASE SYNC (mathpractice-9a4cc)
+    // =========================================================================
+    const STORAGE_KEY = 'mathquest_card_match_v1';
+    let store = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || {
+      student: null,
+      totalCorrect: 0,
+      totalAttempts: 0,
+      bestStreak: 0,
+      xp: 0,
+      activeSec: 0,
+      breakAfter: 20,
+      modesPracticed: [],
+      skills: {}
+    };
+    function saveStore() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    let _fsDb = null;
+    function getDb() {
+      if (_fsDb) return _fsDb;
+      const cfg = window.MATHPRACTICE_FIREBASE_CONFIG;
+      if (!cfg || !cfg.apiKey || typeof firebase === 'undefined') return null;
+      if (!firebase.apps.length) firebase.initializeApp(cfg);
+      _fsDb = firebase.firestore();
+      return _fsDb;
+    }
+    async function ensureAnonUid() {
+      if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') return null;
+      try {
+        const auth = firebase.auth();
+        if (auth.currentUser) return auth.currentUser.uid;
+        const cred = await auth.signInAnonymously();
+        return cred?.user?.uid || null;
+      } catch { return null; }
+    }
+    function studentDocId(name, cls) {
+      return `${name}_${cls}`.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 60);
+    }
+    async function syncToFirestore(reason = 'manual') {
+      const statusEl = document.getElementById('syncStatus');
+      if (!store.student?.name) {
+        openStudentModal();
+        return false;
+      }
+      const db = getDb();
+      if (!db) {
+        statusEl.textContent = 'Offline (saved locally)';
+        return false;
+      }
+      statusEl.textContent = 'Syncing...';
+      try {
+        const uid = await ensureAnonUid();
+        if (!uid) throw new Error('No auth UID');
+        const baseKey = studentDocId(store.student.name, store.student.cls);
+        const key = `${baseKey}_mq_${uid.slice(0, 8)}`;
+        const payload = {
+          ownerUid: uid,
+          name: store.student.name,
+          cls: store.student.cls,
+          course: state.course === 'MIXED' ? 'MPM2D/MCR3U' : state.course,
+          practiceType: 'MathQuest MPM2D / MCR3U Interactive Card Match',
+          lastMode: state.mode,
+          modesPracticed: store.modesPracticed.length ? store.modesPracticed : [state.mode],
+          totalCorrect: store.totalCorrect,
+          totalAttempts: Math.max(store.totalAttempts, store.totalCorrect),
+          bestStreak: store.bestStreak,
+          activeMin: Math.round(store.activeSec / 60),
+          levelled: { xp: store.xp, bossWave: state.bossWave },
+          skills: store.skills,
+          lastReason: reason,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('mpm2d_students').doc(key).set(payload, { merge: true });
+        statusEl.textContent = 'Synced ✓';
+        statusEl.className = 'text-xs font-bold text-emerald-700';
+        return true;
+      } catch (err) {
+        console.warn('Firestore sync failed:', err);
+        statusEl.textContent = 'Sync failed (saved locally)';
+        statusEl.className = 'text-xs font-bold text-rose-600';
+        return false;
+      }
+    }
+
+    // =========================================================================
+    // 4. GAME STATE & RENDERING
+    // =========================================================================
+    const state = {
+      course: 'MPM2D',
+      unit: 'mpm2d_all',
+      mode: 'memory',
+      pairCount: 6,
+      deck: [],
+      matchedIds: new Set(),
+      mistakes: [],
+      score: 0,
+      streak: 0,
+      roundAttempts: 0,
+      timerSec: 0,
+      timerInterval: null,
+      locked: false,
+      // Memory mode
+      flippedCards: [],
+      // Speed / Boss mode
+      selectedPromptId: null,
+      selectedMatchId: null,
+      // Boss mode
+      bossWave: 1,
+      bossHp: 100,
+      bossMaxHp: 100,
+      hearts: 3
+    };
+
+    const $ = id => document.getElementById(id);
+
+    function renderMath(el) {
+      if (!el || typeof katex === 'undefined') return;
+      el.querySelectorAll('.math-expr').forEach(node => {
+        const raw = node.getAttribute('data-tex') || '';
+        const html = raw.replace(/\$([^$]+)\$/g, (_, tex) => {
+          try {
+            return katex.renderToString(tex, { throwOnError: false });
+          } catch {
+            return tex;
+          }
+        });
+        node.innerHTML = html;
+      });
+    }
+
+    function renderTexString(str) {
+      if (typeof katex === 'undefined') return str;
+      return str.replace(/\$([^$]+)\$/g, (_, tex) => {
+        try { return katex.renderToString(tex, { throwOnError: false }); }
+        catch { return tex; }
+      });
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function getFilteredPool() {
+      if (state.course === 'MIXED') return CARD_DECK;
+      if (state.unit.endsWith('_all')) {
+        return CARD_DECK.filter(c => c.course === state.course);
+      }
+      return CARD_DECK.filter(c => c.unit === state.unit);
+    }
+
+    function populateUnits() {
+      const sel = $('unitSelect');
+      const list = UNITS[state.course] || [];
+      sel.innerHTML = list.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+      state.unit = list[0].id;
+    }
+
+    function updateStatsUI() {
+      $('statCorrect').textContent = store.totalCorrect;
+      $('statStreak').textContent = store.bestStreak;
+      const acc = store.totalAttempts > 0 ? Math.round((store.totalCorrect / store.totalAttempts) * 100) : 100;
+      $('statAccuracy').textContent = `${acc}%`;
+      $('statXP').textContent = store.xp;
+      $('activeTimeLabel').textContent = `${Math.floor(store.activeSec / 60)}m`;
+      $('studentLabel').textContent = store.student ? `${store.student.name} (${store.student.cls})` : 'Sign In';
+    }
+
+    function updateHudUI() {
+      $('hudScore').textContent = state.score;
+      $('hudStreak').textContent = state.streak;
+      const mult = Math.min(4, 1 + Math.floor(state.streak / 3));
+      $('hudMult').textContent = `${mult}x`;
+      const mins = Math.floor(state.timerSec / 60);
+      const secs = String(state.timerSec % 60).padStart(2, '0');
+      $('hudTimer').textContent = `${mins}:${secs}`;
+      $('roundProgress').textContent = `${state.matchedIds.size} / ${state.deck.length} Matched`;
+
+      if (state.mode === 'boss') {
+        $('bossBanner').classList.remove('hidden');
+        const boss = BOSSES[(state.bossWave - 1) % BOSSES.length];
+        $('bossWave').textContent = state.bossWave;
+        $('bossName').textContent = boss.name;
+        $('bossEmoji').textContent = boss.emoji;
+        const pct = Math.max(0, Math.round((state.bossHp / state.bossMaxHp) * 100));
+        $('bossHpBar').style.width = `${pct}%`;
+        $('bossHpText').textContent = `${Math.max(0, state.bossHp)} / ${state.bossMaxHp}`;
+        $('bossHearts').textContent = '❤️'.repeat(Math.max(0, state.hearts)) + '🖤'.repeat(Math.max(0, 3 - state.hearts));
+      } else {
+        $('bossBanner').classList.add('hidden');
+      }
+    }
+
+    function setFeedback(html, tone = 'neutral') {
+      const bar = $('feedbackBar');
+      const txt = $('feedbackText');
+      bar.className = 'rounded-2xl px-4 py-3 comic-card no-lift flex items-center justify-between gap-3 min-h-[56px] ';
+      if (tone === 'good') bar.className += 'bg-emerald-50 border-emerald-700';
+      else if (tone === 'bad') bar.className += 'bg-rose-50 border-rose-700';
+      else if (tone === 'hint') bar.className += 'bg-amber-50 border-amber-600';
+      else bar.className += 'bg-white';
+      txt.innerHTML = html;
+      renderMath(txt);
+    }
+
+    // =========================================================================
+    // 5. START ROUND & BOARD RENDERERS
+    // =========================================================================
+    function startRound(keepBoss = false) {
+      clearInterval(state.timerInterval);
+      const pool = shuffle(getFilteredPool());
+      const seenMatches = new Set();
+      const uniqueDeck = [];
+      for (const card of pool) {
+        if (!seenMatches.has(card.match)) {
+          seenMatches.add(card.match);
+          uniqueDeck.push(card);
+        }
+        if (uniqueDeck.length >= state.pairCount) break;
+      }
+      state.deck = uniqueDeck;
+      state.matchedIds = new Set();
+      state.mistakes = [];
+      state.flippedCards = [];
+      state.selectedPromptId = null;
+      state.selectedMatchId = null;
+      state.locked = false;
+      state.roundAttempts = 0;
+
+      if (!keepBoss) {
+        state.score = 0;
+        state.streak = 0;
+        state.bossWave = 1;
+        state.hearts = 3;
+        const boss = BOSSES[0];
+        state.bossMaxHp = boss.hp;
+        state.bossHp = boss.hp;
+      }
+
+      if (state.mode === 'speed') {
+        state.timerSec = state.deck.length === 8 ? 90 : 60;
+        state.timerInterval = setInterval(() => {
+          state.timerSec--;
+          updateHudUI();
+          if (state.timerSec <= 0) {
+            clearInterval(state.timerInterval);
+            finishRound(false, 'Time is up!');
+          }
+        }, 1000);
+      } else {
+        state.timerSec = 0;
+        state.timerInterval = setInterval(() => {
+          state.timerSec++;
+          updateHudUI();
+        }, 1000);
+      }
+
+      if (!store.modesPracticed.includes(state.mode)) {
+        store.modesPracticed.push(state.mode);
+        saveStore();
+      }
+
+      updateHudUI();
+      setFeedback('Match each expression with its equivalent form or solution!');
+      renderBoard();
+    }
+
+    function renderBoard() {
+      const container = $('boardContainer');
+      if (state.mode === 'memory') {
+        renderMemoryBoard(container);
+      } else {
+        renderMatchColumnsBoard(container);
+      }
+      renderMath(container);
+    }
+
+    function renderMemoryBoard(container) {
+      // Build 2 cards per pair (prompt & match) and shuffle
+      const cards = [];
+      state.deck.forEach(item => {
+        cards.push({ uid: `${item.id}_p`, pairId: item.id, kind: 'Quest', text: item.prompt });
+        cards.push({ uid: `${item.id}_m`, pairId: item.id, kind: 'Match', text: item.match });
+      });
+      const shuffled = shuffle(cards);
+      const cols = state.deck.length === 8 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-4';
+      container.innerHTML = `<div class="grid ${cols} gap-3">${shuffled.map((c, idx) => `
+        <button data-uid="${c.uid}" data-pair="${c.pairId}" data-kind="${c.kind}"
+          class="mem-card flip-scene h-28 sm:h-32 text-left focus:outline-none">
+          <div class="flip-inner">
+            <div class="flip-face bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-xl border-3 border-slate-800 shadow-[4px_4px_0px_#1e293b] flex flex-col items-center justify-center p-2">
+              <span class="text-2xl mb-1">🃏</span>
+              <span class="text-[11px] font-black uppercase tracking-wider opacity-85">#${idx + 1}</span>
+            </div>
+            <div class="flip-face flip-back bg-white rounded-xl border-3 border-slate-800 shadow-[4px_4px_0px_#1e293b] p-2.5 flex flex-col justify-between">
+              <span class="self-start text-[10px] font-black px-2 py-0.5 rounded-full border border-slate-800 ${c.kind === 'Quest' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-900'}">${c.kind}</span>
+              <div class="math-expr text-center font-bold text-sm sm:text-base text-slate-900 my-auto leading-snug" data-tex="${escapeAttr(c.text)}"></div>
+              <span></span>
+            </div>
+          </div>
+        </button>
+      `).join('')}</div>`;
+
+      container.querySelectorAll('.mem-card').forEach(btn => {
+        btn.addEventListener('click', () => handleMemoryFlip(btn));
+      });
+    }
+
+    function handleMemoryFlip(btn) {
+      if (state.locked) return;
+      const inner = btn.querySelector('.flip-inner');
+      if (inner.classList.contains('is-flipped')) return;
+
+      sfx.flip();
+      inner.classList.add('is-flipped');
+      state.flippedCards.push(btn);
+
+      if (state.flippedCards.length < 2) return;
+
+      state.locked = true;
+      state.roundAttempts++;
+      const [c1, c2] = state.flippedCards;
+      const isMatch = c1.dataset.pair === c2.dataset.pair && c1.dataset.uid !== c2.dataset.uid;
+
+      if (isMatch) {
+        const item = state.deck.find(d => d.id === c1.dataset.pair);
+        recordMatch(item);
+        c1.classList.add('animate-match');
+        c2.classList.add('animate-match');
+        c1.querySelector('.flip-back').classList.add('bg-emerald-50', 'border-emerald-700');
+        c2.querySelector('.flip-back').classList.add('bg-emerald-50', 'border-emerald-700');
+        state.flippedCards = [];
+        state.locked = false;
+        checkRoundComplete();
+      } else {
+        recordMiss(c1.dataset.pair);
+        c1.classList.add('animate-shake');
+        c2.classList.add('animate-shake');
+        setTimeout(() => {
+          c1.querySelector('.flip-inner').classList.remove('is-flipped');
+          c2.querySelector('.flip-inner').classList.remove('is-flipped');
+          c1.classList.remove('animate-shake');
+          c2.classList.remove('animate-shake');
+          state.flippedCards = [];
+          state.locked = false;
+        }, 850);
+      }
+    }
+
+    function renderMatchColumnsBoard(container) {
+      const prompts = shuffle(state.deck);
+      const matches = shuffle(state.deck);
+      container.innerHTML = `
+        <div class="text-xs font-bold text-slate-500 mb-3 flex items-center justify-between">
+          <span>Click a <strong class="text-blue-700">Quest Card</strong> and its <strong class="text-amber-700">Matching Card</strong> (or drag &amp; drop!).</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2.5" id="promptCol">
+            ${prompts.map(item => `
+              <button draggable="true" data-pair="${item.id}" data-side="prompt"
+                class="match-card prompt-card w-full p-3.5 rounded-xl comic-card bg-blue-50 hover:bg-blue-100 text-left flex items-center justify-between gap-2">
+                <span class="math-expr font-bold text-sm sm:text-base text-slate-900" data-tex="${escapeAttr(item.prompt)}"></span>
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-200 text-blue-900 border border-slate-800 shrink-0">QUEST</span>
+              </button>
+            `).join('')}
+          </div>
+          <div class="space-y-2.5" id="matchCol">
+            ${matches.map(item => `
+              <button draggable="true" data-pair="${item.id}" data-side="match"
+                class="match-card match-target w-full p-3.5 rounded-xl comic-card bg-amber-50 hover:bg-amber-100 text-left flex items-center justify-between gap-2">
+                <span class="math-expr font-bold text-sm sm:text-base text-slate-900" data-tex="${escapeAttr(item.match)}"></span>
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-slate-800 shrink-0">MATCH</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      container.querySelectorAll('.match-card').forEach(btn => {
+        btn.addEventListener('click', () => handleColumnClick(btn));
+        // Drag & drop support
+        btn.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', JSON.stringify({ pair: btn.dataset.pair, side: btn.dataset.side }));
+        });
+        btn.addEventListener('dragover', e => e.preventDefault());
+        btn.addEventListener('drop', e => {
+          e.preventDefault();
+          try {
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+            if (data.side === btn.dataset.side) return;
+            const pId = data.side === 'prompt' ? data.pair : btn.dataset.pair;
+            const mId = data.side === 'match' ? data.pair : btn.dataset.pair;
+            evaluatePairSelection(pId, mId);
+          } catch {}
+        });
+      });
+    }
+
+    function handleColumnClick(btn) {
+      if (state.locked || btn.disabled) return;
+      const side = btn.dataset.side;
+      const pairId = btn.dataset.pair;
+
+      if (side === 'prompt') {
+        document.querySelectorAll('.prompt-card').forEach(el => el.classList.remove('ring-4', 'ring-blue-500'));
+        state.selectedPromptId = pairId;
+        btn.classList.add('ring-4', 'ring-blue-500');
+      } else {
+        document.querySelectorAll('.match-target').forEach(el => el.classList.remove('ring-4', 'ring-amber-500'));
+        state.selectedMatchId = pairId;
+        btn.classList.add('ring-4', 'ring-amber-500');
+      }
+
+      if (state.selectedPromptId && state.selectedMatchId) {
+        evaluatePairSelection(state.selectedPromptId, state.selectedMatchId);
+      }
+    }
+
+    function evaluatePairSelection(promptId, matchId) {
+      if (state.matchedIds.has(promptId) || state.matchedIds.has(matchId)) return;
+      state.roundAttempts++;
+
+      const pEl = document.querySelector(`.prompt-card[data-pair="${promptId}"]`);
+      const mEl = document.querySelector(`.match-target[data-pair="${matchId}"]`);
+
+      if (promptId === matchId) {
+        const item = state.deck.find(d => d.id === promptId);
+        recordMatch(item);
+        if (pEl) {
+          pEl.disabled = true;
+          pEl.className = 'match-card prompt-card w-full p-3.5 rounded-xl border-2 border-emerald-700 bg-emerald-100 text-left flex items-center justify-between gap-2 opacity-75 animate-match';
+        }
+        if (mEl) {
+          mEl.disabled = true;
+          mEl.className = 'match-card match-target w-full p-3.5 rounded-xl border-2 border-emerald-700 bg-emerald-100 text-left flex items-center justify-between gap-2 opacity-75 animate-match';
+        }
+        if (state.mode === 'speed') {
+          state.timerSec += 3; // +3s speed bonus!
+        }
+        state.selectedPromptId = null;
+        state.selectedMatchId = null;
+        checkRoundComplete();
+      } else {
+        recordMiss(promptId);
+        if (pEl) pEl.classList.add('animate-shake', 'ring-4', 'ring-rose-500');
+        if (mEl) mEl.classList.add('animate-shake', 'ring-4', 'ring-rose-500');
+        setTimeout(() => {
+          document.querySelectorAll('.match-card').forEach(el => el.classList.remove('animate-shake', 'ring-4', 'ring-rose-500', 'ring-blue-500', 'ring-amber-500'));
+          state.selectedPromptId = null;
+          state.selectedMatchId = null;
+        }, 420);
+      }
+    }
+
+    // =========================================================================
+    // 6. SCORING, BOSS DAMAGE, HINTS & COMPLETION
+    // =========================================================================
+    function recordMatch(item) {
+      sfx.match();
+      state.matchedIds.add(item.id);
+      state.streak++;
+      const mult = Math.min(4, 1 + Math.floor(state.streak / 3));
+      const pts = 50 * mult;
+      state.score += pts;
+
+      store.totalCorrect++;
+      store.totalAttempts++;
+      store.xp += pts;
+      if (state.streak > store.bestStreak) store.bestStreak = state.streak;
+
+      // Track per-unit skill stats
+      const sk = store.skills[item.unit] || { name: item.unit, correct: 0, attempts: 0 };
+      sk.correct++;
+      sk.attempts++;
+      store.skills[item.unit] = sk;
+      saveStore();
+      updateStatsUI();
+
+      let bossMsg = '';
+      if (state.mode === 'boss') {
+        const dmg = 20 * mult;
+        state.bossHp = Math.max(0, state.bossHp - dmg);
+        bossMsg = ` ⚔️ <strong>-${dmg} Boss HP!</strong>`;
+      }
+
+      setFeedback(`✅ <strong>Match! (+${pts} pts)</strong>${bossMsg} — ${renderTexString(item.tip)}`, 'good');
+      updateHudUI();
+
+      // Auto-sync every 20 correct matches per math-practice-firebase standard
+      if (store.totalCorrect % 20 === 0 && store.student?.name) {
+        syncToFirestore('milestone_20');
+      }
+    }
+
+    function recordMiss(pairId) {
+      sfx.miss();
+      state.streak = 0;
+      store.totalAttempts++;
+      const item = state.deck.find(d => d.id === pairId);
+      if (item) {
+        const sk = store.skills[item.unit] || { name: item.unit, correct: 0, attempts: 0 };
+        sk.attempts++;
+        store.skills[item.unit] = sk;
+        if (!state.mistakes.some(m => m.id === item.id)) state.mistakes.push(item);
+      }
+      saveStore();
+      updateStatsUI();
+
+      if (state.mode === 'boss') {
+        state.hearts--;
+        updateHudUI();
+        if (state.hearts <= 0) {
+          clearInterval(state.timerInterval);
+          finishRound(false, 'Your shields broke! Review the missed pairs and try again.');
+          return;
+        }
+      }
+
+      updateHudUI();
+      setFeedback('❌ Not a match! Streak reset — try using 💡 Hint if you get stuck.', 'bad');
+    }
+
+    function checkRoundComplete() {
+      if (state.mode === 'boss' && state.bossHp <= 0) {
+        sfx.win();
+        state.bossWave++;
+        const nextBoss = BOSSES[(state.bossWave - 1) % BOSSES.length];
+        state.bossMaxHp = nextBoss.hp;
+        state.bossHp = nextBoss.hp;
+        state.hearts = Math.min(3, state.hearts + 1);
+        setFeedback(`🎉 <strong>Boss Defeated!</strong> Advancing to Wave ${state.bossWave}: ${nextBoss.name}!`, 'good');
+        setTimeout(() => startRound(true), 1100);
+        return;
+      }
+
+      if (state.matchedIds.size >= state.deck.length) {
+        if (state.mode === 'boss') {
+          // Board cleared, boss still has HP -> deal fresh board!
+          setFeedback('⚡ Board cleared! Dealing fresh cards to finish off the Boss!', 'good');
+          setTimeout(() => startRound(true), 800);
+        } else {
+          clearInterval(state.timerInterval);
+          sfx.win();
+          finishRound(true, 'You matched every pair!');
+        }
+      }
+    }
+
+    function finishRound(won, subtitle) {
+      const acc = state.roundAttempts > 0 ? Math.round((state.matchedIds.size / state.roundAttempts) * 100) : 0;
+      const stars = !won ? '⭐' : acc >= 90 ? '⭐⭐⭐' : acc >= 70 ? '⭐⭐' : '⭐';
+      $('summaryEmoji').textContent = won ? '🏆' : '💥';
+      $('summaryTitle').textContent = won ? 'Quest Complete!' : 'Quest Ended!';
+      $('summarySub').textContent = subtitle;
+      $('summaryStars').textContent = stars;
+
+      $('summaryStats').innerHTML = `
+        <div class="bg-slate-100 p-2.5 rounded-xl border-2 border-slate-800">
+          <div class="text-lg font-black">${state.score}</div>
+          <div class="text-[11px] font-bold text-slate-600">Round Score</div>
+        </div>
+        <div class="bg-slate-100 p-2.5 rounded-xl border-2 border-slate-800">
+          <div class="text-lg font-black">${acc}%</div>
+          <div class="text-[11px] font-bold text-slate-600">Accuracy</div>
+        </div>
+        <div class="bg-slate-100 p-2.5 rounded-xl border-2 border-slate-800">
+          <div class="text-lg font-black">${state.matchedIds.size}/${state.deck.length}</div>
+          <div class="text-[11px] font-bold text-slate-600">Pairs Found</div>
+        </div>
+      `;
+
+      if (state.mistakes.length) {
+        $('summaryReview').innerHTML = `
+          <div class="text-xs font-black uppercase text-rose-700 mb-1">Review Missed Pairs:</div>
+          ${state.mistakes.map(m => `
+            <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-300 text-xs">
+              <div class="font-black text-slate-900">${renderTexString(m.prompt)} ⟷ ${renderTexString(m.match)}</div>
+              <div class="text-slate-600 mt-0.5">${renderTexString(m.tip)}</div>
+            </div>
+          `).join('')}
+        `;
+      } else {
+        $('summaryReview').innerHTML = `<div class="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-xs font-bold text-emerald-800 text-center">Flawless round — zero mistakes!</div>`;
+      }
+
+      $('summaryModal').classList.replace('hidden', 'flex');
+    }
+
+    function escapeAttr(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // =========================================================================
+    // 7. EVENT LISTENERS & BREAK TIMER
+    // =========================================================================
+    document.querySelectorAll('.course-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.course = btn.dataset.course;
+        document.querySelectorAll('.course-btn').forEach(b => {
+          b.className = b === btn
+            ? 'course-btn comic-btn py-2 px-2 rounded-xl text-xs font-black bg-blue-600 text-white'
+            : 'course-btn comic-btn py-2 px-2 rounded-xl text-xs font-black bg-slate-100 text-slate-800';
+        });
+        populateUnits();
+        startRound(false);
+      });
+    });
+
+    $('unitSelect').addEventListener('change', e => {
+      state.unit = e.target.value;
+      startRound(false);
+    });
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.mode = btn.dataset.mode;
+        document.querySelectorAll('.mode-btn').forEach(b => {
+          if (b === btn) {
+            b.classList.remove('bg-slate-100', 'text-slate-800');
+            b.classList.add('bg-indigo-600', 'text-white');
+          } else {
+            b.classList.remove('bg-indigo-600', 'text-white');
+            b.classList.add('bg-slate-100', 'text-slate-800');
+          }
+        });
+        startRound(false);
+      });
+    });
+
+    $('pairCountSelect').addEventListener('change', e => {
+      state.pairCount = Number(e.target.value);
+      startRound(false);
+    });
+
+    $('newGameBtn').addEventListener('click', () => startRound(false));
+
+    $('hintBtn').addEventListener('click', () => {
+      const remaining = state.deck.filter(d => !state.matchedIds.has(d.id));
+      if (!remaining.length) return;
+      const target = remaining[0];
+      state.score = Math.max(0, state.score - 15);
+      updateHudUI();
+      setFeedback(`💡 <strong>Hint for ${renderTexString(target.prompt)}:</strong> ${renderTexString(target.hint)}`, 'hint');
+    });
+
+    $('soundBtn').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      $('soundBtn').textContent = soundEnabled ? '🔊 Sound' : '🔇 Muted';
+    });
+
+    $('playAgainBtn').addEventListener('click', () => {
+      $('summaryModal').classList.replace('flex', 'hidden');
+      startRound(false);
+    });
+    $('closeSummaryBtn').addEventListener('click', () => {
+      $('summaryModal').classList.replace('flex', 'hidden');
+    });
+
+    function openStudentModal() {
+      $('stuName').value = store.student?.name || '';
+      $('stuClass').value = store.student?.cls || '';
+      $('studentModal').classList.replace('hidden', 'flex');
+      $('stuName').focus();
+    }
+    $('studentBtn').addEventListener('click', openStudentModal);
+    $('cancelStudentBtn').addEventListener('click', () => $('studentModal').classList.replace('flex', 'hidden'));
+    $('studentForm').addEventListener('submit', e => {
+      e.preventDefault();
+      store.student = { name: $('stuName').value.trim(), cls: $('stuClass').value.trim() };
+      saveStore();
+      updateStatsUI();
+      $('studentModal').classList.replace('flex', 'hidden');
+      syncToFirestore('sign_in');
+    });
+
+    $('syncBtn').addEventListener('click', () => syncToFirestore('manual_report'));
+
+    $('breakSelect').value = String(store.breakAfter);
+    $('breakSelect').addEventListener('change', e => {
+      store.breakAfter = Number(e.target.value);
+      saveStore();
+    });
+    $('resumeBreakBtn').addEventListener('click', () => $('breakModal').classList.replace('flex', 'hidden'));
+
+    // Active time & break reminder ticker
+    let sessionActiveSec = 0;
+    setInterval(() => {
+      if (document.hidden) return;
+      store.activeSec++;
+      sessionActiveSec++;
+      if (store.activeSec % 15 === 0) {
+        saveStore();
+        updateStatsUI();
+      }
+      if (store.breakAfter > 0 && sessionActiveSec > 0 && sessionActiveSec % (store.breakAfter * 60) === 0) {
+        $('breakModal').classList.replace('hidden', 'flex');
+      }
+    }, 1000);
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      populateUnits();
+      updateStatsUI();
+      startRound(false);
+      setTimeout(() => renderMath(document.body), 250);
+    });
+  </script>
+</body>
+</html>
