@@ -105,8 +105,59 @@ function drawGraph(canvas, data) {
   ctx.restore();
 }
 
+const MATH_WORDS = new Set([
+  'sin', 'cos', 'tan', 'csc', 'sec', 'cot', 'log', 'ln', 'lim',
+  'arcsin', 'arccos', 'arctan', 'and', 'or', 'for', 'where', 'then', 'max', 'min'
+]);
+
+function isProseCard(str) {
+  const words = str.match(/[a-zA-Z]{4,}/g) || [];
+  return words.some(w => !MATH_WORDS.has(w.toLowerCase()));
+}
+
+function unicodeToLatex(str) {
+  const subMap = { '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9' };
+  const supMap = { '⁻': '-', '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9', 'ˣ': 'x', 'ⁿ': 'n', 'ᵗ': 't' };
+
+  let s = str.replace(/\$/g, '\\$');
+  s = s.replace(/[₀-₉]+/g, m => `_{${[...m].map(ch => subMap[ch]).join('')}}`);
+  s = s.replace(/[⁻⁰¹²³⁴⁵⁶⁷⁸⁹ˣⁿᵗ]+/g, m => `^{${[...m].map(ch => supMap[ch]).join('')}}`);
+  s = s.replace(/\^\(([^()]+)\)/g, '^{$1}');
+  s = s.replace(/√\(([^()]+)\)/g, '\\sqrt{$1}');
+  s = s.replace(/√([0-9a-zA-Z]+)/g, '\\sqrt{$1}');
+  s = s.replace(/\b(arcsin|arccos|arctan|sin|cos|tan|csc|sec|cot|log|ln|lim)\b/g, '\\$1');
+  s = s.replace(/−/g, '-')
+    .replace(/·/g, ' \\cdot ')
+    .replace(/×/g, ' \\times ')
+    .replace(/÷/g, ' \\div ')
+    .replace(/±/g, ' \\pm ')
+    .replace(/≥/g, ' \\ge ')
+    .replace(/≤/g, ' \\le ')
+    .replace(/≠/g, ' \\ne ')
+    .replace(/≈/g, ' \\approx ')
+    .replace(/∈/g, ' \\in ')
+    .replace(/ℝ/g, '\\mathbb{R}')
+    .replace(/ℤ/g, '\\mathbb{Z}')
+    .replace(/ℕ/g, '\\mathbb{N}')
+    .replace(/π/g, '\\pi ')
+    .replace(/θ/g, '\\theta ')
+    .replace(/°/g, '^\\circ ')
+    .replace(/∞/g, '\\infty ')
+    .replace(/→/g, ' \\to ')
+    .replace(/∪/g, ' \\cup ');
+
+  // Convert simple numeric/pi/sqrt fractions like 1/2, 3\pi /4, 1/\sqrt{2} into \frac{...}{...}
+  s = s.replace(/(^|[(\s=+\-,])(-?(?:\d*\\pi\s*|\d+))\/(-?(?:\\sqrt\{\d+\}|\d+))(?=[)\s=+\-,;]|$)/g, '$1\\frac{$2}{$3}');
+  return s;
+}
+
 function renderValue(value) {
-  if (typeof value === 'string') return element('div', 'break-words', value);
+  if (typeof value === 'string') {
+    if (isProseCard(value)) {
+      return element('div', 'text-base sm:text-lg font-bold leading-snug text-slate-800 break-words', value);
+    }
+    return element('div', 'break-words', `$${unicodeToLatex(value)}$`);
+  }
   if (value.kind === 'graph') return plot(value);
   const grid = element('table', 'wodb-table');
   const body = grid.createTBody();
@@ -482,6 +533,17 @@ function mount(root, strands) {
     });
 
     for (const [canvas, data] of visibleGraphs) drawGraph(canvas, data);
+
+    if (typeof window.renderMathInElement === 'function') {
+      window.renderMathInElement(cardsGrid, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false,
+        trust: false
+      });
+    }
   }
 
   function selectEntry(entry, updateAddress = true) {
@@ -630,6 +692,7 @@ function mount(root, strands) {
 
   renderFilters();
   selectEntry(activeEntry, false);
+  window.addEventListener('load', renderStage);
   return restoreFromAddress;
 }
 
