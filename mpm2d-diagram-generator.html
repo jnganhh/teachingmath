@@ -597,6 +597,9 @@
         angleB: '',
         showRightAngle: true,
         showAngleArcs: true,
+        showEye: false,
+        showBuilding: false,
+        showDepressionLine: false,
         // Oblique triangle (SAS or SSS)
         obSideA: 7,
         obSideB: 6,
@@ -947,6 +950,12 @@
             <button type="button" class="preset-chip" onclick="applyTriPreset('sohcahtoa')">SOH CAH TOA</button>
             <button type="button" class="preset-chip" onclick="applyTriPreset('pythag')">Pythagorean (6-8-c)</button>
             <button type="button" class="preset-chip" onclick="applyTriPreset('elevation')">Angle of Elevation</button>
+            <button type="button" class="preset-chip" onclick="applyTriPreset('depression')">Angle of Depression</button>
+          </div>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${t.showEye?'active':''}" onclick="state.tri.showEye=!state.tri.showEye; buildControls(); render();">👁️ Eye</button>
+            <button type="button" class="pill-btn ${t.showBuilding?'active':''}" onclick="state.tri.showBuilding=!state.tri.showBuilding; buildControls(); render();">🏢 Building</button>
+            <button type="button" class="pill-btn ${t.showDepressionLine?'active':''}" onclick="state.tri.showDepressionLine=!state.tri.showDepressionLine; buildControls(); render();">--- Depression Horizontal</button>
           </div>
           <div class="form-grid-3">
             <div class="field"><label>Base Label</label><input type="text" value="${esc(t.labelBase)}" placeholder="e.g. 12 m" oninput="state.tri.labelBase=this.value; render()"></div>
@@ -1048,14 +1057,22 @@
         t.base = 7; t.height = 5; t.rotation = 0;
         t.labelBase = '12 m'; t.labelHeight = 'x'; t.labelHyp = '';
         t.angleA = '34°'; t.angleB = '';
+        t.showEye = false; t.showBuilding = false; t.showDepressionLine = false;
       } else if (name === 'pythag') {
         t.base = 8; t.height = 6; t.rotation = 0;
         t.labelBase = '8 cm'; t.labelHeight = '6 cm'; t.labelHyp = 'c';
         t.angleA = ''; t.angleB = '';
+        t.showEye = false; t.showBuilding = false; t.showDepressionLine = false;
       } else if (name === 'elevation') {
         t.base = 9; t.height = 4.5; t.rotation = 0;
         t.labelBase = '45 m'; t.labelHeight = 'h'; t.labelHyp = '';
         t.angleA = '28°'; t.angleB = '';
+        t.showEye = true; t.showBuilding = true; t.showDepressionLine = false;
+      } else if (name === 'depression') {
+        t.base = 9; t.height = 4.5; t.rotation = 0;
+        t.labelBase = 'x'; t.labelHeight = '30 m'; t.labelHyp = '';
+        t.angleA = ''; t.angleB = '32°';
+        t.showEye = true; t.showBuilding = true; t.showDepressionLine = true;
       }
       buildControls();
       render();
@@ -1725,6 +1742,38 @@
         pts.forEach(p => {
           if (p.lbl) inner += drawVertexLabel(p, { x: cx, y: cy }, p.lbl, cfg);
         });
+
+        // Depression dashed horizontal line from top vertex B
+        if (t.showDepressionLine) {
+          const dirBase = normalize(A.x - C.x, A.y - C.y);
+          const hLen = Math.hypot(A.x - C.x, A.y - C.y) * 0.65;
+          const Hpt = { x: B.x + dirBase.x * hLen, y: B.y + dirBase.y * hLen };
+          inner += `<line x1="${B.x.toFixed(1)}" y1="${B.y.toFixed(1)}" x2="${Hpt.x.toFixed(1)}" y2="${Hpt.y.toFixed(1)}" stroke="${cfg.muted}" stroke-width="1.6" stroke-dasharray="5,4" />`;
+          if (t.showAngleArcs && t.angleB) {
+            inner += drawAngleArcAndLabel(B, Hpt, A, t.angleB, cfg);
+          }
+        }
+
+        // Eye emoji at observation vertex (B if depression, else A)
+        if (t.showEye) {
+          const obs = t.showDepressionLine ? B : A;
+          const dir = normalize(obs.x - cx, obs.y - cy);
+          const ex = obs.x + dir.x * (cfg.fs + 16);
+          const ey = obs.y + dir.y * (cfg.fs + 16) + 5;
+          inner += `<text x="${ex.toFixed(1)}" y="${ey.toFixed(1)}" text-anchor="middle" font-size="${cfg.fs + 8}">👁️</text>`;
+        }
+
+        // Building emoji beside vertical leg CB
+        if (t.showBuilding) {
+          const mx = (C.x + B.x) / 2, my = (C.y + B.y) / 2;
+          let nx = -(B.y - C.y), ny = B.x - C.x;
+          const nLen = Math.hypot(nx, ny) || 1;
+          nx /= nLen; ny /= nLen;
+          if (nx * (mx - cx) + ny * (my - cy) < 0) { nx = -nx; ny = -ny; }
+          const bx = mx + nx * (cfg.fs * 2.2 + 16);
+          const by = my + ny * (cfg.fs * 2.2 + 16) + 6;
+          inner += `<text x="${bx.toFixed(1)}" y="${by.toFixed(1)}" text-anchor="middle" font-size="${cfg.fs + 12}">🏢</text>`;
+        }
 
       } else if (t.mode === 'oblique') {
         // Auto-derive oblique triangle from numeric labels (SSS, SAS, or ASA/AAS)
