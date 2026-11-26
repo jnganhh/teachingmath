@@ -1,0 +1,300 @@
+[data-course-panel][hidden],
+.wodb-prompt[hidden] {
+  display: none !important;
+}
+
+.wodb-course-nav {
+  padding: clamp(.75rem, 2.5vw, 1.25rem);
+  background: white;
+  border-radius: .8rem;
+}
+
+.wodb-course-nav h1, .wodb-course > h2 {
+  color: #1e3a8a;
+  font-size: clamp(1.35rem, 4vw, 2.15rem);
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.wodb-hub-link,
+.wodb-source {
+  color: #1e3a8a;
+  text-decoration: underline;
+}
+
+.wodb-hub-link {
+  display: inline-block;
+  margin-block-end: .4rem;
+}
+
+.wodb-course-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-block-start: .8rem;
+}
+
+.wodb-course-links a {
+  border: 2px solid #1e3a8a;
+  border-radius: .45rem;
+  color: #1e3a8a;
+  font-size: .9rem;
+  font-weight: 750;
+  padding: .5rem .65rem;
+}
+
+.wodb-course-links a[aria-current='page'],
+.wodb-course-links a:hover {
+  color: #fff;
+  background: #1e3a8a;
+}
+
+.wodb-course-links a > span {
+  font-size: .8em;
+  font-weight: 600;
+  margin-inline-start: .2rem;
+}
+
+.wodb-course :focus-visible,
+.wodb-course-nav :focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.wodb-directions {
+  margin-block-end: .85rem;
+}
+
+.wodb-source {
+  display: inline-block;
+  font-size: .88rem;
+  margin-block-start: 1rem;
+}
+
+.wodb-course {
+  --wodb-surface: #ffffff;
+  --wodb-frame: #f0f5f5;
+  --wodb-border: #ccdada;
+  --wodb-accent: #155e63;
+  --wodb-chip: #e1f2ee;
+  --wodb-plot-grid: #dbe4e4;
+  --wodb-plot-axis: #6a7d7d;
+  --wodb-plot-text: #3d5357;
+
+}
+
+.wodb-counts,
+.wodb-position {
+  color: var(--wodb-accent);
+  font-size: .9rem;
+  font-weight: 650;
+  margin-block: .25rem .55rem;
+}
+
+.wodb-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: .75rem;
+  margin-block-end: 1rem;
+}
+
+.wodb-field label {
+  display: block;
+  font-size: .86rem;
+  font-weight: 650;
+  margin-block-end: .25rem;
+}
+
+.wodb-field select {
+  width: 100%;
+  text-overflow: ellipsis;
+  min-height: 2.65rem;
+  padding: .4rem 1.65rem .4rem .55rem;
+  border: 1px solid #718896;
+  background: #fff;
+  border-radius: .35rem;
+}
+
+.wodb-board {
+  background: var(--wodb-frame);
+  border-radius: .9rem;
+  padding: clamp(.75rem, 2.5vw, 1.5rem);
+}
+
+.wodb-board .wodb-title {
+  font-size: clamp(1.15rem, 3vw, 1.6rem);
+  margin-block: 0 .8rem;
+  font-weight: 800;
+}
+
+.wodb-prompt {
+  margin-block-end: .9rem;
+}
+
+.wodb-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  list-style-type: upper-alpha;
+  margin: 0;
+  padding: 0;
+}
+
+.wodb-card {
+  background: var(--wodb-surface);
+  border: 1px solid var(--wodb-border);
+  border-radius: .55rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 9.5rem;
+  min-width: 0;
+  padding: .6rem .7rem;
+}
+
+.wodb-card::marker {
+  content: "";
+}
+
+.wodb-letter {
+  align-self: start;
+  background: var(--wodb-chip);
+  border-radius: .24rem;
+  color: var(--wodb-accent);
+  display: grid;
+  font-size: .85rem;
+  font-weight: 700;
+  height: 1.6rem;
+  justify-self: start;
+  place-items: center;
+  width: 1.6rem;
+}
+
+.wodb-expression {
+  align-self: center;
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  padding: .5rem .15rem;
+  text-align: center;
+}
+
+.wodb-table-wrap, .wodb-graph {
+  align-self: center;
+  justify-self: center;
+  max-width: 100%;
+}
+
+.wodb-table-wrap {
+  overflow-x: auto;
+  padding-block: .4rem;
+}
+
+.wodb-table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  text-align: center;
+}
+
+.wodb-table :is(th, td) {
+  border: 1px solid var(--wodb-border);
+  font-size: clamp(.82rem, 2vw, 1rem);
+  padding: .18rem clamp(.18rem, .7vw, .45rem);
+  white-space: nowrap;
+}
+
+.wodb-table th {
+  background: var(--wodb-frame);
+}
+
+.wodb-graph {
+  display: block;
+  height: auto;
+  width: min(100%, 20rem);
+}
+
+.wodb-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-block: .85rem;
+}
+
+.wodb-button {
+  min-height: 2.5rem;
+  border: 1px solid var(--wodb-accent);
+  border-radius: .35rem;
+  background: #fff;
+  color: var(--wodb-accent);
+  padding: .3rem .65rem;
+  font-size: .88rem;
+  font-weight: 650;
+}
+
+.wodb-button:hover:not(:disabled),
+.wodb-button[aria-pressed="true"] {
+  background: var(--wodb-accent);
+  color: #fff;
+}
+
+.wodb-button:disabled {
+  opacity: .5;
+}
+
+.wodb-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+}
+
+.wodb-vote {
+  font-variant-numeric: tabular-nums;
+  min-height: 2.25rem;
+}
+
+.wodb-course .wodb-large .wodb-expression {
+  font-size: clamp(1.3rem, 3.5vw, 2rem);
+}
+
+.wodb-large .wodb-table :is(th, td),
+.wodb-large .wodb-reasons {
+  font-size: 1.1rem;
+}
+
+.wodb-discussion {
+  border-top: 1px solid var(--wodb-border);
+  padding-block-start: .65rem;
+}
+
+.wodb-discussion summary {
+  color: var(--wodb-accent);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.wodb-reasons {
+  margin: .65rem 0 0;
+  padding-inline-start: 1.5rem;
+  list-style: upper-alpha;
+}
+
+.wodb-reasons li + li {
+  margin-block-start: .3rem;
+}
+
+@media (max-width: 550px) {
+  .wodb-controls, .wodb-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wodb-card {
+    min-height: 6rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .wodb-course-links a > span {
+    display: none;
+  }
+}

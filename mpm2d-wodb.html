@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MPM2D 800 Which One Doesn't Belong? (WODB)</title>
+  <title>Which One Doesn’t Belong? | Ontario Math</title>
+  <link rel="stylesheet" href="assets/wodb/wodb.css" />
+  <script type="module" src="assets/wodb/wodb.mjs"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -30,15 +32,26 @@
 </head>
 <body class="bg-yellow-50 text-slate-900 font-sans min-h-screen p-3 sm:p-5 overflow-x-hidden">
   <div class="max-w-7xl mx-auto space-y-4">
+    <nav class="wodb-course-nav comic-border" aria-label="WODB course">
+      <a href="index.html" class="wodb-hub-link">← Hub</a>
+      <h1>Which One Doesn’t Belong?</h1>
+      <div class="wodb-course-links">
+        <a href="#mpm2d" data-course-link="mpm2d" aria-current="page">MPM2D <span>Grade 10</span></a>
+        <a href="#mcr3u" data-course-link="mcr3u">MCR3U <span>Functions</span></a>
+        <a href="#mhf4u" data-course-link="mhf4u">MHF4U <span>Advanced Functions</span></a>
+      </div>
+    </nav>
+
+    <main>
+    <div id="mpm2d" class="space-y-4" data-course-panel>
     <!-- Top Header -->
     <header class="bg-white rounded-xl comic-border p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div>
         <div class="flex items-center gap-2 flex-wrap">
-          <a href="index.html" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-100 hover:bg-slate-200 border-2 border-slate-800">← Hub</a>
           <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
           <span class="px-2.5 py-1 text-xs font-black rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800">800 WODB Puzzles</span>
         </div>
-        <h1 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">🤔 Which One Doesn't Belong? (800 MPM2D Set)</h1>
+        <h2 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">MPM2D · Principles of Mathematics</h2>
         <p class="text-xs font-bold text-slate-600">Every quadrant has a valid mathematical reason! Tap a card to tally class votes, then reveal reasons.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
@@ -98,6 +111,17 @@
         </div>
       </div>
     </section>
+  </div>
+
+    <section id="mcr3u" class="wodb-course" data-course="MCR3U" data-course-panel aria-labelledby="mcr3u-title" hidden>
+      <h2 id="mcr3u-title">MCR3U · Functions</h2>
+    </section>
+
+    <section id="mhf4u" class="wodb-course" data-course="MHF4U" data-course-panel aria-labelledby="mhf4u-title" hidden>
+      <h2 id="mhf4u-title">MHF4U · Advanced Functions</h2>
+    </section>
+    <noscript><p>Enable JavaScript to browse the WODB sets.</p></noscript>
+    </main>
   </div>
 
   <!-- Custom WODB Modal -->
