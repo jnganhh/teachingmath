@@ -20,6 +20,7 @@
   math-field[disabled] { opacity: .65; pointer-events: none; background: #f1f5f9; }
   @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
   .shake { animation: shake .3s; }
+  @media (prefers-reduced-motion: reduce) { .shake { animation: none; } }
 </style>
 </head>
 <body class="bg-yellow-50 text-slate-800 min-h-screen p-4">
@@ -204,7 +205,7 @@
           <button id="nextBtn" class="btn bg-blue-400 text-white px-4 py-2 hidden">Next →</button>
         </div>
 
-        <div id="feedback" class="mt-4 hidden p-3 rounded-lg border-2 font-bold"></div>
+        <div id="feedback" role="status" aria-live="polite" class="mt-4 hidden p-3 rounded-lg border-2 font-bold"></div>
         <div id="hints" class="mt-3 space-y-2"></div>
       </section>
 
@@ -322,8 +323,14 @@ const sup = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶'
 const pretty = s => s.replace(/\^(\d+)/g, (_, d) => d.split('').map(c => sup[c]).join('')).replace(/\*/g, '·').replace(/-/g, '−');
 
 /* ================= Expression parser ================= */
+function normalizeDigits(str) {
+  return String(str || '')
+    .replace(/[۰-۹]/g, ch => String(ch.charCodeAt(0) - 0x06f0))
+    .replace(/[٠-٩]/g, ch => String(ch.charCodeAt(0) - 0x0660))
+    .replace(/٫/g, '.');
+}
 function normalizeLatex(str) {
-  str = String(str || '').trim().replace(/^\$+|\$+$/g, '').replace(/\^\{\s*(-?\d+)\s*\}/g, '^$1');
+  str = normalizeDigits(str).trim().replace(/^\$+|\$+$/g, '').replace(/\^\{\s*(-?\d+)\s*\}/g, '^$1');
   // Convert \sqrt{a} and \frac{a}{b} (handles simple nested braces)
   for (let pass = 0; pass < 5 && (str.includes('\\frac') || str.includes('\\sqrt')); pass++) {
     str = str.replace(/\\sqrt\s*\{([^{}]*)\}/g, 'sqrt($1)');
@@ -346,7 +353,11 @@ function tokenize(str) {
   while (i < str.length) {
     if (str.slice(i, i + 4).toLowerCase() === 'sqrt') { t.push({ type: 'sqrt' }); i += 4; continue; }
     const c = str[i];
-    if (/[0-9.]/.test(c)) { let n = ''; while (i < str.length && /[0-9.]/.test(str[i])) n += str[i++]; t.push({ type: 'num', v: parseFloat(n) }); continue; }
+    if (/[0-9.]/.test(c)) {
+      let n = ''; while (i < str.length && /[0-9.]/.test(str[i])) n += str[i++];
+      if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(n)) throw new Error(`"${n}" is not a valid number.`);
+      t.push({ type: 'num', v: Number(n) }); continue;
+    }
     if (c === 'x') { t.push({ type: 'var' }); i++; continue; }
     if ('+-*/^()'.includes(c)) { t.push({ type: c }); i++; continue; }
     if (c === '[' ) { t.push({ type: '(' }); i++; continue; }
@@ -408,31 +419,126 @@ function evalAst(n, x) {
     case '+': return n.terms.reduce((a, t) => a + t.sign * evalAst(t.node, x), 0);
   }
 }
-const SAMPLES = [-2.7, -1.3, 0.4, 1.9, 3.1, 0.77, -0.55];
-const equiv = (ast, fn) => SAMPLES.every(x => Math.abs(evalAst(ast, x) - fn(x)) < 1e-6 * Math.max(1, Math.abs(fn(x))));
-// Recover integer coefficients (degree ≤ 4) of an AST by sampling
-function coefsOf(ast) {
-  const xs = [0, 1, -1, 2, -2]; const ys = xs.map(x => evalAst(ast, x));
-  // Solve Vandermonde (5x5) via Gaussian elimination
-  const A = xs.map((x, i) => [...[0,1,2,3,4].map(d => Math.pow(x, d)), ys[i]]);
-  for (let c = 0; c < 5; c++) {
-    let piv = c; for (let r = c + 1; r < 5; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
-    [A[c], A[piv]] = [A[piv], A[c]];
-    for (let r = 0; r < 5; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k < 6; k++) A[r][k] -= f * A[c][k]; }
+const hasVar = n => !n ? false : n.op === 'var' ? true : n.op === 'num' ? false
+  : (n.op === 'grp' || n.op === 'neg' || n.op === 'inv' || n.op === 'sqrt') ? hasVar(n.node)
+  : n.op === '^' ? hasVar(n.base) || hasVar(n.exp)
+  : n.op === '*' ? n.factors.some(hasVar)
+  : n.op === '+' ? n.terms.some(t => hasVar(t.node)) : false;
+
+function parseConstant(str) {
+  const ast = parse(str);
+  if (hasVar(ast)) throw new Error('Enter a number only (no x).');
+  const v = evalAst(ast, 0);
+  if (!Number.isFinite(v)) throw new Error('That does not evaluate to a real number.');
+  return v;
+}
+function splitTopLevel(str, sep = ',') {
+  const parts = []; let depth = 0, cur = '';
+  for (const ch of str) {
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    else if (ch === ')' || ch === ']' || ch === '}') depth = Math.max(0, depth - 1);
+    if (ch === sep && depth === 0) { parts.push(cur.trim()); cur = ''; }
+    else cur += ch;
   }
-  const co = A.map((row, i) => row[5] / row[i]);
-  const ok = Math.abs(co.reduce((s, c, d) => s + c * Math.pow(3, d), 0) - evalAst(ast, 3)) < 1e-6;
-  return ok ? co.map(c => Math.round(c * 1e6) / 1e6) : null;
+  parts.push(cur.trim());
+  return parts;
+}
+// Exact structural polynomial evaluator: returns coefficient array [c0, c1, ...] or null if not a polynomial
+function addP(p, q, sign = 1) {
+  const len = Math.max(p.length, q.length), r = Array(len).fill(0);
+  for (let i = 0; i < len; i++) r[i] = (p[i] || 0) + sign * (q[i] || 0);
+  return r;
+}
+function polyFromAst(n) {
+  if (!n) return null;
+  if (n.op === 'num') return [n.v];
+  if (n.op === 'var') return [0, 1];
+  if (n.op === 'grp') return polyFromAst(n.node);
+  if (n.op === 'neg') { const p = polyFromAst(n.node); return p ? p.map(v => -v) : null; }
+  if (n.op === 'sqrt') {
+    if (hasVar(n.node)) return null;
+    const v = Math.sqrt(evalAst(n.node, 0));
+    return Number.isFinite(v) ? [v] : null;
+  }
+  if (n.op === 'inv') {
+    if (hasVar(n.node)) return null; // Reject division by variable (e.g. /x)
+    const d = evalAst(n.node, 0);
+    return Number.isFinite(d) && Math.abs(d) > 1e-12 ? [1 / d] : null;
+  }
+  if (n.op === '^') {
+    if (hasVar(n.exp)) return null;
+    const e = evalAst(n.exp, 0);
+    if (!Number.isInteger(e) || e < 0 || e > 8) return null;
+    const base = polyFromAst(n.base);
+    if (!base) return null;
+    let res = [1];
+    for (let i = 0; i < e; i++) res = mulP(res, base);
+    return res;
+  }
+  if (n.op === '*') {
+    let res = [1];
+    for (const f of n.factors) { const p = polyFromAst(f); if (!p) return null; res = mulP(res, p); }
+    return res;
+  }
+  if (n.op === '+') {
+    let res = [0];
+    for (const t of n.terms) { const p = polyFromAst(t.node); if (!p) return null; res = addP(res, p, t.sign); }
+    return res;
+  }
+  return null;
 }
 const degree = co => { for (let d = co.length - 1; d >= 0; d--) if (Math.abs(co[d]) > 1e-9) return d; return -1; };
+function polyEq(a, b, tol = 1e-6) {
+  if (!a || !b) return false;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) if (Math.abs((a[i] || 0) - (b[i] || 0)) > tol) return false;
+  return true;
+}
+const unwrapGrp = n => { while (n && n.op === 'grp') n = n.node; return n; };
 const hasGroup = n => !n ? false : n.op === 'grp' ? true : n.op === 'neg' || n.op === 'inv' ? hasGroup(n.node) : n.op === '^' ? hasGroup(n.base) || hasGroup(n.exp) : n.op === '*' ? n.factors.some(hasGroup) : n.op === '+' ? n.terms.some(t => hasGroup(t.node)) : false;
-// Top-level factors of a product (unwrapping negation)
 function topFactors(n) {
+  n = unwrapGrp(n);
+  if (!n) return [];
   if (n.op === 'neg') return topFactors(n.node);
-  if (n.op === '*') return n.factors.flatMap(f => f.op === '^' && f.base.op === 'grp' ? [f.base.node, f.base.node] : [f.op === 'grp' ? f.node : f]);
-  if (n.op === '^' && n.base.op === 'grp') return [n.base.node, n.base.node];
-  if (n.op === 'grp') return [n.node];
+  if (n.op === '*') return n.factors.flatMap(topFactors);
+  if (n.op === '^') {
+    const e = !hasVar(n.exp) ? evalAst(n.exp, 0) : -1;
+    if (Number.isInteger(e) && e >= 1 && e <= 8) return Array.from({ length: e }, () => unwrapGrp(n.base));
+  }
   return [n];
+}
+function isVertexFormAst(n) {
+  n = unwrapGrp(n);
+  if (!n) return false;
+  const isScaledSq = node => {
+    node = unwrapGrp(node);
+    if (!node) return false;
+    if (node.op === 'neg') return isScaledSq(node.node);
+    if (node.op === '^') {
+      const e = !hasVar(node.exp) ? evalAst(node.exp, 0) : 0;
+      const b = polyFromAst(node.base);
+      return e === 2 && b && degree(b) === 1 && Math.abs(Math.abs(b[1]) - 1) < 1e-9;
+    }
+    if (node.op === '*') {
+      let sqCount = 0;
+      for (const f of node.factors) {
+        if (isScaledSq(f)) sqCount++;
+        else if (hasVar(f)) return false;
+      }
+      return sqCount === 1;
+    }
+    return false;
+  };
+  if (isScaledSq(n)) return true;
+  if (n.op === '+') {
+    let sqCount = 0;
+    for (const t of n.terms) {
+      if (isScaledSq(t.node)) sqCount++;
+      else if (hasVar(t.node)) return false;
+    }
+    return sqCount === 1;
+  }
+  return false;
 }
 
 /* ================= Skills & generators ================= */
@@ -553,7 +659,7 @@ const SKILLS = {
       hints: ['Check if the first and last terms are perfect squares — this may be a <b>perfect square trinomial</b>: a² ± 2ab + b² = (a ± b)².',
               `${mono(a*a,2)} = (${mono(a,1)})², ${b*b} = (${b})². Is the middle term 2·${mono(a,1)}·${b} = ${mono(2*a*b,1)}?`,
               `Yes! The middle sign is ${s>0?'+':'−'}, so the answer is (${mono(a,1)} ${s>0?'+':'−'} ${b})².`],
-      steps: [`√(${mono(a*a,2)}) = ${mono(a,1)}, √${b*b} = ${b}, middle = 2·${mono(a,1)}·${b} ✓`, `${poly(res)} = ${paren(lin(a,s*b))}²`] };
+      steps: [`${mono(a*a,2)} = (${mono(a,1)})², ${b*b} = (${b})², middle = 2·${mono(a,1)}·${b} ✓`, `${poly(res)} = ${paren(lin(a,s*b))}²`] };
   }},
   f_full: { mode: 'factor', name: 'Factor Fully (GCF first)', gen() {
     const g = pick([2,3,4,5,-2,-3]), r = rndNZ(-7,7), s = rndNZ(-7,7), inner = mulP([r,1],[s,1]), res = inner.map(v => v*g);
@@ -1098,16 +1204,20 @@ const SKILLS = {
         steps: [`x + y = ${tot}`, `${r1}x + ${r2}y = ${intr * 100}`, `Solve → x = $${x} in Account A (and $${y} in Account B)`] };
     }
     // Solution mixture: x L of p1% + y L of p2% = tot L of target%
-    const x = rnd(2, 8) * 5, y = rnd(2, 8) * 5, tot = x + y;
-    const p1 = pick([10, 20, 25]), p2 = p1 + pick([20, 30, 40]);
-    const target = Math.round(((x * p1 + y * p2) / tot) * 10) / 10;
+    let x, y, tot, p1, p2;
+    do {
+      x = rnd(2, 8) * 5; y = rnd(2, 8) * 5; tot = x + y;
+      p1 = pick([10, 20, 25]); p2 = p1 + pick([20, 30, 40]);
+    } while ((10 * (x * p1 + y * p2)) % tot !== 0);
+    const target = ((10 * (x * p1 + y * p2)) / tot) / 10;
+    const pureTotal = Math.round(target * tot);
     return { expr: `A chemist mixes a ${p1}% saline solution with a ${p2}% solution\nto make ${tot} L of a ${target}% solution.\nHow many litres of the ${p1}% solution are needed?`,
-      numAns: x, tol: 0.1, textCard: true,
+      numAns: x, tol: 1e-4, textCard: true,
       prompt: 'Set up a linear system and solve (enter litres of the weaker solution):',
       hints: [`Let x = litres of ${p1}% and y = litres of ${p2}%.`,
-              `Eq. 1: x + y = ${tot}.   Eq. 2: ${p1}x + ${p2}y = ${Math.round(target * tot)}.`,
+              `Eq. 1: x + y = ${tot}.   Eq. 2: ${p1}x + ${p2}y = ${pureTotal}.`,
               `Substitute y = ${tot} − x into Eq. 2 and solve for x.`],
-      steps: [`x + y = ${tot}`, `${p1}x + ${p2}(${tot} − x) = ${Math.round(target * tot)}`, `Solve → x = ${x} L of ${p1}% (and ${y} L of ${p2}%)`] };
+      steps: [`x + y = ${tot}`, `${p1}x + ${p2}(${tot} − x) = ${pureTotal}`, `Solve → x = ${x} L of ${p1}% (and ${y} L of ${p2}%)`] };
   }},
   ag_multi: { mode: 'analytic', name: 'Multi-Condition Line Equation', gen() {
     const perp = Math.random() < 0.5;
@@ -1140,28 +1250,40 @@ const SKILLS = {
       steps: [`Slope m = ${mStr || '1'}`, `Plug in (${px}, ${py}): ${py} = (${mStr || '1'})(${px}) + b`, `y = ${mStr}x ${b >= 0 ? '+ ' : '− '}${Math.abs(Number.isInteger(b) ? b : +b.toFixed(2))}`] };
   }},
   ag_classify: { mode: 'analytic', name: 'Classify Triangle (Distance)', gen() {
-    const isIso = Math.random() < 0.55;
-    let A, B, C;
-    if (isIso) {
-      const mx = rnd(-2, 2), my = rnd(-2, 2), dx = rnd(2, 4), dy = rnd(-2, 2);
-      B = [mx - dx, my - dy]; C = [mx + dx, my + dy];
-      const k = rndNZ(1, 3) * pick([1, -1]);
-      A = [mx - k * dy, my + k * dx]; // on perpendicular bisector of BC => AB = AC
-    } else {
-      A = [rnd(-5, 0), rnd(-4, 0)]; B = [rnd(1, 5), rnd(-3, 2)]; C = [rnd(-2, 3), rnd(2, 6)];
-    }
-    const dAB = (A[0]-B[0])**2 + (A[1]-B[1])**2;
-    const dAC = (A[0]-C[0])**2 + (A[1]-C[1])**2;
-    const dBC = (B[0]-C[0])**2 + (B[1]-C[1])**2;
-    const eqCount = (dAB === dAC ? 1 : 0) + (dAB === dBC ? 1 : 0) + (dAC === dBC ? 1 : 0);
-    const kind = eqCount === 3 ? 'equilateral' : eqCount >= 1 ? 'isosceles' : 'scalene';
+    const mode = pick(['isosceles', 'scalene', 'right']);
+    let A, B, C, dAB, dAC, dBC, eqCount, isRight, area2;
+    let tries = 0;
+    do {
+      tries++;
+      if (mode === 'isosceles') {
+        const mx = rnd(-2, 2), my = rnd(-2, 2), dx = rnd(2, 4), dy = rnd(-2, 2);
+        B = [mx - dx, my - dy]; C = [mx + dx, my + dy];
+        const k = rndNZ(1, 3) * pick([1, -1]);
+        A = [mx - k * dy, my + k * dx];
+      } else if (mode === 'right') {
+        const ux = rndNZ(-3, 3), uy = rndNZ(-3, 3);
+        const s = pick([1, -1]), k = rnd(1, 2);
+        A = [rnd(-3, 3), rnd(-3, 3)];
+        B = [A[0] + ux, A[1] + uy];
+        C = [A[0] - s * k * uy, A[1] + s * k * ux];
+      } else {
+        A = [rnd(-5, 0), rnd(-4, 0)]; B = [rnd(1, 5), rnd(-3, 2)]; C = [rnd(-2, 3), rnd(2, 6)];
+      }
+      area2 = (B[0] - A[0]) * (C[1] - A[1]) - (B[1] - A[1]) * (C[0] - A[0]);
+      dAB = (A[0]-B[0])**2 + (A[1]-B[1])**2;
+      dAC = (A[0]-C[0])**2 + (A[1]-C[1])**2;
+      dBC = (B[0]-C[0])**2 + (B[1]-C[1])**2;
+      eqCount = (dAB === dAC ? 1 : 0) + (dAB === dBC ? 1 : 0) + (dAC === dBC ? 1 : 0);
+      isRight = (dAB + dAC === dBC || dAB + dBC === dAC || dAC + dBC === dAB);
+    } while ((area2 === 0 || (isRight && eqCount > 0)) && tries < 40);
+    const kind = isRight ? 'right' : eqCount >= 1 ? 'isosceles' : 'scalene';
     return { expr: `A(${A[0]}, ${A[1]}),   B(${B[0]}, ${B[1]}),   C(${C[0]}, ${C[1]})`,
       choice: kind,
-      choices: [{ val: 'isosceles', label: 'Isosceles (2 equal sides)' }, { val: 'scalene', label: 'Scalene (all sides different)' }, { val: 'equilateral', label: 'Equilateral (3 equal sides)' }],
-      prompt: 'Use the distance formula to classify ΔABC by its side lengths:',
+      choices: [{ val: 'isosceles', label: 'Isosceles (2 equal sides)' }, { val: 'scalene', label: 'Scalene (all sides different, not right)' }, { val: 'right', label: 'Right-angled (a² + b² = c²)' }],
+      prompt: 'Use the distance formula to classify ΔABC:',
       hints: ['Compute AB², AC², and BC² using d² = (x₂ − x₁)² + (y₂ − y₁)².',
               `AB² = ${dAB},   AC² = ${dAC},   BC² = ${dBC}.`,
-              '2 equal lengths → Isosceles; 3 different → Scalene; all 3 equal → Equilateral.'],
+              'Check if a² + b² = c² (Right-angled), 2 equal lengths (Isosceles), or 3 different non-right lengths (Scalene).'],
       steps: [`AB = √${dAB},  AC = √${dAC},  BC = √${dBC}`, `Classification: ${kind.toUpperCase()}`] };
   }},
   s_disc: { mode: 'solve', name: 'Discriminant (Number of Roots)', gen() {
@@ -1383,12 +1505,13 @@ function checkLineEq(input, q) {
   const raw = String(input || '').trim().replace(/^y\s*=\s*/i, '');
   let ast;
   try { ast = parse(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
-  const target = x => q.lineEq.m * x + q.lineEq.b;
-  if (SAMPLES.every(x => Math.abs(evalAst(ast, x) - target(x)) < 0.03)) {
+  const co = polyFromAst(ast);
+  if (!co || degree(co) > 1) return { ok: false, syntax: true, msg: '✏️ Write a linear equation in the form y = mx + b.' };
+  const mUser = co[1] || 0, bUser = co[0] || 0;
+  if (Math.abs(mUser - q.lineEq.m) < 1e-4 && Math.abs(bUser - q.lineEq.b) < 1e-4) {
     return { ok: true, msg: '🎉 Correct! Your line equation matches.' };
   }
-  const slopeUser = evalAst(ast, 1) - evalAst(ast, 0);
-  if (Math.abs(slopeUser - q.lineEq.m) < 0.03) {
+  if (Math.abs(mUser - q.lineEq.m) < 1e-4) {
     return { ok: false, msg: '❌ Your slope m is right, but the y-intercept b is off. Plug a point on the line into y = mx + b to check b.' };
   }
   return { ok: false, msg: '❌ Not quite. Check your slope m first, then solve for b using a point on the line.' };
@@ -1424,23 +1547,22 @@ function checkChoice(input, q) {
 function checkNumber(input, q) {
   const raw = String(input || '').trim()
     .replace(/^(?:[a-z]|r\^2|θ|\\theta)\s*=\s*/i, '')
-    .replace(/\s*(?:°|\\circ|deg|degrees?|cm|m|hours?|tickets?|dollars?)\s*$/i, '');
-  let ast;
-  try { ast = parse(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
-  const v = evalAst(ast, 0);
+    .replace(/^\$/, '')
+    .replace(/\s*(?:°|\\circ|deg|degrees?|cm|m\^2|m²|m|L|litres?|hours?|tickets?|dollars?)\s*$/i, '');
+  let v;
+  try { v = parseConstant(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
   if (Math.abs(v - q.numAns) <= (q.tol || 1e-6)) return { ok: true, msg: '🎉 Correct! Nicely solved.' };
-  return { ok: false, msg: '❌ Not quite. Check your formula (and make sure your calculator is in DEG mode), or press <b>Hint 💡</b>.' };
+  return { ok: false, msg: '❌ Not quite. Check your formula' + (q.tol >= 0.15 ? ' (make sure your calculator is in DEG mode)' : '') + ', or press <b>Hint 💡</b>.' };
 }
 function checkPoint(input, q) {
   let raw = normalizeLatex(input).trim();
   if (!raw) return { ok: false, syntax: true, msg: '✏️ Type a point like (2, -3).' };
-  if (raw.startsWith('(') && raw.endsWith(')')) raw = raw.slice(1, -1);
-  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
-  if (parts.length !== 2) return { ok: false, syntax: true, msg: '✏️ Enter a coordinate pair with two numbers separated by a comma, e.g. (2, -3).' };
+  if (raw.startsWith('(') && raw.endsWith(')')) raw = raw.slice(1, -1).trim();
+  const parts = splitTopLevel(raw, ',');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return { ok: false, syntax: true, msg: '✏️ Enter a coordinate pair with two numbers separated by a comma, e.g. (2, -3).' };
   let x, y;
-  try { x = evalAst(parse(parts[0]), 0); y = evalAst(parse(parts[1]), 0); }
+  try { x = parseConstant(parts[0]); y = parseConstant(parts[1]); }
   catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, syntax: true, msg: '✏️ Both coordinates must be numbers.' };
   const [tx, ty] = q.point;
   if (Math.abs(x - tx) < 1e-6 && Math.abs(y - ty) < 1e-6) return { ok: true, msg: '🎉 Correct!' };
   if (q.isVertex && Math.abs(x + tx) < 1e-6 && Math.abs(y - ty) < 1e-6) {
@@ -1452,9 +1574,9 @@ function checkVertexForm(input, q) {
   let raw = String(input || '').trim().replace(/^(?:y|f\s*\(\s*x\s*\))\s*=\s*/i, '').trim();
   let ast;
   try { ast = parse(raw); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
-  const target = x => q.co.reduce((s, c, d) => s + c * Math.pow(x, d), 0);
-  if (!equiv(ast, target)) return { ok: false, msg: '❌ That equation does not match the transformations. Check a, h (opposite sign inside the bracket!), and k.' };
-  if (!hasGroup(ast)) return { ok: false, partial: true, msg: '🟡 Equivalent, but write it in <b>vertex form</b> y = a(x − h)² + k (with brackets).' };
+  const co = polyFromAst(ast);
+  if (!co || !polyEq(co, q.co, 1e-5)) return { ok: false, msg: '❌ That equation does not match the transformations. Check a, h (opposite sign inside the bracket!), and k.' };
+  if (!isVertexFormAst(ast)) return { ok: false, partial: true, msg: '🟡 Equivalent, but write it in <b>vertex form</b> y = a(x − h)² + k.' };
   return { ok: true, msg: '🎉 Correct! Nicely written in vertex form.' };
 }
 function checkSolve(input, q) {
@@ -1466,21 +1588,16 @@ function checkSolve(input, q) {
       ? { ok: true, msg: '🎉 Correct! The discriminant is negative, so there are no real solutions.' }
       : { ok: false, msg: '❌ This equation does have real solution(s). Try factoring or the quadratic formula.' };
   }
-  // Split on comma, semicolon, "or", "and", or ±
-  let parts = raw.split(/\s*(?:,|;|\bor\b|\band\b)\s*/i).filter(Boolean);
-  // Expand ± or \pm into two expressions
-  parts = parts.flatMap(p => {
-    if (/\\pm|±/.test(p)) return [p.replace(/\\pm|±/g, '+'), p.replace(/\\pm|±/g, '-')];
-    return [p];
-  });
+  const norm = normalizeLatex(raw);
+  let parts = splitTopLevel(norm.replace(/\s*(?:;|\bor\b|\band\b)\s*/gi, ','), ',');
+  if (parts.some(p => !p)) return { ok: false, syntax: true, msg: '✏️ Check for an extra comma in your answer.' };
+  parts = parts.flatMap(p => (/\\pm|±/.test(p) ? [p.replace(/\\pm|±/g, '+'), p.replace(/\\pm|±/g, '-')] : [p]));
   const vals = [];
   for (let p of parts) {
     p = p.replace(/^x\s*=\s*/i, '').trim();
-    if (!p) continue;
-    let ast;
-    try { ast = parse(p); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
-    const v = evalAst(ast, 0);
-    if (!Number.isFinite(v)) return { ok: false, syntax: true, msg: '✏️ That does not evaluate to a real number.' };
+    if (!p) return { ok: false, syntax: true, msg: '✏️ Enter a value after x =.' };
+    let v;
+    try { v = parseConstant(p); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
     vals.push(v);
   }
   if (!vals.length) return { ok: false, syntax: true, msg: '✏️ Type your solution(s) for x, separated by a comma (e.g. -3, 2).' };
@@ -1519,24 +1636,24 @@ function check(input, q) {
   if (q.vertexForm) return checkVertexForm(input, q);
   let ast;
   try { ast = parse(input); } catch (e) { return { ok: false, syntax: true, msg: '✏️ ' + e.message }; }
-  const target = x => q.co.reduce((s, c, d) => s + c * Math.pow(x, d), 0);
-  const isEq = equiv(ast, target);
+  const co = polyFromAst(ast);
+  if (!co) return { ok: false, syntax: true, msg: '✏️ Write a polynomial expression (no division by x).' };
+  const isEq = polyEq(co, q.co, 1e-6);
 
   if (!q.factor) { // expansion
     if (!isEq) {
-      const co = coefsOf(ast); let msg = '❌ Not quite. ';
-      if (co) {
-        const lead = degree(q.co);
-        if (Math.abs(co[lead] - q.co[lead]) > 1e-9) msg += `Check your x${lead>1?'^'+lead:''} term. `;
-        else if (Math.abs(co[0] - q.co[0]) > 1e-9) msg += 'Your constant term is off — check the "Last" product and signs. ';
-        else msg += 'Your first and last terms are right — check the middle (x) term. Did you combine like terms correctly? ';
-        if (Math.abs(co[0]+q.co[0])<1e-9 && q.co[0] !== 0) msg += 'Hint: a sign error? ';
-      }
+      let msg = '❌ Not quite. ';
+      const lead = degree(q.co);
+      if (Math.abs((co[lead] || 0) - q.co[lead]) > 1e-9) msg += `Check your x${lead>1?'^'+lead:''} term. `;
+      else if (Math.abs((co[0] || 0) - q.co[0]) > 1e-9) msg += 'Your constant term is off — check the "Last" product and signs. ';
+      else msg += 'Your first and last terms are right — check the middle (x) term. Did you combine like terms correctly? ';
+      if (Math.abs((co[0] || 0) + q.co[0]) < 1e-9 && q.co[0] !== 0) msg += 'Hint: a sign error? ';
       return { ok: false, msg: msg + 'Try again or use a hint.' };
     }
-    if (hasGroup(ast)) return { ok: false, partial: true, msg: '🟡 That is equivalent, but it still has brackets. Fully expand it!' };
-    if (ast.op === '+') {
-      const degs = ast.terms.map(t => degree(coefsOf(t.node) || [0]));
+    const unwrapped = unwrapGrp(ast);
+    if (hasGroup(unwrapped)) return { ok: false, partial: true, msg: '🟡 That is equivalent, but it still has brackets. Fully expand it!' };
+    if (unwrapped.op === '+') {
+      const degs = unwrapped.terms.map(t => degree(polyFromAst(t.node) || [0]));
       if (new Set(degs).size < degs.length) return { ok: false, partial: true, msg: '🟡 Equivalent — but you still have like terms. Collect them together.' };
     }
     return { ok: true, msg: '🎉 Correct! Nicely expanded.' };
@@ -1545,26 +1662,28 @@ function check(input, q) {
   if (!isEq) {
     let msg = '❌ That doesn\'t equal the original expression. ';
     msg += 'Tip: expand your answer to check — it should give back ' + pretty(poly(q.co)) + '.';
-    // sign check
-    if (equiv(ast, x => -target(x))) msg = '❌ Very close — your answer is the <b>negative</b> of the expression. Check the signs in your brackets.';
+    if (polyEq(co, q.co.map(v => -v), 1e-6)) msg = '❌ Very close — your answer is the <b>negative</b> of the expression. Check the signs in your brackets.';
     return { ok: false, msg };
   }
-  if (ast.op === '+' && ast.terms.length === 1) ast = ast.terms[0].node;
+  ast = unwrapGrp(ast);
+  if (ast.op === '+' && ast.terms.length === 1) ast = unwrapGrp(ast.terms[0].node);
   if (ast.op === '+') return { ok: false, partial: true, msg: '🟡 Equivalent, but that\'s not factored. A factored answer is a <b>product</b> like a(x + m)(x + n).' };
-  // check each factor is irreducible and primitive
   const facs = topFactors(ast);
   for (const f of facs) {
-    const co = coefsOf(f); if (!co) continue;
-    const deg = degree(co);
+    const fco = polyFromAst(f); if (!fco) continue;
+    const deg = degree(fco);
     if (deg >= 1) {
-      const ints = co.slice(0, deg + 1).map(Math.round);
+      if (!fco.slice(0, deg + 1).every(v => Math.abs(v - Math.round(v)) < 1e-6)) {
+        return { ok: false, partial: true, msg: '🟡 Factor over the integers (no fractional coefficients inside brackets).' };
+      }
+      const ints = fco.slice(0, deg + 1).map(Math.round);
       const g = ints.reduce((s, v) => gcd(s, v), 0);
       if (g > 1) return { ok: false, partial: true, msg: `🟡 Equivalent, but not fully factored: ${pretty(poly(ints))} still has a common factor of ${g}.` };
       if (ints[0] === 0 && deg >= 2) return { ok: false, partial: true, msg: `🟡 Not fully factored: ${pretty(poly(ints))} has a common factor of x.` };
     }
     if (deg === 2) {
-      const [c, b, a] = co; const D = b*b - 4*a*c;
-      if (D >= 0 && Number.isInteger(Math.sqrt(D))) return { ok: false, partial: true, msg: `🟡 Good progress! But ${pretty(poly(co.slice(0,3)))} can still be factored.` };
+      const [c, b, a] = fco; const D = b*b - 4*a*c;
+      if (D >= 0 && Number.isInteger(Math.sqrt(D))) return { ok: false, partial: true, msg: `🟡 Good progress! But ${pretty(poly(fco.slice(0,3)))} can still be factored.` };
     }
     if (deg > 2) return { ok: false, partial: true, msg: '🟡 Equivalent, but some part can be factored further.' };
   }
@@ -1573,9 +1692,33 @@ function check(input, q) {
 
 /* ================= Local storage progress ================= */
 const KEY = 'mpm2d_drill_v1';
-const today = () => new Date().toISOString().slice(0, 10);
-let store = JSON.parse(localStorage.getItem(KEY) || 'null') || { skills: {}, history: [], streak: 0, best: 0, days: {}, breakAfter: 25, totalSec: 0 };
-const save = () => localStorage.setItem(KEY, JSON.stringify(store));
+const STUDENT_KEY_PREFIX = 'mpm2d_drill_v2_';
+const LAST_STUDENT_KEY = 'mpm2d_last_student_v2';
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(new Date());
+function hashId(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+function studentDocId(name, cls) {
+  const norm = `${(cls || '').trim().toLowerCase()}|${(name || '').trim().toLowerCase()}`;
+  const slug = norm.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48) || 'student';
+  return `${slug}_${hashId(norm)}`;
+}
+function emptyStore(student = null) {
+  return { student, skills: {}, history: [], streak: 0, best: 0, days: {}, breakAfter: 25, totalSec: 0 };
+}
+function storageKeyFor(student) {
+  return student?.name ? STUDENT_KEY_PREFIX + studentDocId(student.name, student.cls) : KEY;
+}
+const _lastStu = JSON.parse(localStorage.getItem(LAST_STUDENT_KEY) || 'null');
+let store = JSON.parse(localStorage.getItem(storageKeyFor(_lastStu)) || 'null')
+  || (!_lastStu && JSON.parse(localStorage.getItem(KEY) || 'null'))
+  || emptyStore(_lastStu);
+const save = () => {
+  localStorage.setItem(storageKeyFor(store.student), JSON.stringify(store));
+  if (store.student?.name) localStorage.setItem(LAST_STUDENT_KEY, JSON.stringify(store.student));
+};
 const sk = id => store.skills[id] ||= { attempts: 0, correct: 0, hints: 0, recent: [] };
 
 function record(id, correct, hintsUsed, input) {
@@ -1620,7 +1763,7 @@ function getDb() {
 async function syncToFirestore(reason = 'milestone') {
   const db = getDb();
   if (!db || !store.student?.name) return false;
-  const key = `${store.student.cls}_${store.student.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 80);
+  const key = studentDocId(store.student.name, store.student.cls);
   const skillsSummary = {};
   for (const [id, S] of Object.entries(SKILLS)) {
     const k = store.skills[id];
@@ -1640,18 +1783,10 @@ async function syncToFirestore(reason = 'milestone') {
     activeMin: Math.round(store.totalSec / 60),
     levelled: store.levelled || {},
     skills: skillsSummary,
+    lastReason: reason,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   await db.collection('mpm2d_students').doc(key).set(payload, { merge: true });
-  await db.collection('mpm2d_reports').add({
-    student: store.student.name, cls: store.student.cls,
-    course: 'MPM2D',
-    practiceType: 'MPM2D Math Drill Center',
-    mode: typeof mode !== 'undefined' ? mode : 'expand',
-    correct: payload.totalCorrect, attempts: payload.totalAttempts,
-    activeMin: payload.activeMin, reason,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
   return true;
 }
 
@@ -1663,7 +1798,22 @@ function askStudent() {
 }
 $('studentForm').onsubmit = e => {
   e.preventDefault();
-  store.student = { name: $('stuName').value.trim(), cls: $('stuClass').value.trim() };
+  const nextStudent = { name: $('stuName').value.trim(), cls: $('stuClass').value.trim() };
+  const prevId = store.student?.name ? studentDocId(store.student.name, store.student.cls) : null;
+  const nextId = studentDocId(nextStudent.name, nextStudent.cls);
+  if (prevId !== nextId) {
+    save();
+    store = JSON.parse(localStorage.getItem(storageKeyFor(nextStudent)) || 'null') || emptyStore(nextStudent);
+    store.student = nextStudent;
+    activeSec = 0;
+    nextBreakAt = store.breakAfter * 60;
+    $('breakAfter').value = store.breakAfter;
+    renderProgress();
+    if (typeof renderLevelled === 'function') renderLevelled();
+    if (typeof newQuestion === 'function') newQuestion();
+  } else {
+    store.student = nextStudent;
+  }
   save(); $('studentLabel').textContent = `${store.student.name} (${store.student.cls})`;
   $('studentModal').classList.replace('flex', 'hidden'); $('answer').focus();
 };
@@ -1705,18 +1855,23 @@ async function flushEmails() {
 }
 $('submitReportBtn').onclick = async () => {
   if (!store.student?.name) { askStudent(); return; }
-  const st = $('submitStatus');
-  st.textContent = 'Sending report…';
+  const btn = $('submitReportBtn'), st = $('submitStatus');
+  btn.disabled = true;
+  st.textContent = 'Syncing to teacher dashboard…';
   try {
+    const synced = await syncToFirestore('manual_submit');
     if (APPS_SCRIPT_URL.startsWith('https://script.google.com/')) {
-      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors',
+      fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(buildReportData(`submitted (${totalCorrect()} correct)`)) });
+        body: JSON.stringify(buildReportData(`submitted (${totalCorrect()} correct)`)) }).catch(() => {});
     }
-    await syncToFirestore('manual_submit').catch(() => {});
-    st.textContent = `✅ Sent at ${new Date().toLocaleTimeString()}`;
+    st.textContent = synced
+      ? `✅ Synced to teacher dashboard at ${new Date().toLocaleTimeString()}`
+      : '💾 Saved on this device (cloud sync not acknowledged).';
   } catch (e) {
-    st.textContent = '⚠️ Could not send right now (offline?). Try again in a moment.';
+    st.textContent = '💾 Saved on this device (waiting to sync — offline or blocked).';
+  } finally {
+    btn.disabled = false;
   }
 };
 function masteryOf(id) { const s = store.skills[id]; if (!s || !s.recent.length) return 0; return Math.round(100 * s.recent.reduce((a, b) => a + b, 0) / 10); }
@@ -2165,7 +2320,7 @@ function renderVisualLab() {
       <text x="92" y="17" font-size="12" font-weight="bold" text-anchor="middle" fill="#1d4ed8">x</text>
       <text x="167" y="17" font-size="12" font-weight="bold" text-anchor="middle" fill="#1d4ed8">${hbStr}</text>
     </svg>
-    <div class="text-xs text-slate-600 mt-1">Split ${v.b / v.a}x into two equal ${hbStr}x strips. Add &amp; subtract the missing corner (${hb})² = ${v.sq}!</div>`;
+    <div class="text-xs text-slate-600 mt-1">Split ${v.b / v.a}x into two equal ${hbStr}x strips. Add &amp; subtract the missing corner (${hb})²${showCorner ? ' = ' + v.sq : ''}!</div>`;
   } else if (v.type === 'parabola') {
     $('visLabTitle').textContent = '👁️ Live Parabola Graph (vs. y = x² dashed)';
     $('visRevealBtn').classList.add('hidden');
@@ -2301,7 +2456,6 @@ $('skipBtn').onclick = () => {
 $('nextBtn').onclick = newQuestion;
 $('answer').addEventListener('keydown', e => { if (e.key === 'Enter') (done ? newQuestion : $('checkBtn').onclick)(); });
 $('mathAnswer').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); (done ? newQuestion : $('checkBtn').onclick)(); } });
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && done && document.activeElement !== $('answer') && document.activeElement !== $('mathAnswer') && document.activeElement !== $('nextBtn')) newQuestion(); });
 $('answer').addEventListener('input', () => { $('preview').textContent = $('answer').value ? 'Preview: ' + pretty(normalizeLatex($('answer').value).replace(/\*/g,'·')) : ''; markActive(); });
 $('mathAnswer').addEventListener('input', () => markActive());
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
@@ -2452,7 +2606,11 @@ function renderBeauty() {
   }
 }
 $('exportBtn').onclick = () => {
-  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const esc = v => {
+    let s = String(v ?? '');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
   const row = cols => cols.map(esc).join(',');
   const lines = [
     row(['Student', store.student?.name || '', 'Class', store.student?.cls || '']),
@@ -2472,14 +2630,14 @@ $('exportBtn').onclick = () => {
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mpm2d-progress-${today()}.csv`; a.click();
 };
-$('resetBtn').onclick = () => { if (confirm('Erase all progress saved on this device?')) { localStorage.removeItem(KEY); location.reload(); } };
+$('resetBtn').onclick = () => { if (confirm('Erase all progress saved on this device?')) { localStorage.removeItem(storageKeyFor(store.student)); localStorage.removeItem(KEY); location.reload(); } };
 
 /* ================= Active-time tracker & break reminder ================= */
 let activeSec = 0, lastActivity = Date.now(), onBreak = false;
 const IDLE_LIMIT = 120 * 1000; // stop counting after 2 min of no activity
 function markActive() { lastActivity = Date.now(); }
 ['click', 'keydown', 'mousemove', 'touchstart'].forEach(ev => document.addEventListener(ev, markActive, { passive: true }));
-$('breakAfter').value = store.breakAfter; $('breakAfter').onchange = e => { store.breakAfter = +e.target.value; save(); };
+$('breakAfter').value = store.breakAfter; $('breakAfter').onchange = e => { store.breakAfter = +e.target.value; nextBreakAt = activeSec + store.breakAfter * 60; save(); };
 const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 let nextBreakAt = store.breakAfter * 60;
 

@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isTeacherOf(classId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/classes/$(classId)/teachers/$(request.auth.uid));
+    }
+
+    function isMemberOf(classId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/classes/$(classId)/members/$(request.auth.uid));
+    }
+
+    function validSummary(data, uid, classId) {
+      return data.keys().hasOnly([
+          'uid', 'name', 'cls', 'course', 'practiceType', 'lastMode',
+          'modesPracticed', 'totalCorrect', 'totalAttempts', 'bestStreak',
+          'activeMin', 'levelled', 'skills', 'lastReason', 'updatedAt'
+        ])
+        && data.uid == uid
+        && data.cls == classId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.cls is string && data.cls.size() >= 1 && data.cls.size() <= 40
+        && data.totalCorrect is int && data.totalCorrect >= 0
+        && data.totalAttempts is int && data.totalAttempts >= data.totalCorrect
+        && data.bestStreak is int && data.bestStreak >= 0
+        && data.activeMin is int && data.activeMin >= 0
+        && data.updatedAt == request.time;
+    }
+
+    match /classes/{classId} {
+      allow read: if isTeacherOf(classId) || isMemberOf(classId);
+      allow write: if false;
+
+      match /teachers/{teacherUid} {
+        allow read: if signedIn() && request.auth.uid == teacherUid;
+        allow write: if false;
+      }
+
+      match /members/{memberUid} {
+        allow read: if (signedIn() && request.auth.uid == memberUid) || isTeacherOf(classId);
+        allow write: if isTeacherOf(classId);
+      }
+
+      match /summaries/{studentUid} {
+        allow get: if (signedIn() && request.auth.uid == studentUid && isMemberOf(classId))
+          || isTeacherOf(classId);
+        allow list: if isTeacherOf(classId);
+        allow create, update: if signedIn()
+          && request.auth.uid == studentUid
+          && isMemberOf(classId)
+          && validSummary(request.resource.data, studentUid, classId);
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
