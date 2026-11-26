@@ -36,6 +36,18 @@
       <span title="Current streak">🔥 <span id="streak">0</span></span>
       <span title="Today correct">✅ <span id="todayCorrect">0</span></span>
       <button id="formulaBtn" type="button" class="btn bg-indigo-100 text-indigo-900 px-2.5 py-1 text-xs">📐 Formulas</button>
+      <select id="langSelect" title="Language support for math terms (Read Aloud stays English)" class="border-2 border-slate-800 rounded-lg px-2 py-1 text-xs font-bold bg-teal-50 cursor-pointer">
+        <option value="en">🌐 English</option>
+        <option value="yue">🇭🇰 廣東話 (Cantonese)</option>
+        <option value="zh-CN">🇨🇳 普通话 (Putonghua)</option>
+        <option value="ko">🇰🇷 한국어 (Korean)</option>
+        <option value="fa">🇮🇷 فارسی (Farsi)</option>
+        <option value="ru">🇷🇺 Русский (Russian)</option>
+        <option value="uk">🇺🇦 Українська (Ukrainian)</option>
+        <option value="ur">🇵🇰 اردو (Urdu)</option>
+        <option value="si">🇱🇰 සිංහල (Sinhala)</option>
+        <option value="ta">🇱🇰 தமிழ் (Tamil)</option>
+      </select>
     </div>
   </header>
 
@@ -129,6 +141,7 @@
         <div id="qExp" class="text-xs text-slate-500 italic mb-2"></div>
         <div id="qPrompt" class="font-bold text-slate-600"></div>
         <div id="qExpr" class="math text-3xl md:text-4xl font-bold my-4 text-center"></div>
+        <div id="transBox" class="hidden mb-3 p-2.5 bg-teal-50 border-2 border-teal-600 rounded-lg text-xs sm:text-sm"></div>
 
         <!-- Interactive Visual Simulation Lab (Area Model / Algebra Tiles / Completing Square / Parabola) -->
         <div id="visLabWrap" class="hidden my-3 p-3 bg-indigo-50/70 rounded-xl border-2 border-slate-800">
@@ -1966,9 +1979,91 @@ $('speakBtn').onclick = () => {
   window.speechSynthesis.cancel();
   const txt = `${$('qPrompt').textContent} ${String(q.expr || '').replace(/\^2/g, ' squared').replace(/\^(\d+)/g, ' to the power of $1').replace(/−/g, ' minus ')}`;
   const u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'en-CA';
+  const enVoice = window.speechSynthesis.getVoices().find(v => /^en[-_](CA|US|GB)/i.test(v.lang)) || window.speechSynthesis.getVoices().find(v => /^en/i.test(v.lang));
+  if (enVoice) u.voice = enVoice;
   u.rate = 0.95;
   window.speechSynthesis.speak(u);
 };
+
+/* ================= RHHS Multilingual Support (100% Free) ================= */
+const LANG_DATA = {
+  yue: { rtl: false, gt: 'zh-TW', label: '廣東話', modes: {
+    expand: '展開並化簡（將括號乘開再合併同類項）', factor: '因式分解（抽出公因式或拆成括號相乘）',
+    solve: '解二次方程求 x（多個答案用逗號分隔）', transform: '二次函數變換與配方法（頂點式 y = a(x − h)² + k）',
+    linear: '聯立一次方程（畫圖、代入法或消元法求交點）', analytic: '解析幾何（中點、距離、圓方程、斜率與垂直/中線）',
+    trig: '三角學（SOH-CAH-TOA、正弦定理、餘弦定理，用 DEG 模式）'
+  }, terms: '關鍵詞：Vertex 頂點 · Slope 斜率 · y-intercept y截距 · Factor 因式分解 · Expand 展開 · Roots 根 · Midpoint 中點 · Perpendicular 垂直' },
+  'zh-CN': { rtl: false, gt: 'zh-CN', label: '普通话', modes: {
+    expand: '展开并化简（去括号并合并同类项）', factor: '因式分解（提取公因式或分解为括号乘积）',
+    solve: '解二次方程求 x（多个解用逗号分隔）', transform: '二次函数变换与配方法（顶点式 y = a(x − h)² + k）',
+    linear: '二元一次方程组（画图、代入法或加减消元法求交点）', analytic: '解析几何（中点、距离、圆方程、斜率与垂线/中线）',
+    trig: '三角函数（SOH-CAH-TOA、正弦定理、余弦定理，使用 DEG 模式）'
+  }, terms: '关键词：Vertex 顶点 · Slope 斜率 · y-intercept y截距 · Factor 因式分解 · Expand 展开 · Roots 根 · Midpoint 中点 · Perpendicular 垂直' },
+  ko: { rtl: false, gt: 'ko', label: '한국어', modes: {
+    expand: '전개하여 간단히 하기 (괄호를 풀고 동류항끼리 모으기)', factor: '인수분해하기 (공통인수 묶기 또는 괄호의 곱으로)',
+    solve: '이차방정식의 해 x 구하기 (해가 2개면 쉼표로 구분)', transform: '이차함수 평행이동과 완전제곱식 (꼭짓점 형태 y = a(x − h)² + k)',
+    linear: '연립일차방정식 풀기 (그래프, 대입법, 가감법으로 교점 구하기)', analytic: '해석기하 (중점, 두 점 사이의 거리, 원의 방정식, 기울기와 수직)',
+    trig: '삼각비와 삼각형 (SOH-CAH-TOA, 사인법칙, 코사인법칙 — 각도 DEG 모드)'
+  }, terms: '핵심 용어: Vertex 꼭짓점 · Slope 기울기 · y-intercept y절편 · Factor 인수분해 · Expand 전개 · Roots 근(해) · Midpoint 중점 · Perpendicular 수직' },
+  fa: { rtl: true, gt: 'fa', label: 'فارسی', modes: {
+    expand: 'بسط دادن و ساده کردن (ضرب پرانتزها و جمع جملات مشابه)', factor: 'تجزیه کردن (فاکتورگیری یا تبدیل به ضرب پرانتزها)',
+    solve: 'حل معادله درجه دوم برای x (ریشه‌ها را با کاما جدا کنید)', transform: 'انتقال سهمی و مربع کامل (فرم رأس y = a(x − h)² + k)',
+    linear: 'دستگاه معادلات خطی (روش ترسیمی، جایگزینی یا حذفی برای نقطه تقاطع)', analytic: 'هندسه تحلیلی (نقطه میانی، فاصله، معادله دایره، شیب و عمود)',
+    trig: 'مثلثات (سینوس، کسینوس، تانژانت، قانون سینوس‌ها و کسینوس‌ها — حالت DEG)'
+  }, terms: 'واژگان کلیدی: Vertex رأس · Slope شیب · y-intercept عرض از مبدأ · Factor تجزیه · Expand بسط · Roots ریشه‌ها · Midpoint نقطه میانی · Perpendicular عمود' },
+  ru: { rtl: false, gt: 'ru', label: 'Русский', modes: {
+    expand: 'Раскройте скобки и приведите подобные слагаемые', factor: 'Разложите на множители (вынесите общий множитель или на скобки)',
+    solve: 'Решите квадратное уравнение (корни разделите запятой)', transform: 'Преобразования параболы и выделение полного квадрата y = a(x − h)² + k',
+    linear: 'Решите систему линейных уравнений (графически, подстановкой или сложением)', analytic: 'Аналитическая геометрия (середина отрезка, расстояние, окружность, угловой коэффициент)',
+    trig: 'Тригонометрия (SOH-CAH-TOA, теоремы синусов и косинусов — режим DEG)'
+  }, terms: 'Термины: Vertex вершина · Slope угловой коэффициент · Factor разложить · Expand раскрыть · Roots корни · Midpoint середина · Perpendicular перпендикуляр' },
+  uk: { rtl: false, gt: 'uk', label: 'Українська', modes: {
+    expand: 'Розкрийте дужки та зведіть подібні доданки', factor: 'Розкладіть на множники (спільний множник або добуток дужок)',
+    solve: 'Розв’яжіть квадратне рівняння (корені розділіть комою)', transform: 'Перетворення параболи та виділення повного квадрата y = a(x − h)² + k',
+    linear: 'Розв’яжіть систему лінійних рівнянь (графічно, підстановкою або додаванням)', analytic: 'Аналітична геометрія (середина відрізка, відстань, коло, кутовий коефіцієнт)',
+    trig: 'Тригонометрія (SOH-CAH-TOA, теореми синусів і косинусів — режим DEG)'
+  }, terms: 'Терміни: Vertex вершина · Slope кутовий коефіцієнт · Factor розкласти · Expand розкрити · Roots корені · Midpoint середина · Perpendicular перпендикуляр' },
+  ur: { rtl: true, gt: 'ur', label: 'اردو', modes: {
+    expand: 'بریکٹ کھولیں اور ہم جنس ارکان کو جمع کریں', factor: 'تجزی کریں (مشترک جز یا دو بریکٹوں کے حاصل ضرب میں لکھیں)',
+    solve: 'دو درجی مساوات حل کریں (x کی قیمتیں کوما سے الگ کریں)', transform: 'پیرابولا کی تبدیلی اور تکمیلِ مربع y = a(x − h)² + k',
+    linear: 'یکساں لکیری مساوات کا نظام حل کریں (گراف، متبادل یا حذف کا طریقہ)', analytic: 'تحلیلی جیومیٹری (درمیانی نقطہ، فاصلہ، دائرے کی مساوات، ڈھلوان اور عمود)',
+    trig: 'مثلثیات (SOH-CAH-TOA، سائن اور کوسائن کا قانون — DEG موڈ)'
+  }, terms: 'اہم الفاظ: Vertex راس · Slope ڈھلوان · y-intercept y-انٹرسیپٹ · Factor تجزی · Expand پھیلائیں · Roots جڑیں · Midpoint درمیانی نقطہ · Perpendicular عمود' },
+  si: { rtl: false, gt: 'si', label: 'සිංහල', modes: {
+    expand: 'වරහන් ඉවත් කර සමාන පද එකතු කර සරල කරන්න', factor: 'සාධක වලට වෙන් කරන්න (පොදු සාධක හෝ වරහන් දෙකක ගුණිතය)',
+    solve: 'වර්ගජ සමීකරණය x සඳහා විසඳන්න (පිළිතුරු කොමාවකින් වෙන් කරන්න)', transform: 'පරාවලය පරිවර්තනය සහ වර්ග පූර්ණය y = a(x − h)² + k',
+    linear: 'සමගාමී රේඛීය සමීකරණ විසඳන්න (ප්‍රස්තාර, ආදේශන හෝ ඉවත් කිරීමේ ක්‍රමය)', analytic: 'විශ්ලේෂී ජ්‍යාමිතිය (මධ්‍ය ලක්ෂ්‍යය, දුර, වෘත්ත සමීකරණය, අනුක්‍රමණය)',
+    trig: 'ත්‍රිකෝණමිතිය (SOH-CAH-TOA, සයින් නියමය, කොසයින් නියමය — DEG ප්‍රකාරය)'
+  }, terms: 'ප්‍රධාන වචන: Vertex ශීර්ෂය · Slope අනුක්‍රමණය · Factor සාධක · Expand ප්‍රසාරණය · Roots මූල · Midpoint මධ්‍ය ලක්ෂ්‍යය · Perpendicular ලම්බ' },
+  ta: { rtl: false, gt: 'ta', label: 'தமிழ்', modes: {
+    expand: 'அடைப்புக்குறிகளை விரித்து ஒத்த உறுப்புகளை சுருக்குக', factor: 'காரணிப்படுத்துக (பொதுக் காரணி அல்லது இரு அடைப்புக்குறிகளின் பெருக்கல்)',
+    solve: 'இருபடிச் சமன்பாட்டை x-க்கு தீர்க்கவும் (தீர்வுகளை காற்புள்ளியால் பிரிக்கவும்)', transform: 'பரவளைய மாற்றம் & வர்க்க பூர்த்தி y = a(x − h)² + k',
+    linear: 'நேரியல் சமன்பாட்டுத் தொகுப்பைத் தீர்க்கவும் (வரைபடம், பிரதியிடல், நீக்கல் முறை)', analytic: 'பகுமுறை வடிவியல் (நடுப்புள்ளி, தூரம், வட்டச் சமன்பாடு, சாய்வு, செங்குத்து)',
+    trig: 'முக்கோணவியல் (SOH-CAH-TOA, சைன் விதி, கொசைன் விதி — DEG முறை)'
+  }, terms: 'முக்கிய சொற்கள்: Vertex உச்சி · Slope சாய்வு · Factor காரணிப்படுத்து · Expand விரிவாக்கு · Roots மூலங்கள் · Midpoint நடுப்புள்ளி · Perpendicular செங்குத்து' }
+};
+
+function renderTranslation() {
+  const lang = $('langSelect').value;
+  store.lang = lang; save();
+  const box = $('transBox');
+  if (!lang || lang === 'en' || !LANG_DATA[lang] || !q) { box.classList.add('hidden'); return; }
+  const L = LANG_DATA[lang];
+  const mKey = mode === 'mixed' || mode === 'levelled' ? (SKILLS[qId]?.mode || 'solve') : mode;
+  const guide = L.modes[mKey] || '';
+  const fullText = `${$('qPrompt').textContent}\n${q.expr || ''}`.trim();
+  const gtUrl = `https://translate.google.com/?sl=en&tl=${encodeURIComponent(L.gt)}&text=${encodeURIComponent(fullText)}`;
+  box.classList.remove('hidden');
+  box.setAttribute('dir', L.rtl ? 'rtl' : 'ltr');
+  box.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+      <span class="font-black text-teal-900">🌐 ${L.label}: ${guide}</span>
+      <a href="${gtUrl}" target="_blank" rel="noopener" dir="ltr" class="underline font-bold text-blue-700 whitespace-nowrap">Translate full question ↗</a>
+    </div>
+    <div class="text-slate-700">${L.terms}</div>`;
+}
+$('langSelect').value = store.lang || 'en';
+$('langSelect').onchange = () => renderTranslation();
 $('mathKeypad').querySelectorAll('[data-key]').forEach(btn => btn.onclick = () => {
   if (done) return;
   const k = btn.dataset.key;
@@ -2138,8 +2233,9 @@ function newQuestion() {
   $('qExpr').className = isText ? 'text-lg md:text-xl font-bold my-4 text-center text-slate-800 whitespace-pre-line' : 'math text-2xl md:text-3xl font-bold my-4 text-center whitespace-pre-line';
   $('qExpr').textContent = isText ? q.expr : pretty(q.expr);
 
-  // Show/hide visual lab, diagram, graph, choices, and answer box
+  // Show/hide visual lab, translation, diagram, graph, choices, and answer box
   renderVisualLab();
+  renderTranslation();
   $('diagramWrap').classList.toggle('hidden', !q.svg);
   $('diagramWrap').innerHTML = q.svg || '';
   $('graphWrap').classList.toggle('hidden', !q.lines);
