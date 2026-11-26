@@ -410,6 +410,30 @@
     </div>
   </div>
 
+  <!-- CLOUD SYNC CONFLICT MODAL -->
+  <div id="syncConflictModal" class="hidden fixed inset-0 z-50 bg-slate-900/80 flex items-center justify-center p-3">
+    <div class="bg-white max-w-md w-full rounded-2xl comic-border p-5 space-y-3">
+      <div class="flex items-center gap-2 text-red-700">
+        <span class="text-2xl">⚠️</span>
+        <h3 class="text-lg font-black">Cloud Sync Conflict Detected</h3>
+      </div>
+      <p id="syncConflictDetails" class="text-xs font-bold text-slate-700 leading-relaxed">
+        Another device saved newer changes to Google Cloud while this device had unsynced edits. Neither version was lost—choose which one to keep:
+      </p>
+      <div class="flex flex-col gap-2 pt-1">
+        <button onclick="resolveSyncConflict('cloud')" class="w-full py-2.5 px-3 text-xs font-black rounded-xl bg-emerald-600 text-white comic-btn">
+          ⬇️ Keep Cloud Version (Discard This Device's Unsynced Edits)
+        </button>
+        <button onclick="resolveSyncConflict('local')" class="w-full py-2.5 px-3 text-xs font-black rounded-xl bg-purple-600 text-white comic-btn">
+          ⬆️ Keep This Device's Version (Overwrite Cloud)
+        </button>
+        <button onclick="closeSyncConflictModal()" class="w-full py-2 px-3 text-xs font-black rounded-xl bg-slate-100 text-slate-800 border-2 border-slate-800">
+          Cancel (Keep Both Locally for Now)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating Scroll-to-Top Button (helpful on phone) -->
   <button onclick="window.scrollTo({top:0, behavior:'smooth'})" id="scrollTopBtn" class="fixed bottom-4 right-4 z-30 px-3 py-2 text-xs font-black rounded-full bg-slate-900 text-white comic-btn shadow-lg opacity-85 hover:opacity-100" title="Scroll to top">
     ⬆ Top
@@ -654,8 +678,9 @@
       <!-- iPad & Google Cloud Sync Card -->
       <div class="p-4 rounded-xl bg-purple-50 border-2 border-slate-800 space-y-2.5">
         <h2 class="text-base font-black text-slate-900 flex items-center gap-1.5"><span>☁️</span> iPad & GitHub Pages Cloud Sync (Google Drive)</h2>
-        <div class="flex flex-col sm:flex-row gap-2">
-          <input type="url" id="cloudSyncUrlInput" oninput="saveCloudSyncUrl(this.value)" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-3 py-2 text-xs font-mono font-bold rounded-lg bg-white border-2 border-slate-800 focus:outline-none" />
+        <div class="flex flex-col gap-2">
+          <input type="url" id="cloudSyncUrlInput" oninput="saveCloudSyncUrl(this.value)" placeholder="Web App URL: https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg bg-white border-2 border-slate-800 focus:outline-none" />
+          <input type="password" id="cloudSyncTokenInput" oninput="saveCloudSyncToken(this.value)" placeholder="Teacher Sync Secret (must match TEACHER_SYNC_SECRET in Apps Script)" class="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg bg-white border-2 border-slate-800 focus:outline-none" />
         </div>
         <div class="flex flex-wrap items-center gap-2 pt-1">
           <button onclick="pushToGoogleCloud(true)" class="px-3 py-1.5 text-xs font-black rounded-lg bg-purple-600 text-white comic-btn">
@@ -888,6 +913,9 @@
         updateUndoButton();
 
         localStorage.setItem(STORAGE_KEY, serialized);
+        if (getActiveCloudUrl()) {
+          localStorage.setItem(CLOUD_PENDING_KEY, 'true');
+        }
         saveToIndexedDB(serialized);
 
         if (fileHandle) {
@@ -3035,6 +3063,9 @@
     // IMPORTANT PRIVACY NOTE: The Google Apps Script URL is NOT hardcoded in public GitHub code.
     // It is stored strictly in your private iPad / MacBook browser localStorage after unlocking.
     const CLOUD_URL_KEY = 'mpm2d_tracker_cloud_sync_url';
+    const CLOUD_TOKEN_KEY = 'mpm2d_tracker_cloud_sync_token';
+    const CLOUD_REV_KEY = 'mpm2d_tracker_cloud_revision';
+    const CLOUD_PENDING_KEY = 'mpm2d_tracker_cloud_pending';
     const CLOUD_AUTO_KEY = 'mpm2d_tracker_cloud_auto_sync';
     const TEACHER_PIN_KEY = 'mpm2d_tracker_teacher_pin';
     const TEACHER_UNLOCKED_SESSION = 'mpm2d_tracker_unlocked_session';
@@ -3113,6 +3144,25 @@
       return (localStorage.getItem(CLOUD_URL_KEY) || '').trim();
     }
 
+    function getActiveCloudToken() {
+      return (localStorage.getItem(CLOUD_TOKEN_KEY) || '').trim();
+    }
+
+    function getCloudRevision() {
+      const r = parseInt(localStorage.getItem(CLOUD_REV_KEY) || '0', 10);
+      return isNaN(r) ? 0 : r;
+    }
+
+    function setCloudRevision(rev) {
+      if (rev !== undefined && rev !== null && !isNaN(Number(rev))) {
+        localStorage.setItem(CLOUD_REV_KEY, String(rev));
+      }
+    }
+
+    function hasPendingCloudSync() {
+      return localStorage.getItem(CLOUD_PENDING_KEY) === 'true';
+    }
+
     function isAutoCloudSyncEnabled() {
       const val = localStorage.getItem(CLOUD_AUTO_KEY);
       return val === null ? Boolean(getActiveCloudUrl()) : val === 'true';
@@ -3120,19 +3170,31 @@
 
     function initCloudSyncControls() {
       const savedUrl = getActiveCloudUrl();
+      const savedToken = getActiveCloudToken();
       const autoSync = isAutoCloudSyncEnabled();
       const urlInput = document.getElementById('cloudSyncUrlInput');
+      const tokenInput = document.getElementById('cloudSyncTokenInput');
       const autoCheck = document.getElementById('autoCloudSyncToggle');
       if (urlInput) urlInput.value = savedUrl;
+      if (tokenInput) tokenInput.value = savedToken;
       if (autoCheck) autoCheck.checked = autoSync;
 
       if (savedUrl) {
-        pullFromGoogleCloud(true);
+        if (hasPendingCloudSync() && autoSync) {
+          updateSaveIndicator('Pending Cloud Sync');
+          pushToGoogleCloud(false);
+        } else {
+          pullFromGoogleCloud(true);
+        }
       }
     }
 
     function saveCloudSyncUrl(val) {
       localStorage.setItem(CLOUD_URL_KEY, (val || '').trim());
+    }
+
+    function saveCloudSyncToken(val) {
+      localStorage.setItem(CLOUD_TOKEN_KEY, (val || '').trim());
     }
 
     function toggleAutoCloudSync(checked) {
@@ -3171,14 +3233,54 @@
     let lastSyncedTimestamp = '';
     let isPushing = false;
     let isPulling = false;
+    let pendingConflictState = null;
 
     function isTrackerLocked() {
       const overlay = document.getElementById('teacherLockOverlay');
       return overlay && !overlay.classList.contains('hidden');
     }
 
-    async function pushToGoogleCloud(manualClick) {
+    function openSyncConflictModal(serverData) {
+      pendingConflictState = serverData;
+      const details = document.getElementById('syncConflictDetails');
+      if (details) {
+        const srvTime = serverData.lastUpdated ? new Date(serverData.lastUpdated).toLocaleTimeString() : 'recently';
+        details.textContent = `Another device saved revision ${serverData.currentRevision} at ${srvTime} while this device had unsynced changes (local base rev ${getCloudRevision()}). Neither version was lost—choose which one to keep:`;
+      }
+      document.getElementById('syncConflictModal').classList.remove('hidden');
+    }
+
+    function closeSyncConflictModal() {
+      document.getElementById('syncConflictModal').classList.add('hidden');
+    }
+
+    function resolveSyncConflict(choice) {
+      if (choice === 'cloud' && pendingConflictState && pendingConflictState.state) {
+        const currentTab = state.currentView || 'daily';
+        state = { ...pendingConflictState.state, currentView: currentTab };
+        setCloudRevision(pendingConflictState.currentRevision);
+        lastSyncedTimestamp = pendingConflictState.lastUpdated || '';
+        localStorage.removeItem(CLOUD_PENDING_KEY);
+        undoStack.length = 0;
+        updateUndoButton();
+        const serialized = JSON.stringify(state, null, 2);
+        lastSavedSnapshot = serialized;
+        localStorage.setItem(STORAGE_KEY, serialized);
+        saveToIndexedDB(serialized);
+        renderCurrentView();
+        updateSaveIndicator(`Synced Cloud (rev ${pendingConflictState.currentRevision})`);
+        pendingConflictState = null;
+        closeSyncConflictModal();
+      } else if (choice === 'local') {
+        pendingConflictState = null;
+        closeSyncConflictModal();
+        pushToGoogleCloud(true, true);
+      }
+    }
+
+    async function pushToGoogleCloud(manualClick, forceOverwrite = false) {
       const url = getActiveCloudUrl();
+      const token = getActiveCloudToken();
       const statusEl = document.getElementById('cloudSyncStatus');
       const btnLabel = document.getElementById('cloudBtnLabel');
 
@@ -3204,44 +3306,78 @@
 
         const nowIso = new Date().toISOString();
         state._clientUpdatedAt = nowIso;
+        const baseRev = getCloudRevision();
+        const opId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
         const payload = {
           action: 'save',
+          token,
+          opId,
+          baseRevision: baseRev > 0 ? baseRev : undefined,
+          forceOverwrite: !!forceOverwrite,
           state: state,
           summaryRows: buildSummaryRowsForCloud()
         };
 
-        await fetch(url, {
+        const res = await fetch(url, {
           method: 'POST',
-          mode: 'no-cors',
           cache: 'no-store',
+          redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
+        const data = await res.json();
 
-        lastSyncedTimestamp = nowIso;
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        if (btnLabel) btnLabel.textContent = `Push Cloud ✓`;
-        updateSaveIndicator('Saved + Pushed to Cloud');
-        if (statusEl) {
-          statusEl.classList.remove('hidden');
-          statusEl.textContent = `✓ Pushed to Google Drive & Sheet backup at ${time}`;
+        if (data && data.unauthorized) {
+          if (btnLabel) btnLabel.textContent = 'Push Cloud';
+          updateSaveIndicator('Unauthorized (Check Secret)');
+          if (statusEl) {
+            statusEl.classList.remove('hidden');
+            statusEl.textContent = '🔒 Unauthorized: check your Teacher Sync Secret in Roster → Cloud Sync.';
+          }
+          if (manualClick) alert('Unauthorized: your Teacher Sync Secret does not match TEACHER_SYNC_SECRET in Google Apps Script.');
+          return;
+        }
+
+        if (data && data.conflict) {
+          if (btnLabel) btnLabel.textContent = 'Conflict!';
+          updateSaveIndicator('Sync Conflict');
+          openSyncConflictModal(data);
+          return;
+        }
+
+        if (data && data.ok) {
+          if (data.revision !== undefined) setCloudRevision(data.revision);
+          lastSyncedTimestamp = data.savedAt || nowIso;
+          localStorage.removeItem(CLOUD_PENDING_KEY);
+          const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          if (btnLabel) btnLabel.textContent = `Push Cloud ✓`;
+          updateSaveIndicator(`Saved + Synced (rev ${getCloudRevision()})`);
+          if (statusEl) {
+            statusEl.classList.remove('hidden');
+            statusEl.textContent = `✓ Confirmed rev ${getCloudRevision()} in Google Drive & Sheet at ${time}`;
+          }
+        } else {
+          throw new Error((data && data.error) || 'Unexpected server response');
         }
       } catch (err) {
-        if (btnLabel) btnLabel.textContent = 'Push Cloud';
+        localStorage.setItem(CLOUD_PENDING_KEY, 'true');
+        if (btnLabel) btnLabel.textContent = 'Pending';
+        updateSaveIndicator(navigator.onLine ? 'Pending Sync (Retry)' : 'Offline (Pending Sync)');
         if (statusEl) {
           statusEl.classList.remove('hidden');
-          statusEl.textContent = `❌ Cloud sync failed: ${err.message}`;
+          statusEl.textContent = `⏳ Saved locally (pending cloud confirmation): ${err.message}`;
         }
       } finally {
-        setTimeout(() => { isPushing = false; }, 1500);
+        setTimeout(() => { isPushing = false; }, 1000);
       }
     }
 
     async function pullFromGoogleCloud(silentOnLoad) {
       if (isPulling) return;
-      if ((isPushing || cloudSyncTimer) && silentOnLoad) return;
+      if ((isPushing || cloudSyncTimer || hasPendingCloudSync()) && silentOnLoad) return;
       const url = getActiveCloudUrl();
+      const token = getActiveCloudToken();
       const statusEl = document.getElementById('cloudSyncStatus');
       const pullBtn = document.getElementById('cloudPullQuickBtn');
       if (!url) {
@@ -3264,18 +3400,33 @@
           statusEl.classList.remove('hidden');
           statusEl.textContent = '⏳ Pulling latest state from Google Drive...';
         }
-        // Cache-busting query string so iPad Safari never serves a stale cached response
+        // Cache-busting query string + token so iPad Safari never serves a stale cached response
         const sep = url.includes('?') ? '&' : '?';
-        const res = await fetch(`${url}${sep}_t=${Date.now()}`, { cache: 'no-store', redirect: 'follow' });
+        const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+        const res = await fetch(`${url}${sep}_t=${Date.now()}${tokenParam}`, { cache: 'no-store', redirect: 'follow' });
         const data = await res.json();
+
+        if (data && data.unauthorized) {
+          if (pullBtn) pullBtn.innerHTML = '<span>⬇️</span> Pull Cloud';
+          updateSaveIndicator('Unauthorized (Check Secret)');
+          if (statusEl) {
+            statusEl.classList.remove('hidden');
+            statusEl.textContent = '🔒 Unauthorized: check your Teacher Sync Secret in Roster → Cloud Sync.';
+          }
+          return;
+        }
+
         if (data && data.ok && data.state && data.state.periods) {
-          if (silentOnLoad && (seqAtStart !== localEditSeq || cloudSyncTimer)) {
+          if (silentOnLoad && (seqAtStart !== localEditSeq || cloudSyncTimer || hasPendingCloudSync())) {
             return;
           }
-          // Only overwrite if manual pull OR cloud timestamp changed
-          if (!silentOnLoad || !lastSyncedTimestamp || data.lastUpdated !== lastSyncedTimestamp) {
+          // Only overwrite if manual pull OR cloud revision/timestamp changed
+          const remoteRev = Number(data.revision || 0);
+          const localRev = getCloudRevision();
+          if (!silentOnLoad || !lastSyncedTimestamp || data.lastUpdated !== lastSyncedTimestamp || (remoteRev > 0 && remoteRev !== localRev)) {
+            if (remoteRev > 0) setCloudRevision(remoteRev);
             lastSyncedTimestamp = data.lastUpdated || '';
-            // Keep activePeriod tab local so switching devices doesn't unexpectedly jump tabs unless desired
+            localStorage.removeItem(CLOUD_PENDING_KEY);
             const currentTab = state.currentView || 'daily';
             state = { ...data.state, currentView: currentTab };
             undoStack.length = 0;
@@ -3285,7 +3436,7 @@
             localStorage.setItem(STORAGE_KEY, serialized);
             saveToIndexedDB(serialized);
             renderCurrentView();
-            updateSaveIndicator('Synced from Cloud');
+            updateSaveIndicator(`Synced from Cloud (rev ${remoteRev || '?'})`);
           }
           if (!silentOnLoad && pullBtn) pullBtn.innerHTML = '<span>✓</span> Pulled!';
           setTimeout(() => {
@@ -3293,7 +3444,7 @@
           }, 1800);
           if (statusEl) {
             statusEl.classList.remove('hidden');
-            statusEl.textContent = `✓ Pulled latest data from Google Cloud (updated ${data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : 'just now'})`;
+            statusEl.textContent = `✓ Pulled rev ${remoteRev || '?'} from Google Cloud (updated ${data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : 'just now'})`;
           }
         } else if (!silentOnLoad && statusEl) {
           statusEl.classList.remove('hidden');
