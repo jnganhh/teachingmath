@@ -481,6 +481,7 @@
         <button type="button" class="cat-tab active" data-cat="triangle" onclick="setCategory('triangle')">Triangles</button>
         <button type="button" class="cat-tab" data-cat="lines" onclick="setCategory('lines')">Lines</button>
         <button type="button" class="cat-tab" data-cat="parabola" onclick="setCategory('parabola')">Parabola</button>
+        <button type="button" class="cat-tab" data-cat="quadlinear" onclick="setCategory('quadlinear')">Quad-Linear</button>
         <button type="button" class="cat-tab" data-cat="functions" onclick="setCategory('functions')">Functions (3U)</button>
         <button type="button" class="cat-tab" data-cat="sinusoid" onclick="setCategory('sinusoid')">Sinusoidal (3U)</button>
         <button type="button" class="cat-tab" data-cat="unitcircle" onclick="setCategory('unitcircle')">Unit Circle (3U)</button>
@@ -684,6 +685,7 @@
       },
       // MCR3U Unit Circle / CAST
       unitcircle: {
+        unit: 'deg', // 'deg' | 'rad'
         angleDeg: 135,
         showCast: true,
         showRefAngle: true,
@@ -691,6 +693,18 @@
         showArc: true,
         angleLabel: '135°',
         refLabel: '45°',
+      },
+      // Quadratic-Linear System (MPM2D Enrichment / MCR3U)
+      quadlinear: {
+        a: 1, b: -2, c: -3,
+        m: '1', kLine: -1,
+        xMin: -6, xMax: 6, yMin: -6, yMax: 6,
+        showParabola: true,
+        showLine: true,
+        showIntersections: true,
+        showCoords: true,
+        showVertex: true,
+        showGridNumbers: true,
       },
       // Blank Grid state
       grid: {
@@ -715,6 +729,19 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function degToRadLabel(deg) {
+      const d = Math.round(deg);
+      if (d === 0) return '0';
+      const sign = d < 0 ? '-' : '';
+      const absD = Math.abs(d);
+      const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+      const g = gcd(absD, 180);
+      const num = absD / g;
+      const den = 180 / g;
+      const numStr = num === 1 ? 'π' : `${num}π`;
+      return den === 1 ? `${sign}${numStr}` : `${sign}${numStr}/${den}`;
     }
 
     function extractNum(str) {
@@ -805,6 +832,8 @@
         container.innerHTML = buildLinesControls();
       } else if (state.category === 'parabola') {
         container.innerHTML = buildParabolaControls();
+      } else if (state.category === 'quadlinear') {
+        container.innerHTML = buildQuadLinearControls();
       } else if (state.category === 'functions') {
         container.innerHTML = buildFunctionsControls();
       } else if (state.category === 'sinusoid') {
@@ -1130,9 +1159,13 @@
       return `
         <div>
           <p class="section-title">MCR3U Sinusoidal Function</p>
-          <div class="submode-pills">
+          <div class="submode-pills" style="margin-bottom:8px;">
             <button type="button" class="pill-btn ${s.fn==='sin'?'active':''}" onclick="state.sinusoid.fn='sin'; buildControls(); render();">y = a sin(k(x - d)) + c</button>
             <button type="button" class="pill-btn ${s.fn==='cos'?'active':''}" onclick="state.sinusoid.fn='cos'; buildControls(); render();">y = a cos(k(x - d)) + c</button>
+          </div>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${s.unit==='deg'?'active':''}" onclick="state.sinusoid.unit='deg'; buildControls(); render();">Degrees (°)</button>
+            <button type="button" class="pill-btn ${s.unit==='rad'?'active':''}" onclick="state.sinusoid.unit='rad'; buildControls(); render();">Radians (π)</button>
           </div>
         </div>
         <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
@@ -1157,12 +1190,35 @@
       `;
     }
 
+    function setUnitCircleMode(unit) {
+      const u = state.unitcircle;
+      u.unit = unit;
+      const ref = Math.abs(u.angleDeg) % 180;
+      const refDeg = ref > 90 ? 180 - ref : ref;
+      if (unit === 'rad') {
+        u.angleLabel = degToRadLabel(u.angleDeg);
+        u.refLabel = degToRadLabel(refDeg);
+      } else {
+        u.angleLabel = u.angleDeg + '°';
+        u.refLabel = refDeg + '°';
+      }
+      buildControls();
+      render();
+    }
+
     function buildUnitCircleControls() {
       const u = state.unitcircle;
+      const dispAng = u.unit === 'rad' ? degToRadLabel(u.angleDeg) : `${u.angleDeg}°`;
       return `
-        <div><p class="section-title">MCR3U Standard Position &amp; CAST Rule</p></div>
+        <div>
+          <p class="section-title">MCR3U Standard Position &amp; CAST Rule</p>
+          <div class="submode-pills">
+            <button type="button" class="pill-btn ${u.unit==='deg'?'active':''}" onclick="setUnitCircleMode('deg')">Degrees (°)</button>
+            <button type="button" class="pill-btn ${u.unit==='rad'?'active':''}" onclick="setUnitCircleMode('rad')">Radians (π)</button>
+          </div>
+        </div>
         <div class="form-grid">
-          <div class="field full"><label>Principal Angle θ (${u.angleDeg}°)</label><input type="range" min="-360" max="360" step="15" value="${u.angleDeg}" oninput="state.unitcircle.angleDeg=+this.value; state.unitcircle.angleLabel=this.value+'°'; const ref=Math.abs(this.value)%180; state.unitcircle.refLabel=(ref>90?180-ref:ref)+'°'; buildControls(); render()"></div>
+          <div class="field full"><label>Principal Angle θ (${dispAng})</label><input type="range" min="-360" max="360" step="15" value="${u.angleDeg}" oninput="state.unitcircle.angleDeg=+this.value; const ref=Math.abs(this.value)%180; const refD=ref>90?180-ref:ref; if(state.unitcircle.unit==='rad'){state.unitcircle.angleLabel=degToRadLabel(this.value);state.unitcircle.refLabel=degToRadLabel(refD);}else{state.unitcircle.angleLabel=this.value+'°';state.unitcircle.refLabel=refD+'°';} buildControls(); render()"></div>
           <div class="field"><label>Angle Label</label><input type="text" value="${esc(u.angleLabel)}" oninput="state.unitcircle.angleLabel=this.value; render()"></div>
           <div class="field"><label>Reference ∠ Label</label><input type="text" value="${esc(u.refLabel)}" oninput="state.unitcircle.refLabel=this.value; render()"></div>
         </div>
@@ -1171,6 +1227,44 @@
           <label class="check-label"><input type="checkbox" ${u.showArc?'checked':''} onchange="state.unitcircle.showArc=this.checked; render()"> Rotation arc</label>
           <label class="check-label"><input type="checkbox" ${u.showRefAngle?'checked':''} onchange="state.unitcircle.showRefAngle=this.checked; render()"> Reference angle</label>
           <label class="check-label"><input type="checkbox" ${u.showDropTriangle?'checked':''} onchange="state.unitcircle.showDropTriangle=this.checked; render()"> Drop right triangle</label>
+        </div>
+      `;
+    }
+
+    function buildQuadLinearControls() {
+      const q = state.quadlinear;
+      return `
+        <div><p class="section-title">Quadratic-Linear System (MPM2D Enrichment / MCR3U)</p></div>
+        <div class="preset-row">
+          <button type="button" class="preset-chip" onclick="state.quadlinear.a=1;state.quadlinear.b=-2;state.quadlinear.c=-3;state.quadlinear.m='1';state.quadlinear.kLine=-1;buildControls();render();">2 Solutions (Secant)</button>
+          <button type="button" class="preset-chip" onclick="state.quadlinear.a=1;state.quadlinear.b=0;state.quadlinear.c=0;state.quadlinear.m='2';state.quadlinear.kLine=-1;buildControls();render();">1 Solution (Tangent)</button>
+          <button type="button" class="preset-chip" onclick="state.quadlinear.a=1;state.quadlinear.b=0;state.quadlinear.c=2;state.quadlinear.m='1';state.quadlinear.kLine=-1;buildControls();render();">0 Solutions</button>
+        </div>
+        <p class="section-title" style="margin-top:4px;">Parabola: y = ax² + bx + c</p>
+        <div class="form-grid-3">
+          <div class="field"><label>a</label><input type="text" value="${q.a}" oninput="state.quadlinear.a=parseFrac(this.value,1); render()"></div>
+          <div class="field"><label>b</label><input type="number" step="0.5" value="${q.b}" oninput="state.quadlinear.b=parseFloat(this.value)||0; render()"></div>
+          <div class="field"><label>c</label><input type="number" step="0.5" value="${q.c}" oninput="state.quadlinear.c=parseFloat(this.value)||0; render()"></div>
+        </div>
+        <p class="section-title" style="margin-top:4px;">Line: y = mx + k</p>
+        <div class="form-grid">
+          <div class="field"><label>Slope m (e.g. 1/2)</label><input type="text" value="${esc(q.m)}" oninput="state.quadlinear.m=this.value; render()"></div>
+          <div class="field"><label>y-intercept k</label><input type="number" step="0.5" value="${q.kLine}" oninput="state.quadlinear.kLine=parseFloat(this.value)||0; render()"></div>
+        </div>
+        <div id="qlReadout" class="info-box"></div>
+        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="field"><label>x min</label><input type="number" value="${q.xMin}" oninput="state.quadlinear.xMin=+this.value||-6; render()"></div>
+          <div class="field"><label>x max</label><input type="number" value="${q.xMax}" oninput="state.quadlinear.xMax=+this.value||6; render()"></div>
+          <div class="field"><label>y min</label><input type="number" value="${q.yMin}" oninput="state.quadlinear.yMin=+this.value||-6; render()"></div>
+          <div class="field"><label>y max</label><input type="number" value="${q.yMax}" oninput="state.quadlinear.yMax=+this.value||6; render()"></div>
+        </div>
+        <div class="check-row">
+          <label class="check-label"><input type="checkbox" ${q.showParabola?'checked':''} onchange="state.quadlinear.showParabola=this.checked; render()"> Show parabola</label>
+          <label class="check-label"><input type="checkbox" ${q.showLine?'checked':''} onchange="state.quadlinear.showLine=this.checked; render()"> Show line</label>
+          <label class="check-label"><input type="checkbox" ${q.showIntersections?'checked':''} onchange="state.quadlinear.showIntersections=this.checked; render()"> Intersection dots</label>
+          <label class="check-label"><input type="checkbox" ${q.showCoords?'checked':''} onchange="state.quadlinear.showCoords=this.checked; render()"> Coordinates</label>
+          <label class="check-label"><input type="checkbox" ${q.showVertex?'checked':''} onchange="state.quadlinear.showVertex=this.checked; render()"> Vertex</label>
+          <label class="check-label"><input type="checkbox" ${q.showGridNumbers?'checked':''} onchange="state.quadlinear.showGridNumbers=this.checked; render()"> Axis numbers</label>
         </div>
       `;
     }
@@ -2033,8 +2127,9 @@
         for (let deg = Math.ceil(xMin / 90) * 90; deg <= xMax + 1e-9; deg += 90) {
           if (Math.abs(deg) < 1e-9) continue;
           const px = grid.toX(deg);
+          const tickLbl = s.unit === 'rad' ? degToRadLabel(deg) : `${deg}°`;
           inner += `<line x1="${px.toFixed(2)}" y1="${(axisY - 3).toFixed(2)}" x2="${px.toFixed(2)}" y2="${(axisY + 3).toFixed(2)}" stroke="${cfg.gridAxis}" stroke-width="1.2" />`;
-          inner += `<text x="${px.toFixed(2)}" y="${(axisY + numSize + 4).toFixed(2)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${numSize}" fill="${cfg.muted}">${deg}°</text>`;
+          inner += `<text x="${px.toFixed(2)}" y="${(axisY + numSize + 4).toFixed(2)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${numSize}" fill="${cfg.muted}">${tickLbl}</text>`;
         }
         for (let y = Math.ceil(yMin); y <= yMax + 1e-9; y += 1) {
           if (Math.abs(y) < 1e-9) continue;
@@ -2046,7 +2141,8 @@
 
       const eqEl = document.getElementById('sinEqReadout');
       if (eqEl) {
-        const dStr = s.d === 0 ? 'x' : `(x ${s.d > 0 ? '- ' + s.d + '°' : '+ ' + (-s.d) + '°'})`;
+        const dFmt = s.unit === 'rad' ? degToRadLabel(Math.abs(s.d)) : `${Math.abs(s.d)}°`;
+        const dStr = s.d === 0 ? 'x' : `(x ${s.d > 0 ? '- ' + dFmt : '+ ' + dFmt})`;
         const kStr = s.k === 1 ? dStr : `${fmtNum(s.k)}${dStr}`;
         const cStr = s.c === 0 ? '' : (s.c > 0 ? ` + ${fmtNum(s.c)}` : ` - ${fmtNum(-s.c)}`);
         eqEl.textContent = `y = ${fmtNum(s.a)} ${s.fn}(${kStr})${cStr}`;
@@ -2170,6 +2266,99 @@
     }
 
     // ===========================
+    // Quadratic-Linear System Renderer
+    // ===========================
+    function renderQuadLinearSVG(cfg) {
+      const q = state.quadlinear;
+      const xMin = q.xMin, xMax = Math.max(q.xMin + 2, q.xMax);
+      const yMin = q.yMin, yMax = Math.max(q.yMin + 2, q.yMax);
+      const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 1, 1, q.showGridNumbers, true, 'x', 'y');
+      let inner = grid.svg;
+
+      const a = q.a, b = q.b, c = q.c;
+      const m = parseFrac(q.m, 1), kLine = q.kLine;
+
+      // Solve a x^2 + (b - m)x + (c - kLine) = 0
+      const A = a, B = b - m, C = c - kLine;
+      const ptsInt = [];
+      if (Math.abs(A) < 1e-9) {
+        if (Math.abs(B) > 1e-9) {
+          const ix = -C / B;
+          ptsInt.push({ x: ix, y: m * ix + kLine });
+        }
+      } else {
+        const disc = B * B - 4 * A * C;
+        if (disc > 1e-6) {
+          const sq = Math.sqrt(disc);
+          const x1 = (-B - sq) / (2 * A), x2 = (-B + sq) / (2 * A);
+          ptsInt.push({ x: x1, y: m * x1 + kLine }, { x: x2, y: m * x2 + kLine });
+        } else if (Math.abs(disc) <= 1e-6) {
+          const x1 = -B / (2 * A);
+          ptsInt.push({ x: x1, y: m * x1 + kLine });
+        }
+      }
+
+      const qlEl = document.getElementById('qlReadout');
+      if (qlEl) {
+        if (ptsInt.length === 0) qlEl.textContent = '0 real intersections (Δ < 0)';
+        else if (ptsInt.length === 1) qlEl.textContent = `1 tangent point: (${fmtNum(ptsInt[0].x)}, ${fmtNum(ptsInt[0].y)})`;
+        else qlEl.textContent = `2 intersections: (${fmtNum(ptsInt[0].x)}, ${fmtNum(ptsInt[0].y)}) & (${fmtNum(ptsInt[1].x)}, ${fmtNum(ptsInt[1].y)})`;
+      }
+
+      // Parabola
+      if (q.showParabola && Math.abs(a) > 1e-9) {
+        const segPts = [];
+        for (let i = 0; i <= 180; i++) {
+          const x = xMin + (i / 180) * (xMax - xMin);
+          const y = a * x * x + b * x + c;
+          if (y >= yMin - 0.15 && y <= yMax + 0.15) {
+            segPts.push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+          }
+        }
+        if (segPts.length > 1) {
+          inner += `<polyline points="${segPts.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" stroke-linejoin="round" marker-start="url(#arrow-curve-rev)" marker-end="url(#arrow-curve)" />`;
+        }
+      }
+
+      // Line (clipped to grid)
+      if (q.showLine) {
+        const clipId = 'ql-clip-' + Math.floor(Math.random() * 100000);
+        inner += `<defs><clipPath id="${clipId}"><rect x="${grid.pad}" y="${grid.pad}" width="${grid.plotW}" height="${grid.plotH}" /></clipPath></defs>`;
+        const lx1 = xMin - 1, ly1 = m * lx1 + kLine;
+        const lx2 = xMax + 1, ly2 = m * lx2 + kLine;
+        inner += `<g clip-path="url(#${clipId})"><line x1="${grid.toX(lx1).toFixed(1)}" y1="${grid.toY(ly1).toFixed(1)}" x2="${grid.toX(lx2).toFixed(1)}" y2="${grid.toY(ly2).toFixed(1)}" stroke="${cfg.accent4}" stroke-width="${cfg.sw}" /></g>`;
+      }
+
+      // Vertex
+      if (q.showVertex && Math.abs(a) > 1e-9) {
+        const vx = -b / (2 * a), vy = a * vx * vx + b * vx + c;
+        if (vx >= xMin && vx <= xMax && vy >= yMin && vy <= yMax) {
+          const px = grid.toX(vx), py = grid.toY(vy);
+          inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.5" fill="${cfg.tertiary}" stroke="#ffffff" stroke-width="1.2" />`;
+          if (q.showCoords) {
+            const dy = a > 0 ? 16 : -10;
+            inner += `<text x="${(px + 6).toFixed(1)}" y="${(py + dy).toFixed(1)}" font-family="Arial, sans-serif" font-weight="700" font-size="${Math.max(10, cfg.fs - 2)}" fill="${cfg.tertiary}">(${fmtNum(vx)}, ${fmtNum(vy)})</text>`;
+          }
+        }
+      }
+
+      // Intersections
+      if (q.showIntersections) {
+        ptsInt.forEach(pt => {
+          if (pt.x >= xMin && pt.x <= xMax && pt.y >= yMin && pt.y <= yMax) {
+            const px = grid.toX(pt.x), py = grid.toY(pt.y);
+            inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.3" />`;
+            if (q.showCoords) {
+              inner += `<text x="${(px + 7).toFixed(1)}" y="${(py - 8).toFixed(1)}" font-family="Arial, sans-serif" font-weight="700" font-size="${Math.max(10, cfg.fs - 2)}" fill="${cfg.secondary}">(${fmtNum(pt.x)}, ${fmtNum(pt.y)})</text>`;
+            }
+          }
+        });
+      }
+
+      return inner;
+    }
+
+    // ===========================
     // Master Render
     // ===========================
     function render() {
@@ -2180,6 +2369,7 @@
       if (state.category === 'triangle') content = renderTriangleSVG(cfg);
       else if (state.category === 'lines') content = renderLinesSVG(cfg);
       else if (state.category === 'parabola') content = renderParabolaSVG(cfg);
+      else if (state.category === 'quadlinear') content = renderQuadLinearSVG(cfg);
       else if (state.category === 'functions') content = renderFunctionsSVG(cfg);
       else if (state.category === 'sinusoid') content = renderSinusoidSVG(cfg);
       else if (state.category === 'unitcircle') content = renderUnitCircleSVG(cfg);
@@ -2244,6 +2434,8 @@
         }
       } else if (state.category === 'parabola') {
         items = [dot(cfg.primary, 'Parabola'), dot(cfg.secondary, 'Vertex'), dot(cfg.tertiary, 'Zeros / Axis'), dot(cfg.accent5, 'y-intercept'), dot(cfg.accent4, 'Given Point')];
+      } else if (state.category === 'quadlinear') {
+        items = [dot(cfg.primary, 'Parabola'), dot(cfg.accent4, 'Line'), dot(cfg.secondary, 'Intersections'), dot(cfg.tertiary, 'Vertex')];
       } else if (state.category === 'functions') {
         items = [dot(cfg.primary, 'Transformed'), dot(cfg.muted, 'Parent (Dashed)'), dot(cfg.tertiary, 'Asymptotes'), dot(cfg.secondary, 'Key Points')];
       } else if (state.category === 'sinusoid') {
