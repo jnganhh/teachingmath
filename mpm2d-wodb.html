@@ -7,9 +7,9 @@
   <link rel="stylesheet" href="assets/wodb/wodb.css" />
   <script type="module" src="assets/wodb/wodb.mjs"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"></script>
   <style>
     .comic-border {
       border: 3px solid #1e293b;
@@ -20,13 +20,53 @@
       box-shadow: 3px 3px 0px #1e293b;
       transition: all 0.12s ease;
     }
-    .comic-btn:hover {
+    .comic-btn:hover:not(:disabled) {
       transform: translate(-1px, -1px);
       box-shadow: 4px 4px 0px #1e293b;
     }
+    .comic-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
     .tab-active {
-      background-color: #2563eb !important;
+      background-color: #1d4ed8 !important;
       color: #ffffff !important;
+    }
+    :focus-visible {
+      outline: 3px solid #2563eb;
+      outline-offset: 2px;
+    }
+    .math-scroll {
+      overflow-x: auto;
+      max-width: 100%;
+    }
+    dialog::backdrop {
+      background: rgba(15, 23, 42, 0.75);
+    }
+    body.is-presenting {
+      padding: 0.75rem;
+      background-color: #fefce8;
+    }
+    body.is-presenting #mainHeader,
+    body.is-presenting #browserSection {
+      display: none !important;
+    }
+    body.is-presenting #stageSection {
+      min-height: calc(100vh - 1.5rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    body.is-presenting #wodbGrid {
+      flex: 1;
+    }
+    #stageSection:fullscreen {
+      background-color: #ffffff;
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
   </style>
 </head>
@@ -45,59 +85,82 @@
     <main>
     <div id="mpm2d" class="space-y-4" data-course-panel>
     <!-- Top Header -->
-    <header class="bg-white rounded-xl comic-border p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <header id="mainHeader" class="bg-white rounded-xl comic-border p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div>
         <div class="flex items-center gap-2 flex-wrap">
           <span class="px-2.5 py-1 text-xs font-black uppercase rounded bg-blue-100 text-blue-900 border-2 border-slate-800">Ontario MPM2D</span>
-          <span class="px-2.5 py-1 text-xs font-black rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800">800 WODB Puzzles</span>
+          <span id="totalPuzzleBadge" class="px-2.5 py-1 text-xs font-black rounded bg-emerald-100 text-emerald-900 border-2 border-slate-800">800 WODB Puzzles</span>
         </div>
-        <h2 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">MPM2D · Principles of Mathematics</h2>
-        <p class="text-xs font-bold text-slate-600">Every quadrant has a valid mathematical reason! Tap a card to tally class votes, then reveal reasons.</p>
+        <h1 class="text-xl sm:text-3xl font-black text-blue-700 mt-2">🤔 Which One Doesn't Belong? (<span id="titleCount">800</span> MPM2D Set)</h1>
+        <p class="text-xs font-bold text-slate-600">Every quadrant has a valid mathematical reason! Tap a card or +/− to tally class votes, then reveal sample reasons.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button onclick="pickRandomPuzzle()" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-300 text-slate-900 comic-btn">
+        <button type="button" onclick="pickRandomPuzzle()" class="px-3 py-2 text-xs font-black rounded-lg bg-amber-300 text-slate-900 comic-btn">
           🎲 Random WODB
         </button>
-        <button onclick="toggleReasons()" id="reasonsToggleBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-emerald-600 text-white comic-btn">
-          👁️ Show Reasons
+        <button type="button" onclick="toggleReasons()" id="reasonsToggleBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-emerald-700 text-white comic-btn">
+          👁️ Sample Reasons
         </button>
-        <button onclick="resetVotes()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-100 text-slate-900 comic-btn">
+        <button type="button" onclick="toggleHideTotals()" id="hideTotalsBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-100 text-slate-900 comic-btn">
+          🙈 Hide Totals
+        </button>
+        <button type="button" onclick="resetVotes()" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-100 text-slate-900 comic-btn">
           🔄 Reset Votes
         </button>
-        <button onclick="openCustomWodbModal()" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">
+        <button type="button" onclick="undoResetVotes()" id="undoResetBtn" class="hidden px-3 py-2 text-xs font-black rounded-lg bg-amber-100 text-amber-950 comic-btn">
+          ↩️ Undo Reset
+        </button>
+        <button type="button" onclick="togglePresentMode()" id="presentBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-blue-700 text-white comic-btn">
+          🖥️ Present
+        </button>
+        <button type="button" onclick="openCustomWodbModal()" class="px-3 py-2 text-xs font-black rounded-lg bg-purple-100 text-purple-900 comic-btn">
           ➕ Custom
         </button>
-        <button onclick="toggleLargeFont()" id="fontBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
+        <button type="button" onclick="toggleLargeFont()" id="fontBtn" class="px-3 py-2 text-xs font-black rounded-lg bg-slate-800 text-white comic-btn">
           ⛶ Large Font
         </button>
-        <button onclick="hardRefreshApp()" class="px-3 py-2 text-xs font-black rounded-lg bg-cyan-100 text-cyan-950 comic-btn" title="Reload latest version">
+        <button type="button" onclick="hardRefreshApp()" class="px-3 py-2 text-xs font-black rounded-lg bg-cyan-100 text-cyan-950 comic-btn" title="Reload latest version">
           🔄 Refresh
         </button>
       </div>
     </header>
 
+    <!-- Non-blocking storage warning -->
+    <div id="storageWarning" role="status" class="hidden bg-amber-100 border-2 border-slate-800 rounded-xl p-3 text-xs font-bold text-amber-950 flex items-center justify-between gap-2">
+      <span id="storageWarningText"></span>
+      <button type="button" onclick="document.getElementById('storageWarning').classList.add('hidden')" class="px-2 py-0.5 rounded bg-white border border-slate-800 font-black">✕</button>
+    </div>
+
     <!-- Active WODB 2x2 Stage -->
-    <section class="bg-white rounded-xl comic-border p-4 sm:p-6 space-y-4">
+    <section id="stageSection" tabindex="-1" class="bg-white rounded-xl comic-border p-4 sm:p-6 space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-slate-200 pb-3">
         <div>
-          <span id="activeUnitBadge" class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800">Unit</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="activeUnitBadge" class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-900 border border-slate-800">Unit</span>
+            <span id="activeStrandBadge" class="px-2 py-0.5 text-[10px] font-black uppercase rounded bg-purple-100 text-purple-900 border border-slate-800">Strand</span>
+          </div>
           <h2 id="activeTitle" class="text-lg sm:text-2xl font-black text-slate-900 mt-1">Puzzle Title</h2>
         </div>
-        <div class="flex items-center gap-2">
-          <button onclick="stepPuzzle(-1)" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200">◀ Prev</button>
-          <button onclick="stepPuzzle(1)" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200">Next ▶</button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" id="stagePrevBtn" onclick="stepPuzzle(-1)" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">◀ Prev</button>
+          <button type="button" id="stageNextBtn" onclick="stepPuzzle(1)" class="px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">Next ▶</button>
+          <button type="button" id="presentReasonsBtn" onclick="toggleReasons()" class="hidden px-3 py-1.5 text-xs font-black rounded-lg bg-emerald-700 text-white border-2 border-slate-800">👁️ Sample Reasons</button>
+          <button type="button" id="presentHideTotalsBtn" onclick="toggleHideTotals()" class="hidden px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 text-slate-900 border-2 border-slate-800">🙈 Hide Totals</button>
+          <button type="button" id="presentResetBtn" onclick="resetVotes()" class="hidden px-3 py-1.5 text-xs font-black rounded-lg bg-slate-100 text-slate-900 border-2 border-slate-800">🔄 Reset</button>
+          <button type="button" id="exitPresentBtn" onclick="exitPresentMode()" class="hidden px-3 py-1.5 text-xs font-black rounded-lg bg-slate-800 text-white border-2 border-slate-800">✕ Exit Present</button>
         </div>
       </div>
 
       <div id="wodbGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
     </section>
 
-    <!-- Expectation Filter, Search & Paginated 800-Puzzle Browser -->
-    <section class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3">
+    <!-- Expectation Filter, Search & Paginated Puzzle Browser -->
+    <section id="browserSection" class="bg-white rounded-xl comic-border p-3 sm:p-4 space-y-3">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar"></div>
+        <div class="flex flex-wrap items-center gap-1.5" id="unitFilterBar" role="tablist" aria-label="Filter puzzles by topic"></div>
         <div class="flex items-center gap-2">
-          <input type="text" id="wodbSearch" oninput="onSearchChange()" placeholder="Search # (e.g. 250) or topic..." class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 focus:outline-none w-48 sm:w-56" />
+          <label for="wodbSearch" class="sr-only">Search puzzles by number or topic</label>
+          <input type="text" id="wodbSearch" oninput="onSearchChange()" placeholder="Search # (e.g. 250) or topic..." class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800 w-52 sm:w-64" />
         </div>
       </div>
 
@@ -106,12 +169,15 @@
       <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs font-black">
         <span id="pageInfo" class="text-slate-600">Showing 1–12 of 800</span>
         <div class="flex items-center gap-2">
-          <button onclick="changePage(-1)" id="prevPageBtn" class="px-3 py-1 rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">◀ Prev 12</button>
-          <button onclick="changePage(1)" id="nextPageBtn" class="px-3 py-1 rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">Next 12 ▶</button>
+          <button type="button" onclick="changePage(-1)" id="prevPageBtn" class="px-3 py-1 rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">◀ Prev 12</button>
+          <button type="button" onclick="changePage(1)" id="nextPageBtn" class="px-3 py-1 rounded-lg bg-slate-100 border-2 border-slate-800 hover:bg-slate-200 disabled:opacity-40">Next 12 ▶</button>
         </div>
       </div>
     </section>
   </div>
+
+
+    </div>
 
     <section id="mcr3u" class="wodb-course" data-course="MCR3U" data-course-panel aria-labelledby="mcr3u-title" hidden>
       <h2 id="mcr3u-title">MCR3U · Functions</h2>
@@ -124,32 +190,94 @@
     </main>
   </div>
 
-  <!-- Custom WODB Modal -->
-  <div id="customWodbModal" onclick="if(event.target===this) closeCustomWodbModal()" class="hidden fixed inset-0 z-40 bg-slate-900/75 flex items-center justify-center p-3 sm:p-6">
-    <div class="bg-white max-w-lg w-full rounded-2xl comic-border p-4 sm:p-5 space-y-3">
+  <!-- Custom WODB Native Dialog -->
+  <dialog id="customWodbDialog" aria-labelledby="customDialogTitle" class="bg-white max-w-xl w-[calc(100%-1.5rem)] rounded-2xl comic-border p-0 m-auto">
+    <div class="max-h-[90vh] overflow-y-auto p-4 sm:p-5 space-y-3">
       <div class="flex items-center justify-between border-b-2 border-slate-200 pb-2">
-        <h3 class="text-lg font-black">➕ Create Custom WODB</h3>
-        <button onclick="closeCustomWodbModal()" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-800 text-white">✕</button>
+        <h3 id="customDialogTitle" class="text-lg font-black">➕ Create Custom WODB</h3>
+        <button type="button" onclick="closeCustomWodbModal()" aria-label="Close custom puzzle dialog" class="px-2.5 py-1 text-xs font-black rounded-lg bg-slate-800 text-white">✕</button>
       </div>
-      <input type="text" id="cwTitle" placeholder="Title (e.g., Quadratic Forms)" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-      <div class="grid grid-cols-2 gap-2">
-        <input type="text" id="cwA" placeholder="Box A (e.g., $y = x^2 - 4$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-        <input type="text" id="cwB" placeholder="Box B (e.g., $y = (x - 2)^2$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-        <input type="text" id="cwC" placeholder="Box C (e.g., $y = -x^2 + 4$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-        <input type="text" id="cwD" placeholder="Box D (e.g., $y = 2x^2 - 8$)" class="px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+
+      <p class="text-[11px] font-bold text-slate-600">
+        Tip: Wrap math in <code class="bg-slate-100 px-1 rounded">\( ... \)</code> or <code class="bg-slate-100 px-1 rounded">$ ... $</code>. Unpaired <code class="bg-slate-100 px-1 rounded">$</code> amounts stay literal.
+      </p>
+
+      <div>
+        <label for="cwTitle" class="block text-xs font-black text-slate-800 mb-1">Puzzle Title</label>
+        <input type="text" id="cwTitle" maxlength="120" placeholder="e.g., Quadratic Forms" class="w-full px-3 py-2 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
       </div>
-      <div class="grid grid-cols-1 gap-1.5">
-        <input type="text" id="cwRA" placeholder="Reason A doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-        <input type="text" id="cwRB" placeholder="Reason B doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-        <input type="text" id="cwRC" placeholder="Reason C doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
-        <input type="text" id="cwRD" placeholder="Reason D doesn't belong (optional)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="cwA" class="block text-xs font-black text-slate-800 mb-1">Box A Expression</label>
+          <input type="text" id="cwA" maxlength="300" oninput="updateCustomPreview('A')" placeholder="e.g., $y = x^2 - 4$" class="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+          <div id="cwPreviewA" class="mt-1 min-h-[24px] px-2 py-1 rounded bg-blue-50 border border-slate-300 text-xs"></div>
+        </div>
+        <div>
+          <label for="cwB" class="block text-xs font-black text-slate-800 mb-1">Box B Expression</label>
+          <input type="text" id="cwB" maxlength="300" oninput="updateCustomPreview('B')" placeholder="e.g., $y = (x - 2)^2$" class="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+          <div id="cwPreviewB" class="mt-1 min-h-[24px] px-2 py-1 rounded bg-emerald-50 border border-slate-300 text-xs"></div>
+        </div>
+        <div>
+          <label for="cwC" class="block text-xs font-black text-slate-800 mb-1">Box C Expression</label>
+          <input type="text" id="cwC" maxlength="300" oninput="updateCustomPreview('C')" placeholder="e.g., $y = -x^2 + 4$" class="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+          <div id="cwPreviewC" class="mt-1 min-h-[24px] px-2 py-1 rounded bg-amber-50 border border-slate-300 text-xs"></div>
+        </div>
+        <div>
+          <label for="cwD" class="block text-xs font-black text-slate-800 mb-1">Box D Expression</label>
+          <input type="text" id="cwD" maxlength="300" oninput="updateCustomPreview('D')" placeholder="e.g., $y = 2x^2 - 8$" class="w-full px-3 py-2 text-xs font-mono font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+          <div id="cwPreviewD" class="mt-1 min-h-[24px] px-2 py-1 rounded bg-purple-50 border border-slate-300 text-xs"></div>
+        </div>
       </div>
-      <button onclick="saveCustomWodb()" class="w-full py-2.5 text-xs font-black rounded-xl bg-emerald-600 text-white comic-btn">💾 Save &amp; Present</button>
+
+      <div class="grid grid-cols-1 gap-2">
+        <div>
+          <label for="cwRA" class="block text-[11px] font-black text-slate-700 mb-0.5">Reason A doesn't belong (optional)</label>
+          <input type="text" id="cwRA" maxlength="300" placeholder="Reason A doesn't belong" class="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        </div>
+        <div>
+          <label for="cwRB" class="block text-[11px] font-black text-slate-700 mb-0.5">Reason B doesn't belong (optional)</label>
+          <input type="text" id="cwRB" maxlength="300" placeholder="Reason B doesn't belong" class="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        </div>
+        <div>
+          <label for="cwRC" class="block text-[11px] font-black text-slate-700 mb-0.5">Reason C doesn't belong (optional)</label>
+          <input type="text" id="cwRC" maxlength="300" placeholder="Reason C doesn't belong" class="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        </div>
+        <div>
+          <label for="cwRD" class="block text-[11px] font-black text-slate-700 mb-0.5">Reason D doesn't belong (optional)</label>
+          <input type="text" id="cwRD" maxlength="300" placeholder="Reason D doesn't belong" class="w-full px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-50 border-2 border-slate-800" />
+        </div>
+      </div>
+
+      <div id="cwSaveError" role="alert" class="hidden p-2.5 rounded-lg bg-red-50 border-2 border-red-700 text-xs font-bold text-red-900"></div>
+
+      <button type="button" onclick="saveCustomWodb()" class="w-full py-2.5 text-xs font-black rounded-xl bg-emerald-700 text-white comic-btn">💾 Save &amp; Present</button>
     </div>
-  </div>
+  </dialog>
 
   <script>
-    function fmtSign(n) { return n >= 0 ? `+ ${n}` : `- ${Math.abs(n)}`; }
+    const TOPICS = [
+      { id: 'all', label: 'All', strand: '' },
+      { id: 'exp-a', label: 'Factoring & Expanding', strand: 'Quadratic Relations' },
+      { id: 'exp-b', label: 'Quadratic Relations', strand: 'Quadratic Relations' },
+      { id: 'exp-c', label: 'Linear Systems', strand: 'Analytic Geometry' },
+      { id: 'exp-d', label: 'Analytic & Trig', strand: 'Analytic Geometry & Trigonometry' },
+      { id: 'custom', label: 'Custom', strand: 'Custom' }
+    ];
+
+    const TOPIC_BY_ID = Object.fromEntries(TOPICS.map(t => [t.id, t]));
+
+    function gcd(a, b) {
+      let x = Math.abs(a);
+      let y = Math.abs(b);
+      while (y !== 0) {
+        const t = x % y;
+        x = y;
+        y = t;
+      }
+      return x || 1;
+    }
+
     function fmtTermX(b) {
       if (b === 0) return '';
       if (b === 1) return '+ x';
@@ -157,7 +285,23 @@
       return b > 0 ? `+ ${b}x` : `- ${Math.abs(b)}x`;
     }
 
-    // Deterministic generator producing 800 distinct MPM2D WODB puzzles (200 per Expectation A, B, C, D)
+    // Deterministic 4-element permutation based on puzzle number so quadrants vary while bookmarks stay stable
+    const PERM_4 = [
+      [0, 1, 2, 3], [1, 2, 3, 0], [2, 3, 0, 1], [3, 0, 1, 2],
+      [0, 2, 1, 3], [1, 3, 2, 0], [2, 0, 3, 1], [3, 1, 0, 2],
+      [0, 3, 1, 2], [1, 0, 2, 3], [2, 1, 3, 0], [3, 2, 0, 1]
+    ];
+    const QUAD_LABELS = ['A', 'B', 'C', 'D'];
+
+    function permuteItems(items, num) {
+      const p = PERM_4[(num - 1) % PERM_4.length];
+      return p.map((origIdx, newIdx) => ({
+        ...items[origIdx],
+        label: QUAD_LABELS[newIdx]
+      }));
+    }
+
+    // Deterministic generator producing 800 distinct, mathematically verified MPM2D WODB puzzles
     function generate800Puzzles() {
       const list = [];
       let num = 1;
@@ -168,7 +312,8 @@
         const r = (i % 10) + 2;
         const p = Math.floor(i / 10) + 1;
         const m = (i % 7) + 1;
-        const n = ((i + 3) % 8) + 2;
+        const rawN = ((i + 3) % 8) + 2;
+        const n = rawN === m ? rawN + 1 : rawN;
         const bSum = m + n;
         const cProd = m * n;
         const k = (i % 5) + 2;
@@ -176,14 +321,37 @@
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp A: Factoring & Expanding',
+          topicId: 'exp-a',
+          unit: TOPIC_BY_ID['exp-a'].label,
+          strand: 'Quadratic Relations',
+          tags: ['quadratic', 'expressions', 'factoring', 'difference of squares', 'perfect square', 'gcf', 'trinomial'],
           title: `#${num} — Four Quadratic Expressions`,
-          items: [
-            { label: 'A', expr: `$x^2 - ${r * r}$`, reason: `Only difference of squares: $(x - ${r})(x + ${r})$ (2 terms, $b = 0$).` },
-            { label: 'B', expr: `$x^2 + ${2 * p}x + ${p * p}$`, reason: `Only perfect square trinomial: $(x + ${p})^2$.` },
-            { label: 'C', expr: `$x^2 + ${bSum}x + ${cProd}$`, reason: `Only trinomial with two distinct factors: $(x + ${m})(x + ${n})$.` },
-            { label: 'D', expr: `$${k}x^2 + ${k * q}x$`, reason: `Only one with a GCF ($${k}x$) and constant term $c = 0$.` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'a1-diff-squares',
+              expr: `$x^2 - ${r * r}$`,
+              reason: `Only difference of squares: $(x - ${r})(x + ${r})$ ($b = 0$, $c < 0$).`,
+              meta: { a: 1, b: 0, c: -(r * r) }
+            },
+            {
+              claimId: 'a1-perfect-square',
+              expr: `$x^2 + ${2 * p}x + ${p * p}$`,
+              reason: `Only perfect-square trinomial: $(x + ${p})^2$.`,
+              meta: { a: 1, b: 2 * p, c: p * p }
+            },
+            {
+              claimId: 'a1-distinct-factors',
+              expr: `$x^2 + ${bSum}x + ${cProd}$`,
+              reason: `Only trinomial with two distinct linear factors over the integers: $(x + ${m})(x + ${n})$.`,
+              meta: { a: 1, b: bSum, c: cProd }
+            },
+            {
+              claimId: 'a1-gcf-no-const',
+              expr: `$${k}x^2 + ${k * q}x$`,
+              reason: `Only expression with leading coefficient $> 1$ and constant term $c = 0$ (GCF $${k}x$).`,
+              meta: { a: k, b: k * q, c: 0 }
+            }
+          ], num)
         });
         num++;
       }
@@ -191,22 +359,46 @@
       // A2: 100 puzzles — Four Factored / Product Expressions
       for (let i = 0; i < 100; i++) {
         const a = (i % 9) + 1;
-        const b = (Math.floor(i / 9) % 8) + 2;
-        const bUse = b === a ? b + 1 : b;
+        const bRaw = (Math.floor(i / 9) % 8) + 2;
+        const bUse = bRaw === a ? bRaw + 1 : bRaw;
         const c = (i % 4) + 2;
-        const d = ((i + 1) % 5) + 1;
-        const k = (i % 3) + 2;
+        let d = ((i + 1) % 5) + 1;
+        while (gcd(c, d) !== 1) d++;
+        const k = (Math.floor(i / 72) % 3) + 2 + (i % 2);
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp A: Factoring & Expanding',
+          topicId: 'exp-a',
+          unit: TOPIC_BY_ID['exp-a'].label,
+          strand: 'Quadratic Relations',
+          tags: ['quadratic', 'binomial', 'products', 'expanding', 'conjugate', 'gcf', 'factoring'],
           title: `#${num} — Four Binomial Products`,
-          items: [
-            { label: 'A', expr: `$(x + ${a})(x + ${bUse})$`, reason: `Only one with two distinct positive constants (expands to $x^2 + ${a + bUse}x + ${a * bUse}$).` },
-            { label: 'B', expr: `$(x - ${a})(x + ${a})$`, reason: `Only conjugate pair (expands to difference of squares $x^2 - ${a * a}$ with no $x$ term).` },
-            { label: 'C', expr: `$(${c}x + ${d})^2$`, reason: `Only squared binomial with leading coefficient $> 1$ (leading term $${c * c}x^2$).` },
-            { label: 'D', expr: `$${k}(x + ${a})(x - ${bUse})$`, reason: `Only expression with a numerical GCF ($${k}$) factored out in front.` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'a2-distinct-monic',
+              expr: `$(x + ${a})(x + ${bUse})$`,
+              reason: `Only product of two distinct monic factors with positive constants (expands to $x^2 + ${a + bUse}x + ${a * bUse}$).`,
+              meta: { kind: 'distinct-monic', a, b: bUse }
+            },
+            {
+              claimId: 'a2-conjugate',
+              expr: `$(x - ${a})(x + ${a})$`,
+              reason: `Only conjugate pair (expands to difference of squares $x^2 - ${a * a}$ with no $x$ term).`,
+              meta: { kind: 'conjugate', a }
+            },
+            {
+              claimId: 'a2-nonmonic-square',
+              expr: `$(${c}x + ${d})^2$`,
+              reason: `Only squared binomial with leading coefficient $> 1$ and coprime coefficients (leading term $${c * c}x^2$).`,
+              meta: { kind: 'nonmonic-square', c, d }
+            },
+            {
+              claimId: 'a2-outer-gcf',
+              expr: `$${k}(x + ${a})(x - ${bUse})$`,
+              reason: `Only expression with a numerical GCF ($${k}$) factored out in front.`,
+              meta: { kind: 'outer-gcf', k, a, b: bUse }
+            }
+          ], num)
         });
         num++;
       }
@@ -221,14 +413,37 @@
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp B: Quadratic Relations',
+          topicId: 'exp-b',
+          unit: TOPIC_BY_ID['exp-b'].label,
+          strand: 'Quadratic Relations',
+          tags: ['parabola', 'quadratic', 'vertex', 'intercepts', 'opens downward', 'stretch'],
           title: `#${num} — Four Parabolas`,
-          items: [
-            { label: 'A', expr: `$y = x^2 - ${r * r}$`, reason: `Only one in standard form with $2$ $x$-intercepts at $x = \\pm ${r}$.` },
-            { label: 'B', expr: `$y = (x - ${h})^2$`, reason: `Only parabola with exactly $1$ $x$-intercept (vertex on the $x$-axis at $(${h}, 0)$).` },
-            { label: 'C', expr: `$y = -x^2 + ${k}$`, reason: `Only parabola that opens downward ($a = -1 < 0$, has a maximum).` },
-            { label: 'D', expr: `$y = ${a}(x - ${h})^2 + ${k}$`, reason: `Only parabola with vertical stretch $a = ${a}$ AND $0$ $x$-intercepts.` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'b1-neg-yint',
+              expr: `$y = x^2 - ${r * r}$`,
+              reason: `Only parabola with a negative $y$-intercept ($y = -${r * r}$).`,
+              meta: { a: 1, yInt: -(r * r), xIntCount: 2 }
+            },
+            {
+              claimId: 'b1-one-xint',
+              expr: `$y = (x - ${h})^2$`,
+              reason: `Only parabola with exactly $1$ $x$-intercept (vertex on the $x$-axis at $(${h}, 0)$).`,
+              meta: { a: 1, yInt: h * h, xIntCount: 1 }
+            },
+            {
+              claimId: 'b1-opens-down',
+              expr: `$y = -x^2 + ${k}$`,
+              reason: `Only parabola that opens downward ($a = -1 < 0$, has a maximum).`,
+              meta: { a: -1, yInt: k, xIntCount: 2 }
+            },
+            {
+              claimId: 'b1-stretch-zero-xint',
+              expr: `$y = ${a}(x - ${h})^2 + ${k}$`,
+              reason: `Only parabola with vertical stretch $a = ${a}$ AND $0$ $x$-intercepts.`,
+              meta: { a, yInt: a * h * h + k, xIntCount: 0 }
+            }
+          ], num)
         });
         num++;
       }
@@ -244,19 +459,42 @@
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp B: Quadratic Relations',
+          topicId: 'exp-b',
+          unit: TOPIC_BY_ID['exp-b'].label,
+          strand: 'Quadratic Relations',
+          tags: ['quadratic', 'equations', 'roots', 'zeros', 'factored form', 'no real solutions'],
           title: `#${num} — Four Quadratic Equations`,
-          items: [
-            { label: 'A', expr: `$(x - ${r1})(x - ${r2Use}) = 0$`, reason: `Only equation already in factored form (roots immediately $x = ${r1}, ${r2Use}$).` },
-            { label: 'B', expr: `$x^2 - ${s * s} = 0$`, reason: `Only equation with symmetric opposite roots $x = \\pm ${s}$.` },
-            { label: 'C', expr: `$x^2 ${fmtTermX(-(r1 + r2Use))} + ${r1 * r2Use} = 0$`, reason: `Only unfactored standard trinomial with $2$ real roots ($x = ${r1}, ${r2Use}$).` },
-            { label: 'D', expr: `$(x + ${p})^2 + ${q} = 0$`, reason: `Only equation with NO real solutions (since $(x + ${p})^2 \\ge 0$).` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'b2-factored',
+              expr: `$(x - ${r1})(x - ${r2Use}) = 0$`,
+              reason: `Only equation already in factored form (roots immediately $x = ${r1}, ${r2Use}$).`,
+              meta: { kind: 'factored', roots: [r1, r2Use] }
+            },
+            {
+              claimId: 'b2-symmetric',
+              expr: `$x^2 - ${s * s} = 0$`,
+              reason: `Only equation with symmetric opposite roots $x = \\pm ${s}$.`,
+              meta: { kind: 'symmetric', roots: [-s, s] }
+            },
+            {
+              claimId: 'b2-unfactored-two',
+              expr: `$x^2 ${fmtTermX(-(r1 + r2Use))} + ${r1 * r2Use} = 0$`,
+              reason: `Only unfactored standard trinomial with $2$ real roots ($x = ${r1}, ${r2Use}$).`,
+              meta: { kind: 'unfactored-two', roots: [r1, r2Use] }
+            },
+            {
+              claimId: 'b2-no-real',
+              expr: `$(x + ${p})^2 + ${q} = 0$`,
+              reason: `Only equation with NO real solutions (since $(x + ${p})^2 \\ge 0$).`,
+              meta: { kind: 'no-real', roots: [] }
+            }
+          ], num)
         });
         num++;
       }
 
-      // EXPECTATION C (401–600): Linear Systems
+      // EXPECTATION C (401–600): Linear Equations & Systems
       // C1: 100 puzzles — Four Linear Equations
       for (let i = 0; i < 100; i++) {
         const m = (i % 8) + 2;
@@ -265,46 +503,92 @@
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp C: Linear Systems',
+          topicId: 'exp-c',
+          unit: TOPIC_BY_ID['exp-c'].label,
+          strand: 'Analytic Geometry',
+          tags: ['linear', 'slope', 'y-intercept', 'standard form', 'slope-intercept'],
           title: `#${num} — Four Linear Equations`,
-          items: [
-            { label: 'A', expr: `$y = ${m}x + ${b}$`, reason: `Only one in slope-intercept form with positive slope AND positive $y$-intercept.` },
-            { label: 'B', expr: `$y = -${m}x + ${b}$`, reason: `Only line with a negative slope ($m = -${m}$).` },
-            { label: 'C', expr: `$${m}x - y = -${b}$`, reason: `Only equation in standard form (and it represents the exact same line as A!).` },
-            { label: 'D', expr: `$y = ${m}x - ${d}$`, reason: `Only line with a negative $y$-intercept ($b = -${d}$, parallel to A).` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'c1-si-pos',
+              expr: `$y = ${m}x + ${b}$`,
+              reason: `Only equation written in slope-intercept form with positive slope AND positive $y$-intercept.`,
+              meta: { form: 'slope-intercept', slope: m, yInt: b }
+            },
+            {
+              claimId: 'c1-neg-slope',
+              expr: `$y = -${m}x + ${b}$`,
+              reason: `Only line with a negative slope ($m = -${m}$).`,
+              meta: { form: 'slope-intercept', slope: -m, yInt: b }
+            },
+            {
+              claimId: 'c1-standard',
+              expr: `$${m}x - y = -${b}$`,
+              reason: `Only equation written in standard form (represents the exact same line as $y = ${m}x + ${b}$).`,
+              meta: { form: 'standard', slope: m, yInt: b }
+            },
+            {
+              claimId: 'c1-neg-yint',
+              expr: `$y = ${m}x - ${d}$`,
+              reason: `Only line with a negative $y$-intercept ($b = -${d}$).`,
+              meta: { form: 'slope-intercept', slope: m, yInt: -d }
+            }
+          ], num)
         });
         num++;
       }
 
-      // C2: 100 puzzles — Four Linear Systems
+      // C2: 100 puzzles — Four Linear Systems (all 100 distinct; D uses 2x - y so slopes are -1 and 2, NOT perpendicular)
       for (let i = 0; i < 100; i++) {
         const m = (i % 5) + 2;
         const b1 = (Math.floor(i / 5) % 6) + 1;
         const b2 = b1 + ((i % 4) + 2);
-        const xSol = (i % 6) + 2;
-        const ySol = (Math.floor(i / 6) % 5) + 1;
+        const xSol = (i % 10) - 4;
+        const ySol = Math.floor(i / 10) - 4;
         const sum = xSol + ySol;
-        const diff = xSol - ySol;
+        const rhs2 = 2 * xSol - ySol;
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp C: Linear Systems',
+          topicId: 'exp-c',
+          unit: TOPIC_BY_ID['exp-c'].label,
+          strand: 'Analytic Geometry',
+          tags: ['linear systems', 'poi', 'parallel', 'coincident', 'perpendicular', 'elimination', 'intersection'],
           title: `#${num} — Four Linear Systems`,
-          items: [
-            { label: 'A', expr: `$y = ${m}x + ${b1}$ & $y = ${m}x + ${b2}$`, reason: `Only system with NO solution (parallel distinct lines).` },
-            { label: 'B', expr: `$y = ${m}x + ${b1}$ & $${2 * m}x - 2y = -${2 * b1}$`, reason: `Only system with INFINITELY many solutions (coincident lines).` },
-            { label: 'C', expr: `$y = ${m}x + ${b1}$ & $y = -\\frac{1}{${m}}x + ${b2}$`, reason: `Only pair of perpendicular lines (negative reciprocal slopes).` },
-            { label: 'D', expr: `$x + y = ${sum}$ & $x - y = ${diff}$`, reason: `Only system where neither equation has $y$ isolated (POI: $(${xSol}, ${ySol})$).` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'c2-parallel',
+              expr: `$y = ${m}x + ${b1}$\n$y = ${m}x + ${b2}$`,
+              reason: `Only system with NO solution (parallel distinct lines).`,
+              meta: { solType: 'none', slopes: [m, m], yIsolated: true }
+            },
+            {
+              claimId: 'c2-coincident',
+              expr: `$y = ${m}x + ${b1}$\n$${2 * m}x - 2y = -${2 * b1}$`,
+              reason: `Only system with INFINITELY many solutions (coincident lines).`,
+              meta: { solType: 'infinite', slopes: [m, m], yIsolated: false }
+            },
+            {
+              claimId: 'c2-perpendicular',
+              expr: `$y = ${m}x + ${b1}$\n$y = -\\frac{1}{${m}}x + ${b2}$`,
+              reason: `Only pair of perpendicular lines (negative reciprocal slopes $${m}$ and $-\\frac{1}{${m}}$).`,
+              meta: { solType: 'one-perp', slopes: [m, -1 / m], yIsolated: true }
+            },
+            {
+              claimId: 'c2-standard-both',
+              expr: `$x + y = ${sum}$\n$2x - y = ${rhs2}$`,
+              reason: `Only system where neither equation has $y$ isolated (POI: $(${xSol}, ${ySol})$, slopes $-1$ and $2$).`,
+              meta: { solType: 'one-nonperp', slopes: [-1, 2], yIsolated: false, poi: [xSol, ySol] }
+            }
+          ], num)
         });
         num++;
       }
 
       // EXPECTATION D (601–800): Analytic Geometry & Trigonometry
-      // D1: 100 puzzles — Circles & Points
-      for (let i = 0; i < 100; i++) {
-        const triples = [[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15]];
+      // D1: 100 puzzles — 20 Circles & Points + 30 Point-Circle Distance + 25 Coordinate Segments + 25 Mixed-Rep Quadratics
+      const triples = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15]];
+      for (let i = 0; i < 20; i++) {
         const t = triples[i % triples.length];
         const scale = Math.floor(i / triples.length) % 4 + 1;
         const px = t[0] * scale;
@@ -314,35 +598,227 @@
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp D: Analytic & Trig',
+          topicId: 'exp-d',
+          unit: TOPIC_BY_ID['exp-d'].label,
+          strand: 'Analytic Geometry',
+          tags: ['circle', 'radius', 'quadrant', 'intercept', 'pythagorean triple'],
           title: `#${num} — Circles & Coordinate Points`,
-          items: [
-            { label: 'A', expr: `$x^2 + y^2 = ${r * r}$`, reason: `Only circle equation with an integer radius ($r = ${r}$).` },
-            { label: 'B', expr: `$x^2 + y^2 = ${nonSq}$`, reason: `Only circle with an irrational radius ($r = \\sqrt{${nonSq}}$).` },
-            { label: 'C', expr: `$(${px}, ${py})$`, reason: `Only point in Quadrant I (lies directly on circle $x^2 + y^2 = ${r * r}$).` },
-            { label: 'D', expr: `$(0, -${r})$`, reason: `Only point on an axis ($y$-intercept of $x^2 + y^2 = ${r * r}$).` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'd1a-int-radius',
+              expr: `$x^2 + y^2 = ${r * r}$`,
+              reason: `Only circle equation with an integer radius ($r = ${r}$).`,
+              meta: { kind: 'circle-int', r }
+            },
+            {
+              claimId: 'd1a-irr-radius',
+              expr: `$x^2 + y^2 = ${nonSq}$`,
+              reason: `Only circle with an irrational radius ($r = \\sqrt{${nonSq}}$).`,
+              meta: { kind: 'circle-irr', rSq: nonSq }
+            },
+            {
+              claimId: 'd1a-q1-point',
+              expr: `$(${px}, ${py})$`,
+              reason: `Only point in Quadrant I (lies directly on circle $x^2 + y^2 = ${r * r}$).`,
+              meta: { kind: 'point-q1', px, py }
+            },
+            {
+              claimId: 'd1a-axis-point',
+              expr: `$(0, -${r})$`,
+              reason: `Only point on a coordinate axis ($y$-intercept of $x^2 + y^2 = ${r * r}$).`,
+              meta: { kind: 'point-axis', r }
+            }
+          ], num)
         });
         num++;
       }
 
-      // D2: 100 puzzles — Trigonometry & Line Segments
+      // D1b: 30 puzzles — Four Points Compared to Circle x^2 + y^2 = R^2
+      const primTriples = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [9, 40, 41]];
+      const insidePts = [[1, 2], [2, 3], [1, 3], [1, 4], [2, 4], [3, 4]]; // max x^2+y^2 = 25 (strictly < 10^2, and for R=5 we use index % 5 <= 4 where max is 20 < 25)
+      for (let j = 0; j < 30; j++) {
+        const t = primTriples[j % primTriples.length];
+        const scale = Math.floor(j / primTriples.length) + 1;
+        const px = t[0] * scale;
+        const py = t[1] * scale;
+        const R = t[2] * scale;
+        const ptIn = R === 5 ? insidePts[j % 5] : insidePts[j % insidePts.length];
+        const inX = ptIn[0];
+        const inY = ptIn[1];
+        const diagK = R; // (R, R) has 2R^2 > R^2, on y=x
+        const axisS = (j % 3) + 1;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          topicId: 'exp-d',
+          unit: TOPIC_BY_ID['exp-d'].label,
+          strand: 'Analytic Geometry',
+          tags: ['circle', 'distance', 'origin', 'quadrant', 'y=x', 'axis'],
+          title: `#${num} — Four Points Around $x^2 + y^2 = ${R * R}$`,
+          items: permuteItems([
+            {
+              claimId: 'd1b-inside',
+              expr: `$(${inX}, ${inY})$`,
+              reason: `Only point strictly INSIDE $x^2 + y^2 = ${R * R}$ ($${inX}^2 + ${inY}^2 = ${inX * inX + inY * inY} < ${R * R}$).`,
+              meta: { pt: [inX, inY], R }
+            },
+            {
+              claimId: 'd1b-on-circle-q2',
+              expr: `$(-${px}, ${py})$`,
+              reason: `Only point ON the circle $x^2 + y^2 = ${R * R}$ (and only point in Quadrant II).`,
+              meta: { pt: [-px, py], R }
+            },
+            {
+              claimId: 'd1b-on-yx',
+              expr: `$(${diagK}, ${diagK})$`,
+              reason: `Only point on the line $y = x$.`,
+              meta: { pt: [diagK, diagK], R }
+            },
+            {
+              claimId: 'd1b-on-axis',
+              expr: `$(0, -${R + axisS})$`,
+              reason: `Only point on a coordinate axis.`,
+              meta: { pt: [0, -(R + axisS)], R }
+            }
+          ], num)
+        });
+        num++;
+      }
+
+      // D1c: 25 puzzles — Coordinate Line Segments (Slope, Midpoint, Quadrant)
+      for (let j = 0; j < 25; j++) {
+        const len = (j % 5) + 4;
+        const a = (j % 4) + 1;
+        const b = -(Math.floor(j / 5) + 1);
+        const u = (j % 4) + 2;
+        const v = u + 1;
+        const p = (j % 3) + 2;
+        const q = p + 2;
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          topicId: 'exp-d',
+          unit: TOPIC_BY_ID['exp-d'].label,
+          strand: 'Analytic Geometry',
+          tags: ['line segment', 'slope', 'midpoint', 'origin', 'horizontal', 'vertical'],
+          title: `#${num} — Four Line Segments`,
+          items: permuteItems([
+            {
+              claimId: 'd1c-horizontal',
+              expr: `$(${a}, ${b})$ to $(${a + len}, ${b})$`,
+              reason: `Only horizontal segment (slope $= 0$).`,
+              meta: { p1: [a, b], p2: [a + len, b] }
+            },
+            {
+              claimId: 'd1c-vertical',
+              expr: `$(-${a}, ${b})$ to $(-${a}, ${b + len})$`,
+              reason: `Only vertical segment (undefined slope).`,
+              meta: { p1: [-a, b], p2: [-a, b + len] }
+            },
+            {
+              claimId: 'd1c-origin-mid',
+              expr: `$(-${u}, -${v})$ to $(${u}, ${v})$`,
+              reason: `Only segment whose midpoint is the origin $(0, 0)$.`,
+              meta: { p1: [-u, -v], p2: [u, v] }
+            },
+            {
+              claimId: 'd1c-q1-both',
+              expr: `$(1, 1)$ to $(${1 + p}, ${1 + q})$`,
+              reason: `Only segment with both endpoints in Quadrant I.`,
+              meta: { p1: [1, 1], p2: [1 + p, 1 + q] }
+            }
+          ], num)
+        });
+        num++;
+      }
+
+      // D1d: 25 puzzles — Mixed-Representation Quadratics (Graph SVG, Table, Equation, Verbal Rule)
+      for (let j = 0; j < 25; j++) {
+        const minNeg = 2 + (j % 5); // y = x^2 - minNeg
+        const h = 1 + (Math.floor(j / 5) % 5); // y = (x - h)^2
+        const cDown = 3 + (j % 6); // y = -x^2 + cDown
+        const dUp = 2 + Math.floor(j / 5); // y = x^2 + dUp
+        const tableRows = [-2, -1, 0, 1, 2].map(dx => [h + dx, dx * dx]);
+        list.push({
+          id: `wodb-${num}`,
+          num,
+          topicId: 'exp-b',
+          unit: TOPIC_BY_ID['exp-b'].label,
+          strand: 'Quadratic Relations',
+          tags: ['mixed representations', 'graph', 'table', 'verbal', 'parabola', 'quadratic', 'zeros'],
+          title: `#${num} — Four Representations of a Quadratic`,
+          items: permuteItems([
+            {
+              claimId: 'd1d-neg-min',
+              expr: `Graph of $y = x^2 - ${minNeg}$`,
+              visual: { type: 'parabola-svg', a: 1, h: 0, k: -minNeg },
+              reason: `Only quadratic with a negative minimum ($y = -${minNeg}$).`,
+              meta: { a: 1, minVal: -minNeg, xInts: 2 }
+            },
+            {
+              claimId: 'd1d-one-xint',
+              expr: `Table of Values`,
+              visual: { type: 'table', headers: ['x', 'y'], rows: tableRows },
+              reason: `Only quadratic with exactly $1$ $x$-intercept (vertex at $(${h}, 0)$).`,
+              meta: { a: 1, minVal: 0, xInts: 1 }
+            },
+            {
+              claimId: 'd1d-opens-down',
+              expr: `$y = -x^2 + ${cDown}$`,
+              reason: `Only parabola that opens downward ($a = -1 < 0$).`,
+              meta: { a: -1, maxVal: cDown, xInts: 2 }
+            },
+            {
+              claimId: 'd1d-no-zeros',
+              expr: `“Square the input, then add ${dUp}.”`,
+              reason: `Only quadratic with NO real zeros ($y \\ge ${dUp} > 0$).`,
+              meta: { a: 1, minVal: dUp, xInts: 0 }
+            }
+          ], num)
+        });
+        num++;
+      }
+
+      // D2: 100 puzzles — Trigonometry & Exact Values (all delimiters paired!)
       for (let i = 0; i < 100; i++) {
         const k = (i % 10) + 1;
         const angleA = [30, 45, 60][i % 3];
         const compA = 90 - angleA;
-        const s = (i % 7) + 2;
+        const s = (Math.floor(i / 10) % 10) + 2;
         list.push({
           id: `wodb-${num}`,
           num,
-          unit: 'Exp D: Analytic & Trig',
+          topicId: 'exp-d',
+          unit: TOPIC_BY_ID['exp-d'].label,
+          strand: 'Trigonometry',
+          tags: ['trigonometry', 'sine', 'cosine', 'tangent', 'exact values', 'radical', 'cofunction'],
           title: `#${num} — Trig Ratios & Exact Values`,
-          items: [
-            { label: 'A', expr: `$\\sin(${angleA}^\\circ)$`, reason: `Only sine expression.` },
-            { label: 'B', expr: `$\\cos(${compA}^\\circ)$`, reason: `Only cosine expression (equals $\\sin(${angleA}^\\circ)$!).` },
-            { label: 'C', expr: `$\\tan(45^\\circ) \\cdot ${k}$`, reason: `Only tangent expression (evaluates to integer $${k}$).` },
-            { label: 'D', expr: `$${s}\\sqrt{2}$`, reason: `Only expression written as a simplified radical (hypotenuse of a ${s}-${s}-${s}\\sqrt{2}$ triangle).` }
-          ]
+          items: permuteItems([
+            {
+              claimId: 'd2-sine',
+              expr: `$\\sin(${angleA}^\\circ)$`,
+              reason: `Only sine expression (equals $\\cos(${compA}^\\circ)$ on a right triangle).`,
+              meta: { fn: 'sin', angleA, compA }
+            },
+            {
+              claimId: 'd2-cosine',
+              expr: `$\\cos(${compA}^\\circ)$`,
+              reason: `Only cosine expression (equals $\\sin(${angleA}^\\circ)$ by complementary angles).`,
+              meta: { fn: 'cos', angleA, compA }
+            },
+            {
+              claimId: 'd2-tangent-int',
+              expr: `$\\tan(45^\\circ) \\cdot ${k}$`,
+              reason: `Only tangent expression — and only integer value ($${k}$).`,
+              meta: { fn: 'tan', k }
+            },
+            {
+              claimId: 'd2-radical',
+              expr: `$${s}\\sqrt{2}$`,
+              reason: `Only simplified radical (irrational value $> 1$, hypotenuse of a $${s}$-$${s}$-$${s}\\sqrt{2}$ triangle).`,
+              meta: { fn: 'radical', s }
+            }
+          ], num)
         });
         num++;
       }
@@ -351,38 +827,161 @@
     }
 
     const BUILTIN_WODB = generate800Puzzles();
+    const BUILTIN_IDS = new Set(BUILTIN_WODB.map(p => p.id));
     const CUSTOM_WODB_KEY = 'mpm2d_custom_wodb_v1';
-    let customWodb = JSON.parse(localStorage.getItem(CUSTOM_WODB_KEY) || '[]');
-    let activeUnit = 'All';
+
+    function isValidCustomPuzzle(item, seenIds) {
+      if (!item || typeof item !== 'object') return false;
+      if (typeof item.id !== 'string' || !item.id.trim() || item.id.length > 80) return false;
+      if (BUILTIN_IDS.has(item.id) || seenIds.has(item.id)) return false;
+      if (typeof item.title !== 'string' || !item.title.trim() || item.title.length > 140) return false;
+      if (!Array.isArray(item.items) || item.items.length !== 4) return false;
+      for (let i = 0; i < 4; i++) {
+        const card = item.items[i];
+        if (!card || typeof card !== 'object') return false;
+        if (card.label !== QUAD_LABELS[i]) return false;
+        if (typeof card.expr !== 'string' || !card.expr.trim() || card.expr.length > 400) return false;
+        if (card.reason !== undefined && (typeof card.reason !== 'string' || card.reason.length > 400)) return false;
+      }
+      seenIds.add(item.id);
+      return true;
+    }
+
+    function showStorageWarning(msg) {
+      const box = document.getElementById('storageWarning');
+      const txt = document.getElementById('storageWarningText');
+      if (box && txt) {
+        txt.textContent = msg;
+        box.classList.remove('hidden');
+      }
+    }
+
+    function loadCustomWodb() {
+      try {
+        const raw = localStorage.getItem(CUSTOM_WODB_KEY);
+        if (raw === null) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          showStorageWarning('Saved custom WODB data was invalid and could not be loaded. Built-in puzzles remain available.');
+          return [];
+        }
+        const seen = new Set();
+        const valid = [];
+        for (const entry of parsed) {
+          if (isValidCustomPuzzle(entry, seen)) {
+            valid.push({
+              id: entry.id,
+              topicId: 'custom',
+              unit: 'Custom',
+              strand: 'Custom',
+              tags: ['custom'],
+              title: entry.title.trim(),
+              items: entry.items.map((c, idx) => ({
+                label: QUAD_LABELS[idx],
+                expr: c.expr.trim(),
+                reason: typeof c.reason === 'string' ? c.reason.trim() : ''
+              }))
+            });
+          }
+        }
+        if (valid.length < parsed.length) {
+          showStorageWarning('Some saved custom WODB entries were invalid and skipped.');
+        }
+        return valid;
+      } catch (_err) {
+        showStorageWarning('Browser storage could not be read. Built-in MPM2D puzzles remain fully usable.');
+        return [];
+      }
+    }
+
+    let customWodb = loadCustomWodb();
+    let activeTopicId = 'all';
     let activeId = BUILTIN_WODB[0].id;
     let showReasons = false;
+    let hideTotals = false;
     let largeFont = false;
+    let isPresenting = false;
     let currentPage = 0;
     const PAGE_SIZE = 12;
-    let votes = { A: 0, B: 0, C: 0, D: 0 };
 
-    function getAllPuzzles() { return [...customWodb, ...BUILTIN_WODB]; }
+    // Session tallies persisted per puzzle ID
+    const votesById = Object.create(null);
+    let lastResetBackup = null;
+
+    function getVotes(id = activeId) {
+      if (!votesById[id]) votesById[id] = { A: 0, B: 0, C: 0, D: 0 };
+      return votesById[id];
+    }
+
+    const KATEX_OPTS = {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false,
+      trust: false,
+      maxExpand: 500,
+      maxSize: 10
+    };
+
+    function renderMathSafe(el) {
+      if (typeof renderMathInElement === 'function' && el) {
+        renderMathInElement(el, KATEX_OPTS);
+      }
+    }
+
+    function getAllPuzzles() {
+      return [...customWodb, ...BUILTIN_WODB];
+    }
+
     function getFilteredPuzzles() {
       const q = (document.getElementById('wodbSearch')?.value || '').trim().toLowerCase();
+      const exactNumMatch = q.match(/^#?(\d+)$/);
+      const exactNum = exactNumMatch ? Number(exactNumMatch[1]) : null;
       return getAllPuzzles().filter(p => {
-        const unitOk = activeUnit === 'All' || p.unit === activeUnit;
-        if (!unitOk) return false;
+        const topicOk = activeTopicId === 'all' || p.topicId === activeTopicId;
+        if (!topicOk) return false;
         if (!q) return true;
-        return p.title.toLowerCase().includes(q) || p.unit.toLowerCase().includes(q) || String(p.num || '') === q.replace('#', '');
+        if (exactNum !== null) return p.num === exactNum;
+        if (p.title.toLowerCase().includes(q)) return true;
+        if (p.unit.toLowerCase().includes(q)) return true;
+        if (p.strand && p.strand.toLowerCase().includes(q)) return true;
+        if (Array.isArray(p.tags) && p.tags.some(t => t.includes(q))) return true;
+        return false;
       });
     }
-    function getActivePuzzle() { return getAllPuzzles().find(p => p.id === activeId) || BUILTIN_WODB[0]; }
 
-    function renderUnitFilters() {
-      const units = ['All', 'Exp A: Factoring & Expanding', 'Exp B: Quadratic Relations', 'Exp C: Linear Systems', 'Exp D: Analytic & Trig'];
-      if (customWodb.length > 0) units.push('Custom');
-      document.getElementById('unitFilterBar').innerHTML = units.map(u => `
-        <button onclick="setUnitFilter('${u}')" class="px-2.5 py-1 text-[11px] font-black rounded-lg border-2 border-slate-800 transition ${activeUnit === u ? 'tab-active' : 'bg-slate-50 hover:bg-slate-100'}">${u}</button>
-      `).join('');
+    function getActivePuzzle() {
+      return getAllPuzzles().find(p => p.id === activeId) || BUILTIN_WODB[0];
     }
 
-    function setUnitFilter(u) {
-      activeUnit = u;
+    function updateHeaderCounts() {
+      const count = BUILTIN_WODB.length;
+      const badge = document.getElementById('totalPuzzleBadge');
+      const titleCount = document.getElementById('titleCount');
+      if (badge) badge.textContent = `${count} WODB Puzzles`;
+      if (titleCount) titleCount.textContent = String(count);
+    }
+
+    function renderUnitFilters() {
+      const bar = document.getElementById('unitFilterBar');
+      bar.replaceChildren();
+      const visibleTopics = TOPICS.filter(t => t.id !== 'custom' || customWodb.length > 0);
+      for (const topic of visibleTopics) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', String(activeTopicId === topic.id));
+        btn.className = `px-2.5 py-1 text-[11px] font-black rounded-lg border-2 border-slate-800 transition ${activeTopicId === topic.id ? 'tab-active' : 'bg-slate-50 hover:bg-slate-100'}`;
+        btn.textContent = topic.label;
+        btn.addEventListener('click', () => setUnitFilter(topic.id));
+        bar.appendChild(btn);
+      }
+    }
+
+    function setUnitFilter(topicId) {
+      activeTopicId = topicId;
       currentPage = 0;
       renderUnitFilters();
       renderSelector();
@@ -391,6 +990,13 @@
     function onSearchChange() {
       currentPage = 0;
       renderSelector();
+    }
+
+    function syncPageToActive(filtered) {
+      const idx = filtered.findIndex(p => p.id === activeId);
+      if (idx !== -1) {
+        currentPage = Math.floor(idx / PAGE_SIZE);
+      }
     }
 
     function changePage(delta) {
@@ -403,36 +1009,90 @@
     function renderSelector() {
       const filtered = getFilteredPuzzles();
       const total = filtered.length;
+      const maxPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+      if (currentPage > maxPage) currentPage = maxPage;
+
       const start = currentPage * PAGE_SIZE;
       const slice = filtered.slice(start, start + PAGE_SIZE);
 
-      document.getElementById('puzzleSelectorGrid').innerHTML = slice.map(p => `
-        <button onclick="selectPuzzle('${p.id}')" class="text-left p-2.5 rounded-xl border-2 border-slate-800 transition ${p.id === activeId ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-yellow-50'}">
-          <div class="text-[10px] font-black uppercase text-blue-700">${p.unit}</div>
-          <div class="text-xs font-black text-slate-900 mt-0.5">${p.title}</div>
-        </button>
-      `).join('') || `<div class="col-span-full text-center py-4 text-xs font-bold text-slate-500">No matching WODB puzzles found.</div>`;
+      const grid = document.getElementById('puzzleSelectorGrid');
+      grid.replaceChildren();
+
+      if (slice.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'col-span-full text-center py-4 text-xs font-bold text-slate-600';
+        empty.textContent = 'No matching WODB puzzles found.';
+        grid.appendChild(empty);
+      } else {
+        for (const p of slice) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const isActive = p.id === activeId;
+          btn.className = `text-left p-2.5 rounded-xl border-2 border-slate-800 transition ${isActive ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-yellow-50'}`;
+          if (isActive) btn.setAttribute('aria-current', 'true');
+
+          const unitDiv = document.createElement('div');
+          unitDiv.className = 'text-[10px] font-black uppercase text-blue-700';
+          unitDiv.textContent = p.unit;
+
+          const titleDiv = document.createElement('div');
+          titleDiv.className = 'text-xs font-black text-slate-900 mt-0.5';
+          titleDiv.textContent = p.title;
+
+          btn.appendChild(unitDiv);
+          btn.appendChild(titleDiv);
+          btn.addEventListener('click', () => selectPuzzle(p.id));
+          grid.appendChild(btn);
+        }
+      }
 
       const end = Math.min(start + PAGE_SIZE, total);
       document.getElementById('pageInfo').textContent = total > 0 ? `Showing ${start + 1}–${end} of ${total}` : '0 puzzles';
       document.getElementById('prevPageBtn').disabled = currentPage === 0;
       document.getElementById('nextPageBtn').disabled = end >= total;
+
+      const stagePrev = document.getElementById('stagePrevBtn');
+      const stageNext = document.getElementById('stageNextBtn');
+      if (stagePrev) stagePrev.disabled = total === 0;
+      if (stageNext) stageNext.disabled = total === 0;
     }
 
-    function selectPuzzle(id) {
+    function updateUrlHash(id, push = true) {
+      const targetHash = `#${id}`;
+      if (window.location.hash !== targetHash) {
+        if (push && window.history && typeof window.history.pushState === 'function') {
+          window.history.pushState(null, '', targetHash);
+        } else {
+          window.location.hash = targetHash;
+        }
+      }
+    }
+
+    function selectPuzzle(id, options = {}) {
+      const { syncHash = true, pushHash = true } = options;
+      if (id === activeId && !options.force) return;
+      const exists = getAllPuzzles().some(p => p.id === id);
+      if (!exists) return;
+
       activeId = id;
-      votes = { A: 0, B: 0, C: 0, D: 0 };
       showReasons = false;
+      lastResetBackup = null;
+      updateUndoBtn();
       updateReasonsBtn();
+
+      const filtered = getFilteredPuzzles();
+      syncPageToActive(filtered);
       renderSelector();
       renderStage();
+
+      if (syncHash) updateUrlHash(id, pushHash);
     }
 
     function pickRandomPuzzle() {
       const filtered = getFilteredPuzzles();
       if (filtered.length === 0) return;
       const rand = filtered[Math.floor(Math.random() * filtered.length)];
-      selectPuzzle(rand.id);
+      selectPuzzle(rand.id, { force: true });
     }
 
     function stepPuzzle(delta) {
@@ -443,18 +1103,52 @@
       selectPuzzle(filtered[nextIdx].id);
     }
 
+    function updateVoteDisplay(label) {
+      const votes = getVotes();
+      const countEl = document.getElementById(`vote-count-${label}`);
+      if (countEl) {
+        countEl.textContent = hideTotals ? 'Votes: •••' : `Votes: ${votes[label] || 0}`;
+      }
+    }
+
     function addVote(label, delta) {
+      const votes = getVotes();
       votes[label] = Math.max(0, (votes[label] || 0) + delta);
-      const badge = document.getElementById(`voteBadge-${label}`);
-      if (badge) badge.textContent = `Votes: ${votes[label]}`;
+      updateVoteDisplay(label);
     }
 
     function resetVotes() {
-      votes = { A: 0, B: 0, C: 0, D: 0 };
-      ['A', 'B', 'C', 'D'].forEach(lbl => {
-        const badge = document.getElementById(`voteBadge-${lbl}`);
-        if (badge) badge.textContent = 'Votes: 0';
-      });
+      const current = getVotes();
+      lastResetBackup = { id: activeId, votes: { ...current } };
+      votesById[activeId] = { A: 0, B: 0, C: 0, D: 0 };
+      for (const lbl of QUAD_LABELS) updateVoteDisplay(lbl);
+      updateUndoBtn();
+    }
+
+    function undoResetVotes() {
+      if (!lastResetBackup || lastResetBackup.id !== activeId) return;
+      votesById[activeId] = { ...lastResetBackup.votes };
+      lastResetBackup = null;
+      for (const lbl of QUAD_LABELS) updateVoteDisplay(lbl);
+      updateUndoBtn();
+    }
+
+    function updateUndoBtn() {
+      const btn = document.getElementById('undoResetBtn');
+      if (!btn) return;
+      if (lastResetBackup && lastResetBackup.id === activeId) {
+        btn.classList.remove('hidden');
+      } else {
+        btn.classList.add('hidden');
+      }
+    }
+
+    function toggleHideTotals() {
+      hideTotals = !hideTotals;
+      const text = hideTotals ? '👁️ Show Totals' : '🙈 Hide Totals';
+      document.getElementById('hideTotalsBtn').textContent = text;
+      document.getElementById('presentHideTotalsBtn').textContent = text;
+      for (const lbl of QUAD_LABELS) updateVoteDisplay(lbl);
     }
 
     function toggleReasons() {
@@ -464,8 +1158,10 @@
     }
 
     function updateReasonsBtn() {
-      const btn = document.getElementById('reasonsToggleBtn');
-      btn.textContent = showReasons ? '🙈 Hide Reasons' : '👁️ Show Reasons';
+      const text = showReasons ? '🙈 Hide Reasons' : '👁️ Sample Reasons';
+      document.getElementById('reasonsToggleBtn').textContent = text;
+      const pBtn = document.getElementById('presentReasonsBtn');
+      if (pBtn) pBtn.textContent = text;
     }
 
     function toggleLargeFont() {
@@ -474,58 +1170,295 @@
       renderStage();
     }
 
+    function syncPresentUI() {
+      document.body.classList.toggle('is-presenting', isPresenting);
+      const presentOnlyIds = ['presentReasonsBtn', 'presentHideTotalsBtn', 'presentResetBtn', 'exitPresentBtn'];
+      for (const id of presentOnlyIds) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', !isPresenting);
+      }
+      renderStage();
+    }
+
+    async function togglePresentMode() {
+      if (isPresenting) {
+        await exitPresentMode();
+        return;
+      }
+      isPresenting = true;
+      syncPresentUI();
+      const stage = document.getElementById('stageSection');
+      if (stage && typeof stage.requestFullscreen === 'function') {
+        try {
+          await stage.requestFullscreen();
+        } catch (_err) {
+          // CSS viewport fallback already active
+        }
+      }
+      if (stage) stage.focus();
+    }
+
+    async function exitPresentMode() {
+      isPresenting = false;
+      if (document.fullscreenElement && typeof document.exitFullscreen === 'function') {
+        try {
+          await document.exitFullscreen();
+        } catch (_err) {
+          // Ignore
+        }
+      }
+      syncPresentUI();
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && isPresenting) {
+        isPresenting = false;
+        syncPresentUI();
+      }
+    });
+
+    function buildParabolaSvg(visual) {
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('viewBox', '-6 -6 12 12');
+      svg.setAttribute('class', 'w-32 h-32 mx-auto bg-white border-2 border-slate-800 rounded-lg');
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', `Parabola graph with vertex at (${visual.h}, ${visual.k})`);
+
+      // Grid & axes
+      const xAxis = document.createElementNS(svgNS, 'line');
+      xAxis.setAttribute('x1', '-6'); xAxis.setAttribute('y1', '0');
+      xAxis.setAttribute('x2', '6'); xAxis.setAttribute('y2', '0');
+      xAxis.setAttribute('stroke', '#94a3b8'); xAxis.setAttribute('stroke-width', '0.15');
+      svg.appendChild(xAxis);
+
+      const yAxis = document.createElementNS(svgNS, 'line');
+      yAxis.setAttribute('x1', '0'); yAxis.setAttribute('y1', '-6');
+      yAxis.setAttribute('x2', '0'); yAxis.setAttribute('y2', '6');
+      yAxis.setAttribute('stroke', '#94a3b8'); yAxis.setAttribute('stroke-width', '0.15');
+      svg.appendChild(yAxis);
+
+      // Curve path (note SVG y increases downward, so plot -y)
+      let d = '';
+      for (let x = -4; x <= 4; x += 0.25) {
+        const y = visual.a * (x - visual.h) * (x - visual.h) + visual.k;
+        const svgY = -y;
+        d += (d === '' ? 'M ' : ' L ') + `${x.toFixed(2)} ${svgY.toFixed(2)}`;
+      }
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#1d4ed8');
+      path.setAttribute('stroke-width', '0.32');
+      svg.appendChild(path);
+
+      const dot = document.createElementNS(svgNS, 'circle');
+      dot.setAttribute('cx', String(visual.h));
+      dot.setAttribute('cy', String(-visual.k));
+      dot.setAttribute('r', '0.35');
+      dot.setAttribute('fill', '#dc2626');
+      svg.appendChild(dot);
+
+      return svg;
+    }
+
+    function buildTableVisual(visual) {
+      const table = document.createElement('table');
+      table.className = 'mx-auto text-xs font-mono font-bold border-collapse bg-white border-2 border-slate-800';
+      const thead = document.createElement('thead');
+      const hr = document.createElement('tr');
+      hr.className = 'bg-slate-100 border-b-2 border-slate-800';
+      for (const h of visual.headers) {
+        const th = document.createElement('th');
+        th.className = 'px-3 py-1 border-r border-slate-300 last:border-r-0';
+        th.textContent = h;
+        hr.appendChild(th);
+      }
+      thead.appendChild(hr);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      for (const row of visual.rows) {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t border-slate-300';
+        for (const cell of row) {
+          const td = document.createElement('td');
+          td.className = 'px-3 py-0.5 text-center border-r border-slate-300 last:border-r-0';
+          td.textContent = String(cell);
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      return table;
+    }
+
     function renderStage() {
       const p = getActivePuzzle();
       document.getElementById('activeUnitBadge').textContent = p.unit;
+      document.getElementById('activeStrandBadge').textContent = p.strand || 'MPM2D';
       document.getElementById('activeTitle').textContent = p.title;
 
-      const exprClass = largeFont ? 'text-2xl sm:text-4xl' : 'text-xl sm:text-2xl';
+      const big = largeFont || isPresenting;
+      const exprClass = big ? 'text-2xl sm:text-4xl' : 'text-xl sm:text-2xl';
+      const reasonClass = big ? 'text-sm sm:text-base' : 'text-xs';
       const colors = ['bg-blue-50', 'bg-emerald-50', 'bg-amber-50', 'bg-purple-50'];
+      const votes = getVotes(p.id);
 
-      document.getElementById('wodbGrid').innerHTML = p.items.map((item, idx) => {
+      const grid = document.getElementById('wodbGrid');
+      grid.replaceChildren();
+
+      p.items.forEach((item, idx) => {
         const v = votes[item.label] || 0;
-        return `
-          <div onclick="addVote('${item.label}', 1)" class="cursor-pointer ${colors[idx % 4]} rounded-2xl comic-border p-5 sm:p-7 flex flex-col justify-between min-h-[170px] sm:min-h-[210px] hover:brightness-95 transition">
-            <div class="flex items-center justify-between">
-              <span class="w-8 h-8 rounded-full bg-slate-900 text-white text-sm font-black flex items-center justify-center">${item.label}</span>
-              <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-                <button onclick="addVote('${item.label}', -1)" class="px-2 py-0.5 text-xs font-black rounded bg-white border-2 border-slate-800 hover:bg-slate-100" aria-label="Remove vote for ${item.label}">−</button>
-                <span id="voteBadge-${item.label}" class="px-2.5 py-0.5 text-xs font-mono font-black rounded bg-white border-2 border-slate-800">Votes: ${v}</span>
-              </div>
-            </div>
-            <div class="${exprClass} font-black text-center text-slate-900 my-4 break-words">${item.expr}</div>
-            ${showReasons && item.reason ? `
-              <div class="p-2.5 rounded-xl bg-white/90 border-2 border-slate-800 text-xs font-bold text-slate-800">
-                💡 ${item.reason}
-              </div>
-            ` : `<div class="text-[11px] font-bold text-slate-500 text-center">Why might ${item.label} not belong?</div>`}
-          </div>
-        `;
-      }).join('');
 
-      if (typeof renderMathInElement === 'function') {
-        renderMathInElement(document.getElementById('wodbGrid'), {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false }
-          ],
-          throwOnError: false
-        });
+        const card = document.createElement('div');
+        card.className = `cursor-pointer ${colors[idx % 4]} rounded-2xl comic-border p-5 sm:p-7 flex flex-col justify-between min-h-[180px] sm:min-h-[220px] hover:brightness-95 transition`;
+        card.addEventListener('click', () => addVote(item.label, 1));
+
+        // Top bar: label badge + vote controls
+        const topRow = document.createElement('div');
+        topRow.className = 'flex items-center justify-between gap-2';
+
+        const badge = document.createElement('span');
+        badge.className = 'w-8 h-8 rounded-full bg-slate-900 text-white text-sm font-black flex items-center justify-center shrink-0';
+        badge.textContent = item.label;
+
+        const voteWrap = document.createElement('div');
+        voteWrap.className = 'flex items-center gap-1.5';
+        voteWrap.addEventListener('click', (e) => e.stopPropagation());
+
+        const minusBtn = document.createElement('button');
+        minusBtn.type = 'button';
+        minusBtn.className = 'px-2.5 py-1 text-xs font-black rounded bg-white border-2 border-slate-800 hover:bg-slate-100';
+        minusBtn.textContent = '−';
+        minusBtn.setAttribute('aria-label', `Remove vote for ${item.label}`);
+        minusBtn.addEventListener('click', () => addVote(item.label, -1));
+
+        const countSpan = document.createElement('span');
+        countSpan.id = `vote-count-${item.label}`;
+        countSpan.className = `${big ? 'text-sm' : 'text-xs'} px-2.5 py-1 font-mono font-black rounded bg-white border-2 border-slate-800`;
+        countSpan.textContent = hideTotals ? 'Votes: •••' : `Votes: ${v}`;
+
+        const plusBtn = document.createElement('button');
+        plusBtn.type = 'button';
+        plusBtn.className = 'px-2.5 py-1 text-xs font-black rounded bg-white border-2 border-slate-800 hover:bg-slate-100';
+        plusBtn.textContent = '+';
+        plusBtn.setAttribute('aria-label', `Add vote for ${item.label}`);
+        plusBtn.addEventListener('click', () => addVote(item.label, 1));
+
+        voteWrap.appendChild(minusBtn);
+        voteWrap.appendChild(countSpan);
+        voteWrap.appendChild(plusBtn);
+        topRow.appendChild(badge);
+        topRow.appendChild(voteWrap);
+
+        // Expression / visual content (pure text/DOM, zero innerHTML)
+        const exprWrap = document.createElement('div');
+        exprWrap.className = `${exprClass} font-black text-center text-slate-900 my-4 math-scroll space-y-2`;
+
+        if (item.visual) {
+          if (item.visual.type === 'parabola-svg') {
+            exprWrap.appendChild(buildParabolaSvg(item.visual));
+          } else if (item.visual.type === 'table') {
+            exprWrap.appendChild(buildTableVisual(item.visual));
+          }
+        }
+
+        const lines = item.expr.split('\n');
+        for (const line of lines) {
+          const lineDiv = document.createElement('div');
+          lineDiv.textContent = line;
+          exprWrap.appendChild(lineDiv);
+        }
+
+        // Reason / prompt
+        const footer = document.createElement('div');
+        if (showReasons && item.reason) {
+          footer.className = `p-2.5 rounded-xl bg-white/95 border-2 border-slate-800 ${reasonClass} font-bold text-slate-900`;
+          footer.textContent = `💡 ${item.reason}`;
+        } else {
+          footer.className = 'text-xs font-bold text-slate-600 text-center';
+          footer.textContent = `Why might ${item.label} not belong?`;
+        }
+
+        card.appendChild(topRow);
+        card.appendChild(exprWrap);
+        card.appendChild(footer);
+        grid.appendChild(card);
+      });
+
+      renderMathSafe(grid);
+    }
+
+    function openCustomWodbModal() {
+      const dlg = document.getElementById('customWodbDialog');
+      const err = document.getElementById('cwSaveError');
+      if (err) err.classList.add('hidden');
+      for (const lbl of QUAD_LABELS) updateCustomPreview(lbl);
+      if (dlg && typeof dlg.showModal === 'function') {
+        dlg.showModal();
       }
     }
 
-    function openCustomWodbModal() { document.getElementById('customWodbModal').classList.remove('hidden'); }
-    function closeCustomWodbModal() { document.getElementById('customWodbModal').classList.add('hidden'); }
+    function closeCustomWodbModal() {
+      const dlg = document.getElementById('customWodbDialog');
+      if (dlg && dlg.open) dlg.close();
+    }
+
+    function updateCustomPreview(label) {
+      const input = document.getElementById(`cw${label}`);
+      const preview = document.getElementById(`cwPreview${label}`);
+      if (!input || !preview) return;
+      const val = input.value.trim();
+      preview.replaceChildren();
+      preview.classList.remove('border-red-600', 'text-red-800');
+      if (!val) {
+        preview.textContent = 'Preview…';
+        preview.classList.add('text-slate-400');
+        return;
+      }
+      preview.classList.remove('text-slate-400');
+      preview.textContent = val;
+      if (typeof renderMathInElement === 'function') {
+        try {
+          renderMathInElement(preview, {
+            ...KATEX_OPTS,
+            throwOnError: true,
+            errorCallback: (msg) => {
+              throw new Error(msg);
+            }
+          });
+        } catch (err) {
+          preview.classList.add('border-red-600', 'text-red-800');
+          preview.textContent = `Math syntax error: ${err.message}`;
+        }
+      }
+    }
+
+    function showCustomSaveError(msg) {
+      const err = document.getElementById('cwSaveError');
+      if (err) {
+        err.textContent = msg;
+        err.classList.remove('hidden');
+      }
+    }
+
     function saveCustomWodb() {
       const title = document.getElementById('cwTitle').value.trim();
       const a = document.getElementById('cwA').value.trim();
       const b = document.getElementById('cwB').value.trim();
       const c = document.getElementById('cwC').value.trim();
       const d = document.getElementById('cwD').value.trim();
-      if (!title || !a || !b || !c || !d) { alert('Please fill in the title and all 4 boxes.'); return; }
+      if (!title || !a || !b || !c || !d) {
+        showCustomSaveError('Please fill in the puzzle title and all 4 box expressions.');
+        return;
+      }
       const newP = {
         id: 'cw-' + Date.now(),
+        topicId: 'custom',
         unit: 'Custom',
+        strand: 'Custom',
+        tags: ['custom'],
         title,
         items: [
           { label: 'A', expr: a, reason: document.getElementById('cwRA').value.trim() },
@@ -534,13 +1467,21 @@
           { label: 'D', expr: d, reason: document.getElementById('cwRD').value.trim() }
         ]
       };
-      customWodb.unshift(newP);
-      localStorage.setItem(CUSTOM_WODB_KEY, JSON.stringify(customWodb));
+      const nextCustom = [newP, ...customWodb];
+      try {
+        localStorage.setItem(CUSTOM_WODB_KEY, JSON.stringify(nextCustom));
+      } catch (_err) {
+        showCustomSaveError('Could not save to browser storage (storage may be full or blocked). Your draft is still here.');
+        return;
+      }
+      customWodb = nextCustom;
       closeCustomWodbModal();
-      activeUnit = 'All';
+      activeTopicId = 'all';
+      const searchEl = document.getElementById('wodbSearch');
+      if (searchEl) searchEl.value = '';
       currentPage = 0;
       renderUnitFilters();
-      selectPuzzle(newP.id);
+      selectPuzzle(newP.id, { force: true });
     }
 
     function hardRefreshApp() {
@@ -549,7 +1490,50 @@
       window.location.replace(url.toString());
     }
 
+    // Keyboard shortcuts (inactive when typing or when dialog is open)
+    document.addEventListener('keydown', (e) => {
+      const dlg = document.getElementById('customWodbDialog');
+      if (dlg && dlg.open) return;
+      const mpm2dPanel = document.getElementById("mpm2d");
+      if (mpm2dPanel && mpm2dPanel.hidden) return;
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || document.activeElement?.isContentEditable) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        stepPuzzle(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        stepPuzzle(1);
+      } else if (e.key === 'r' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        toggleReasons();
+      } else if (e.key === 'R' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        resetVotes();
+      } else if (e.key === 'Escape' && isPresenting && !document.fullscreenElement) {
+        e.preventDefault();
+        exitPresentMode();
+      }
+    });
+
+    function syncFromHash() {
+      const rawHash = window.location.hash.replace(/^#/, '').trim();
+      if (rawHash && getAllPuzzles().some(p => p.id === rawHash)) {
+        selectPuzzle(rawHash, { syncHash: false, force: true });
+      }
+    }
+
+    window.addEventListener('hashchange', syncFromHash);
+    window.addEventListener('popstate', syncFromHash);
+
+    updateHeaderCounts();
     renderUnitFilters();
+    const initialHash = window.location.hash.replace(/^#/, '').trim();
+    if (initialHash && getAllPuzzles().some(p => p.id === initialHash)) {
+      activeId = initialHash;
+    }
+    syncPageToActive(getFilteredPuzzles());
     renderSelector();
     renderStage();
     window.addEventListener('load', renderStage);
