@@ -31,23 +31,25 @@
       <h1 class="text-3xl font-black text-blue-600">MPM2D Math Drill Center</h1>
     </div>
     <div class="comic bg-white px-4 py-2 text-sm font-bold flex flex-wrap gap-3 items-center">
-      <span title="Student">👤 <span id="studentLabel"></span> <button id="changeStudent" class="text-xs text-blue-600 underline">change</button></span>
-      <span title="Active work time this session">⏱️ <span id="sessTime">0:00</span></span>
-      <span title="Current streak">🔥 <span id="streak">0</span></span>
-      <span title="Today correct">✅ <span id="todayCorrect">0</span></span>
-      <button id="formulaBtn" type="button" class="btn bg-indigo-100 text-indigo-900 px-2.5 py-1 text-xs">📐 Formulas</button>
-      <select id="langSelect" title="Language support for math terms (Read Aloud stays English)" class="border-2 border-slate-800 rounded-lg px-2 py-1 text-xs font-bold bg-teal-50 cursor-pointer">
-        <option value="en">🌐 English</option>
-        <option value="yue">🇭🇰 廣東話 (Cantonese)</option>
-        <option value="zh-CN">🇨🇳 普通话 (Putonghua)</option>
-        <option value="ko">🇰🇷 한국어 (Korean)</option>
-        <option value="fa">🇮🇷 فارسی (Farsi)</option>
-        <option value="ru">🇷🇺 Русский (Russian)</option>
-        <option value="uk">🇺🇦 Українська (Ukrainian)</option>
-        <option value="ur">🇵🇰 اردو (Urdu)</option>
-        <option value="si">🇱🇰 සිංහල (Sinhala)</option>
-        <option value="ta">🇱🇰 தமிழ் (Tamil)</option>
-      </select>
+      <span title="Student" class="whitespace-nowrap">👤 <span id="studentLabel"></span> <button id="changeStudent" class="text-xs text-blue-600 underline">change</button></span>
+      <span title="Active work time this session" class="whitespace-nowrap">⏱️ <span id="sessTime" class="inline-block w-11 tabular-nums">0:00</span></span>
+      <span title="Current streak" class="whitespace-nowrap">🔥 <span id="streak" class="inline-block min-w-[1rem] tabular-nums">0</span></span>
+      <span title="Today correct" class="whitespace-nowrap">✅ <span id="todayCorrect" class="inline-block min-w-[1rem] tabular-nums">0</span></span>
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="formulaBtn" type="button" class="btn bg-indigo-100 text-indigo-900 px-2.5 py-1 text-xs whitespace-nowrap">📐 Formulas</button>
+        <select id="langSelect" title="Language support for math terms (Read Aloud stays English)" class="border-2 border-slate-800 rounded-lg px-2 py-1 text-xs font-bold bg-teal-50 cursor-pointer w-40">
+          <option value="en">🌐 English</option>
+          <option value="yue">🇭🇰 廣東話 (Cantonese)</option>
+          <option value="zh-CN">🇨🇳 普通话 (Putonghua)</option>
+          <option value="ko">🇰🇷 한국어 (Korean)</option>
+          <option value="fa">🇮🇷 فارسی (Farsi)</option>
+          <option value="ru">🇷🇺 Русский (Russian)</option>
+          <option value="uk">🇺🇦 Українська (Ukrainian)</option>
+          <option value="ur">🇵🇰 اردو (Urdu)</option>
+          <option value="si">🇱🇰 සිංහල (Sinhala)</option>
+          <option value="ta">🇱🇰 தமிழ் (Tamil)</option>
+        </select>
+      </div>
     </div>
   </header>
 
