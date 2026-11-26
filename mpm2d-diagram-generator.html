@@ -544,7 +544,7 @@
           <button type="button" class="btn btn-primary" id="btnCopyDocs" onclick="copyHighResPngForDocs()">
             📄 Copy for Google Docs (Hi-Res)
           </button>
-          <button type="button" class="btn" onclick="downloadPng()">
+          <button type="button" class="btn" id="btnDownloadPng" onclick="downloadPng()">
             ⬇️ Download .PNG
           </button>
           <button type="button" class="btn" id="btnCopySvg" onclick="copySvgCode()">
@@ -553,7 +553,7 @@
           <button type="button" class="btn" id="btnCopyImage" onclick="copySvgClipboardImage()">
             🖼️ Copy SVG Image
           </button>
-          <button type="button" class="btn" onclick="downloadSvg()">
+          <button type="button" class="btn" id="btnDownloadSvg" onclick="downloadSvg()">
             ⬇️ Download .SVG
           </button>
         </div>
@@ -739,7 +739,7 @@
         showSecant: false,
         // Limits
         limitType: 'hole', // 'hole' | 'jump'
-        limX0: 2, limY0: 3, limFillY: 1,
+        limX0: 2, limY0: 3, limRightY: 1, limFillY: 1,
         // 2D Vectors
         ux: 4, uy: 1,
         vx: 1, vy: 3,
@@ -866,6 +866,15 @@
         el.textContent = '';
         el.classList.remove('show');
       }
+      const hasErr = Boolean(msg);
+      ['btnCopyDocs', 'btnDownloadPng', 'btnCopySvg', 'btnCopyImage', 'btnDownloadSvg'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) {
+          b.disabled = hasErr;
+          b.style.opacity = hasErr ? '0.45' : '1';
+          b.style.pointerEvents = hasErr ? 'none' : 'auto';
+        }
+      });
     }
 
     // ===========================
@@ -1435,9 +1444,10 @@
             <button type="button" class="pill-btn ${c.limitType==='hole'?'active':''}" onclick="state.mcv4u.limitType='hole'; buildControls(); render();">Removable (Hole)</button>
             <button type="button" class="pill-btn ${c.limitType==='jump'?'active':''}" onclick="state.mcv4u.limitType='jump'; buildControls(); render();">Jump Discontinuity</button>
           </div>
-          <div class="form-grid-3">
+          <div class="form-grid" style="grid-template-columns: repeat(${c.limitType==='jump'?4:3}, 1fr);">
             <div class="field"><label>x₀</label><input type="number" step="0.5" value="${c.limX0}" oninput="state.mcv4u.limX0=parseFloat(this.value)||0; render()"></div>
-            <div class="field"><label>Limit y₀ (open)</label><input type="number" step="0.5" value="${c.limY0}" oninput="state.mcv4u.limY0=parseFloat(this.value)||0; render()"></div>
+            <div class="field"><label>${c.limitType==='jump'?'Left limit':'Limit y₀'}</label><input type="number" step="0.5" value="${c.limY0}" oninput="state.mcv4u.limY0=parseFloat(this.value)||0; render()"></div>
+            ${c.limitType==='jump' ? `<div class="field"><label>Right limit</label><input type="number" step="0.5" value="${c.limRightY}" oninput="state.mcv4u.limRightY=parseFloat(this.value)||0; render()"></div>` : ''}
             <div class="field"><label>f(x₀) (filled)</label><input type="number" step="0.5" value="${c.limFillY}" oninput="state.mcv4u.limFillY=parseFloat(this.value)||0; render()"></div>
           </div>
           <div class="check-row">
@@ -1536,7 +1546,7 @@
         }
       }
 
-      return { svg: out, toX, toY, padX, padY, pad: padX, plotW, plotH };
+      return { svg: out, toX, toY, padX, padY, plotW, plotH };
     }
 
     // ===========================
@@ -2022,23 +2032,32 @@
         const b1 = parseFrac(l.b1, 1);
         const isParallel = l.mode === 'grid_parallel';
         const isPerp = l.mode === 'grid_perp';
-        const m2 = isParallel ? m1 : (isPerp ? (Math.abs(m1) < 1e-9 ? 1e9 : -1 / m1) : parseFrac(l.m2, -1));
+        const isVert2 = isPerp && Math.abs(m1) < 1e-9;
+        const m2 = isParallel ? m1 : (isPerp ? (isVert2 ? null : -1 / m1) : parseFrac(l.m2, -1));
         const b2 = parseFrac(l.b2, -2);
 
         const clipId = 'grid-clip-' + Math.floor(Math.random() * 100000);
-        inner += `<defs><clipPath id="${clipId}"><rect x="${grid.pad}" y="${grid.pad}" width="${grid.plotW}" height="${grid.plotH}" /></clipPath></defs>`;
+        inner += `<defs><clipPath id="${clipId}"><rect x="${grid.padX.toFixed(1)}" y="${grid.padY.toFixed(1)}" width="${grid.plotW.toFixed(1)}" height="${grid.plotH.toFixed(1)}" /></clipPath></defs>`;
 
-        const drawClippedLine = (m, b, color, labelText) => {
+        const drawClippedLine = (m, b, color, labelText, isVertical = false) => {
+          let s = `<g clip-path="url(#${clipId})">`;
+          if (isVertical) {
+            const px = grid.toX(b).toFixed(1);
+            s += `<line x1="${px}" y1="${grid.toY(gMax + 1).toFixed(1)}" x2="${px}" y2="${grid.toY(gMin - 1).toFixed(1)}" stroke="${color}" stroke-width="${cfg.sw}" />`;
+            s += `</g>`;
+            if (l.showEqLabels && labelText && b >= gMin && b <= gMax) {
+              s += `<text x="${(grid.toX(b) + 6).toFixed(1)}" y="${(grid.toY(gMax - 0.8)).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${color}">${esc(labelText)}</text>`;
+            }
+            return s;
+          }
           const x1 = gMin - 1, y1 = m * x1 + b;
           const x2 = gMax + 1, y2 = m * x2 + b;
-          let s = `<g clip-path="url(#${clipId})">`;
           s += `<line x1="${grid.toX(x1).toFixed(1)}" y1="${grid.toY(y1).toFixed(1)}" x2="${grid.toX(x2).toFixed(1)}" y2="${grid.toY(y2).toFixed(1)}" stroke="${color}" stroke-width="${cfg.sw}" />`;
           s += `</g>`;
           if (l.showInterceptDots && b >= gMin && b <= gMax) {
             s += `<circle cx="${grid.toX(0).toFixed(1)}" cy="${grid.toY(b).toFixed(1)}" r="4" fill="${color}" />`;
           }
           if (l.showEqLabels && labelText) {
-            // Place label near right-ish visible point
             let lx = gMax - 1.2;
             let ly = m * lx + b;
             if (ly > gMax - 0.6) { lx = (gMax - 0.8 - b) / (m || 1); ly = m * lx + b; }
@@ -2050,11 +2069,22 @@
           return s;
         };
 
-        inner += drawClippedLine(m1, b1, cfg.primary, l.labelLine1);
-        inner += drawClippedLine(m2, b2, cfg.secondary, l.labelLine2);
+        inner += drawClippedLine(m1, b1, cfg.primary, l.labelLine1, false);
+        inner += drawClippedLine(m2, b2, cfg.secondary, l.labelLine2, isVert2);
 
         // Intersection & Perpendicular Square
-        if (!isParallel && Math.abs(m1 - m2) > 1e-6) {
+        if (isVert2) {
+          const ix = b2, iy = b1;
+          if (ix >= gMin && ix <= gMax && iy >= gMin && iy <= gMax) {
+            const px = grid.toX(ix), py = grid.toY(iy);
+            if (l.showPerpSquare) {
+              inner += drawRightAngleBox({ x: px, y: py }, { x: grid.toX(ix + 1), y: py }, { x: px, y: grid.toY(iy + 1) }, 12, cfg.ink, Math.max(1.3, cfg.sw * 0.75));
+            }
+            if (l.showIntersection) {
+              inner += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.5" fill="${cfg.ink}" />`;
+            }
+          }
+        } else if (!isParallel && Math.abs(m1 - m2) > 1e-6) {
           const ix = (b2 - b1) / (m1 - m2);
           const iy = m1 * ix + b1;
           if (ix >= gMin && ix <= gMax && iy >= gMin && iy <= gMax) {
@@ -2171,7 +2201,7 @@
       let inner = grid.svg;
 
       // Axis of symmetry
-      if (p.showAxisSym && h >= xMin && h <= xMax) {
+      if (p.showAxisSym && !alertMsg && h >= xMin && h <= xMax) {
         const axX = grid.toX(h).toFixed(1);
         inner += `<line x1="${axX}" y1="${grid.padY.toFixed(1)}" x2="${axX}" y2="${(grid.padY + grid.plotH).toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
       }
@@ -2198,7 +2228,7 @@
       }
 
       // Key points (semantic colors: Vertex=Red, Zero=Emerald, y-int=Amber, Point=Violet)
-      if (p.showKeyPoints) {
+      if (p.showKeyPoints && !alertMsg) {
         const ptColor = tag => {
           if (!cfg.isColor) return cfg.ink;
           if (tag === 'Vertex') return cfg.secondary;
@@ -2280,11 +2310,11 @@
       if (f.showAsymptotes) {
         if ((f.type === 'exponential' || f.type === 'reciprocal') && f.c >= yMin && f.c <= yMax) {
           const ay = grid.toY(f.c).toFixed(1);
-          inner += `<line x1="${grid.pad}" y1="${ay}" x2="${grid.pad + grid.plotW}" y2="${ay}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+          inner += `<line x1="${grid.padX.toFixed(1)}" y1="${ay}" x2="${(grid.padX + grid.plotW).toFixed(1)}" y2="${ay}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
         }
         if (f.type === 'reciprocal' && f.d >= xMin && f.d <= xMax) {
           const ax = grid.toX(f.d).toFixed(1);
-          inner += `<line x1="${ax}" y1="${grid.pad}" x2="${ax}" y2="${grid.pad + grid.plotH}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
+          inner += `<line x1="${ax}" y1="${grid.padY.toFixed(1)}" x2="${ax}" y2="${(grid.padY + grid.plotH).toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="1.5" stroke-dasharray="5,4" />`;
         }
       }
 
@@ -2512,11 +2542,12 @@
       const ptsInt = [];
       if (Math.abs(A) >= 1e-9) {
         const disc = B * B - 4 * A * C;
-        if (disc > 1e-6) {
+        const discTol = 1e-11 * (B * B + Math.abs(4 * A * C) + 1);
+        if (disc > discTol) {
           const sq = Math.sqrt(disc);
           const x1 = (-B - sq) / (2 * A), x2 = (-B + sq) / (2 * A);
           ptsInt.push({ x: x1, y: m * x1 + kLine }, { x: x2, y: m * x2 + kLine });
-        } else if (Math.abs(disc) <= 1e-6) {
+        } else if (Math.abs(disc) <= discTol) {
           const x1 = -B / (2 * A);
           ptsInt.push({ x: x1, y: m * x1 + kLine });
         }
@@ -2597,68 +2628,121 @@
       const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 1, 1, m.showGridNumbers, true, 'x', 'y');
       let inner = grid.svg;
 
+      const clipId = 'mhf-clip-' + Math.floor(Math.random() * 100000);
+      inner += `<defs><clipPath id="${clipId}"><rect x="${grid.padX.toFixed(1)}" y="${grid.padY.toFixed(1)}" width="${grid.plotW.toFixed(1)}" height="${grid.plotH.toFixed(1)}" /></clipPath></defs>`;
+
       const evalPolyRoots = () => {
-        return String(m.rootsSpec || '').split(',').map(p => {
-          const [rStr, multStr] = p.split(':').map(s => (s || '').trim());
-          const r = Number(rStr);
-          const mult = multStr ? Math.max(1, parseInt(multStr, 10) || 1) : 1;
-          return isFinite(r) && rStr !== '' ? { r, mult } : null;
-        }).filter(Boolean);
+        const items = String(m.rootsSpec || '').split(',').map(s => s.trim()).filter(Boolean);
+        const parsed = [];
+        for (const item of items) {
+          const parts = item.split(':').map(s => s.trim());
+          if (parts.length > 2) return { error: `Invalid root entry "${item}". Use root or root:multiplicity.` };
+          const r = parseFrac(parts[0], NaN);
+          const mult = parts.length === 2 ? Number(parts[1]) : 1;
+          if (!isFinite(r) || !isFinite(mult) || !Number.isInteger(mult) || mult < 1) {
+            return { error: `Invalid root/multiplicity "${item}". Multiplicity must be a positive integer.` };
+          }
+          parsed.push({ r, mult });
+        }
+        return { roots: parsed };
       };
 
       let evalFn = () => null;
-      let vaList = [], haList = [], keyPts = [], eqText = '';
+      let vaList = [], haList = [], keyPts = [], holePts = [], excludedX = [], eqText = '', errMsg = '';
+      let extraSamples = [];
 
       if (m.mode === 'poly') {
-        const roots = evalPolyRoots();
-        evalFn = x => {
-          let y = m.pa;
-          roots.forEach(rt => { y *= Math.pow(x - rt.r, rt.mult); });
-          return y;
-        };
-        roots.forEach(rt => keyPts.push({ x: rt.r, y: 0 }));
-        if (roots.length > 0) keyPts.push({ x: 0, y: evalFn(0) });
-        const facStr = roots.map(rt => `(x ${rt.r >= 0 ? '- ' + fmtNum(rt.r) : '+ ' + fmtNum(-rt.r)})${rt.mult > 1 ? '^' + rt.mult : ''}`).join('');
-        eqText = `y = ${fmtNum(m.pa)}${facStr || '1'}`;
+        const res = evalPolyRoots();
+        if (res.error) {
+          errMsg = res.error;
+        } else {
+          const roots = res.roots;
+          evalFn = x => {
+            let y = m.pa;
+            roots.forEach(rt => { y *= Math.pow(x - rt.r, rt.mult); });
+            return y;
+          };
+          if (Math.abs(m.pa) > 1e-9) {
+            roots.forEach(rt => {
+              keyPts.push({ x: rt.r, y: 0 });
+              extraSamples.push(rt.r);
+            });
+            if (roots.length > 0) keyPts.push({ x: 0, y: evalFn(0) });
+          }
+          const facStr = roots.map(rt => `(x ${rt.r >= 0 ? '- ' + fmtNum(rt.r) : '+ ' + fmtNum(-rt.r)})${rt.mult > 1 ? '^' + rt.mult : ''}`).join('');
+          eqText = roots.length === 0 ? `y = ${fmtNum(m.pa)}` : `y = ${fmtNum(m.pa)}${facStr}`;
+        }
       } else if (m.mode === 'rational') {
         if (m.ratType === 'lin_lin') {
-          evalFn = x => {
-            const den = m.rc * x + m.rd;
-            return Math.abs(den) > 0.04 ? (m.ra * x + m.rb) / den : null;
-          };
-          if (Math.abs(m.rc) > 1e-9) {
-            vaList.push(-m.rd / m.rc);
-            haList.push(m.ra / m.rc);
+          if (Math.abs(m.rc) < 1e-9 && Math.abs(m.rd) < 1e-9) {
+            errMsg = 'Denominator cx + d cannot be identically zero.';
+          } else if (Math.abs(m.rc) < 1e-9) {
+            // Non-zero constant denominator -> linear/constant
+            evalFn = x => (m.ra * x + m.rb) / m.rd;
+            if (Math.abs(m.ra) > 1e-9) keyPts.push({ x: -m.rb / m.ra, y: 0 });
+            keyPts.push({ x: 0, y: m.rb / m.rd });
+            eqText = `y = (${fmtNum(m.ra)}x ${m.rb >= 0 ? '+ ' + fmtNum(m.rb) : '- ' + fmtNum(-m.rb)}) / ${fmtNum(m.rd)}`;
+          } else {
+            const holeX = -m.rd / m.rc;
+            const numAtHole = m.ra * holeX + m.rb;
+            if (Math.abs(numAtHole) < 1e-9) {
+              // Cancellation! Common factor -> constant y = a/c with open hole at holeX
+              const yConst = m.ra / m.rc;
+              evalFn = x => Math.abs(x - holeX) > 1e-6 ? yConst : null;
+              excludedX.push(holeX);
+              holePts.push({ x: holeX, y: yConst });
+              if (Math.abs(holeX) > 1e-9) keyPts.push({ x: 0, y: yConst });
+              eqText = `y = ${fmtNum(yConst)} (hole at x = ${fmtNum(holeX)})`;
+            } else {
+              evalFn = x => Math.abs(x - holeX) > 1e-6 ? (m.ra * x + m.rb) / (m.rc * x + m.rd) : null;
+              excludedX.push(holeX);
+              vaList.push(holeX);
+              haList.push(m.ra / m.rc);
+              if (Math.abs(m.ra) > 1e-9) keyPts.push({ x: -m.rb / m.ra, y: 0 });
+              if (Math.abs(m.rd) > 1e-9) keyPts.push({ x: 0, y: m.rb / m.rd });
+              eqText = `y = (${fmtNum(m.ra)}x ${m.rb >= 0 ? '+ ' + fmtNum(m.rb) : '- ' + fmtNum(-m.rb)}) / (${fmtNum(m.rc)}x ${m.rd >= 0 ? '+ ' + fmtNum(m.rd) : '- ' + fmtNum(-m.rd)})`;
+            }
           }
-          if (Math.abs(m.ra) > 1e-9) keyPts.push({ x: -m.rb / m.ra, y: 0 });
-          if (Math.abs(m.rd) > 1e-9) keyPts.push({ x: 0, y: m.rb / m.rd });
-          eqText = `y = (${fmtNum(m.ra)}x ${m.rb >= 0 ? '+ ' + fmtNum(m.rb) : '- ' + fmtNum(-m.rb)}) / (${fmtNum(m.rc)}x ${m.rd >= 0 ? '+ ' + fmtNum(m.rd) : '- ' + fmtNum(-m.rd)})`;
         } else {
           evalFn = x => {
             const den = (x - m.qdR1) * (x - m.qdR2);
-            return Math.abs(den) > 0.05 ? m.qdA / den : null;
+            return Math.abs(den) > 1e-7 ? m.qdA / den : null;
           };
-          vaList.push(m.qdR1, m.qdR2);
-          haList.push(0);
-          const xm = (m.qdR1 + m.qdR2) / 2;
-          const ym = evalFn(xm);
-          if (ym !== null) keyPts.push({ x: xm, y: ym });
+          excludedX.push(m.qdR1);
+          vaList.push(m.qdR1);
+          if (Math.abs(m.qdR2 - m.qdR1) > 1e-6) {
+            excludedX.push(m.qdR2);
+            vaList.push(m.qdR2);
+            const xm = (m.qdR1 + m.qdR2) / 2;
+            const ym = evalFn(xm);
+            if (ym !== null) keyPts.push({ x: xm, y: ym });
+          }
+          if (Math.abs(m.qdA) > 1e-9) haList.push(0);
           eqText = `y = ${fmtNum(m.qdA)} / ((x - ${fmtNum(m.qdR1)})(x - ${fmtNum(m.qdR2)}))`;
         }
       } else {
-        const kSafe = Math.abs(m.lk) < 1e-6 ? 1 : m.lk;
-        const bSafe = m.lb <= 0 || Math.abs(m.lb - 1) < 1e-6 ? 2 : m.lb;
-        evalFn = x => {
-          const arg = kSafe * (x - m.ld);
-          return arg > 0.02 ? m.la * (Math.log(arg) / Math.log(bSafe)) + m.lc : null;
-        };
-        vaList.push(m.ld);
-        keyPts.push({ x: m.ld + 1 / kSafe, y: m.lc });
-        eqText = `y = ${fmtNum(m.la)} log_${fmtNum(bSafe)}(${fmtNum(kSafe)}(x - ${fmtNum(m.ld)})) + ${fmtNum(m.lc)}`;
+        if (m.lb <= 0 || Math.abs(m.lb - 1) < 1e-6) {
+          errMsg = 'Logarithm base b must satisfy b > 0 and b ≠ 1.';
+        } else if (Math.abs(m.lk) < 1e-9) {
+          errMsg = 'Parameter k cannot be 0 in logarithmic function.';
+        } else {
+          evalFn = x => {
+            const arg = m.lk * (x - m.ld);
+            return arg > 1e-7 ? m.la * (Math.log(arg) / Math.log(m.lb)) + m.lc : null;
+          };
+          excludedX.push(m.ld);
+          if (Math.abs(m.la) > 1e-9) {
+            vaList.push(m.ld);
+            keyPts.push({ x: m.ld + 1 / m.lk, y: m.lc });
+          }
+          eqText = `y = ${fmtNum(m.la)} log_${fmtNum(m.lb)}(${fmtNum(m.lk)}(x - ${fmtNum(m.ld)})) + ${fmtNum(m.lc)}`;
+        }
       }
 
+      setAlert(errMsg);
       const ro = document.getElementById('mhf4uReadout');
-      if (ro) ro.textContent = eqText;
+      if (ro) ro.textContent = errMsg ? 'Invalid MHF4U parameters' : eqText;
+      if (errMsg) return inner;
 
       if (m.showAsymptotes) {
         vaList.forEach(vx => {
@@ -2676,30 +2760,47 @@
       }
 
       if (m.showCurve) {
+        const xs = [];
+        for (let i = 0; i <= 300; i++) xs.push(xMin + (i / 300) * (xMax - xMin));
+        extraSamples.forEach(ex => { if (ex >= xMin && ex <= xMax) xs.push(ex); });
+        xs.sort((a, b) => a - b);
+
         let segments = [[]];
-        let prevY = null;
-        for (let i = 0; i <= 260; i++) {
-          const x = xMin + (i / 260) * (xMax - xMin);
+        let prevX = null, prevY = null;
+        for (const x of xs) {
           const y = evalFn(x);
-          const jumpBreak = prevY !== null && y !== null && Math.abs(y - prevY) > (yMax - yMin) * 0.6;
-          if (y === null || !isFinite(y) || y < yMin - 0.3 || y > yMax + 0.3 || jumpBreak) {
+          const crossedExcl = prevX !== null && excludedX.some(ex => (prevX < ex && x > ex) || Math.abs(x - ex) < 1e-6);
+          const jumpBreak = prevY !== null && y !== null && Math.abs(y - prevY) > (yMax - yMin) * 1.2;
+          if (y === null || !isFinite(y) || crossedExcl || jumpBreak) {
             if (segments[segments.length - 1].length > 0) segments.push([]);
-          } else {
-            segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
           }
-          prevY = y;
+          if (y !== null && isFinite(y)) {
+            if (y >= yMin - 2 && y <= yMax + 2) {
+              segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(y).toFixed(1)}`);
+            } else if (segments[segments.length - 1].length > 0) {
+              segments.push([]);
+            }
+          }
+          prevX = x; prevY = y;
         }
+        inner += `<g clip-path="url(#${clipId})">`;
         segments.forEach(seg => {
           if (seg.length > 1) {
             inner += `<polyline points="${seg.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" stroke-linejoin="round" />`;
           }
         });
+        inner += `</g>`;
       }
 
       if (m.showKeyPoints) {
         keyPts.forEach(pt => {
           if (pt.x >= xMin && pt.x <= xMax && pt.y >= yMin && pt.y <= yMax) {
             inner += `<circle cx="${grid.toX(pt.x).toFixed(1)}" cy="${grid.toY(pt.y).toFixed(1)}" r="4.5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          }
+        });
+        holePts.forEach(pt => {
+          if (pt.x >= xMin && pt.x <= xMax && pt.y >= yMin && pt.y <= yMax) {
+            inner += `<circle cx="${grid.toX(pt.x).toFixed(1)}" cy="${grid.toY(pt.y).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
           }
         });
       }
@@ -2716,6 +2817,8 @@
       const grid = drawCartesianGrid(cfg, xMin, xMax, yMin, yMax, 1, 1, c.showGridNumbers, true, 'x', 'y');
       let inner = grid.svg;
       const ro = document.getElementById('mcv4uReadout');
+      const clipId = 'mcv-clip-' + Math.floor(Math.random() * 100000);
+      inner += `<defs><clipPath id="${clipId}"><rect x="${grid.padX.toFixed(1)}" y="${grid.padY.toFixed(1)}" width="${grid.plotW.toFixed(1)}" height="${grid.plotH.toFixed(1)}" /></clipPath></defs>`;
 
       if (c.mode === 'tangent') {
         const f = x => c.ca * x * x * x + c.cb * x * x + c.cc * x + c.cd;
@@ -2724,23 +2827,25 @@
         for (let i = 0; i <= 220; i++) {
           const x = xMin + (i / 220) * (xMax - xMin);
           const y = f(x);
-          if (y >= yMin - 0.15 && y <= yMax + 0.15) {
-            segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+          if (y >= yMin - 1 && y <= yMax + 1) {
+            segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(y).toFixed(1)}`);
           } else if (segments[segments.length - 1].length > 0) {
             segments.push([]);
           }
         }
+        inner += `<g clip-path="url(#${clipId})">`;
         segments.forEach(seg => {
           if (seg.length > 1) inner += `<polyline points="${seg.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" stroke-linejoin="round" />`;
         });
-
-        const clipId = 'mcv-clip-' + Math.floor(Math.random() * 100000);
-        inner += `<defs><clipPath id="${clipId}"><rect x="${grid.padX.toFixed(1)}" y="${grid.padY.toFixed(1)}" width="${grid.plotW.toFixed(1)}" height="${grid.plotH.toFixed(1)}" /></clipPath></defs>`;
+        inner += `</g>`;
 
         const y1 = f(c.x1), mTan = df(c.x1);
-        const y2 = f(c.x2), mSec = Math.abs(c.x2 - c.x1) > 1e-6 ? (y2 - y1) / (c.x2 - c.x1) : mTan;
+        const y2 = f(c.x2);
+        const hasSecant = Math.abs(c.x2 - c.x1) > 1e-9;
+        // Exact factored cubic difference quotient avoids catastrophic cancellation
+        const mSec = hasSecant ? (c.ca * (c.x1 * c.x1 + c.x1 * c.x2 + c.x2 * c.x2) + c.cb * (c.x1 + c.x2) + c.cc) : null;
 
-        if (c.showSecant && Math.abs(c.x2 - c.x1) > 1e-6) {
+        if (c.showSecant && hasSecant) {
           const lx1 = xMin - 1, ly1 = y1 + mSec * (lx1 - c.x1);
           const lx2 = xMax + 1, ly2 = y1 + mSec * (lx2 - c.x1);
           inner += `<g clip-path="url(#${clipId})"><line x1="${grid.toX(lx1).toFixed(1)}" y1="${grid.toY(ly1).toFixed(1)}" x2="${grid.toX(lx2).toFixed(1)}" y2="${grid.toY(ly2).toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" stroke-dasharray="5,3" /></g>`;
@@ -2756,31 +2861,52 @@
         if (c.x1 >= xMin && c.x1 <= xMax && y1 >= yMin && y1 <= yMax) {
           inner += `<circle cx="${grid.toX(c.x1).toFixed(1)}" cy="${grid.toY(y1).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.3" />`;
         }
-        if (ro) ro.textContent = `Tangent at (${fmtNum(c.x1)}, ${fmtNum(y1)}), slope f'(${fmtNum(c.x1)}) = ${fmtNum(mTan)}` + (c.showSecant ? ` | Secant slope = ${fmtNum(mSec)}` : '');
+        if (ro) {
+          const secMsg = !c.showSecant ? '' : (hasSecant ? ` | Secant slope = ${fmtNum(mSec)}` : ' | Secant undefined for coincident points');
+          ro.textContent = `Tangent at (${fmtNum(c.x1)}, ${fmtNum(y1)}), slope f'(${fmtNum(c.x1)}) = ${fmtNum(mTan)}${secMsg}`;
+        }
       } else if (c.mode === 'limit') {
-        const x0 = c.limX0, y0 = c.limY0, yf = c.limFillY;
-        const drawSeg = (xa, xb, fn) => {
-          const pts = [];
-          for (let i = 0; i <= 80; i++) {
-            const x = xa + (i / 80) * (xb - xa);
+        const x0 = c.limX0, y0 = c.limY0, yr = c.limRightY, yf = c.limFillY;
+        const drawBranch = (xa, xb, fn) => {
+          if (xb <= xa) return;
+          const segments = [[]];
+          for (let i = 0; i <= 100; i++) {
+            const x = xa + (i / 100) * (xb - xa);
             const y = fn(x);
-            if (y >= yMin - 0.1 && y <= yMax + 0.1) pts.push(`${grid.toX(x).toFixed(1)},${grid.toY(Math.max(yMin, Math.min(yMax, y))).toFixed(1)}`);
+            if (y >= yMin - 1 && y <= yMax + 1) {
+              segments[segments.length - 1].push(`${grid.toX(x).toFixed(1)},${grid.toY(y).toFixed(1)}`);
+            } else if (segments[segments.length - 1].length > 0) {
+              segments.push([]);
+            }
           }
-          if (pts.length > 1) inner += `<polyline points="${pts.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" />`;
+          inner += `<g clip-path="url(#${clipId})">`;
+          segments.forEach(seg => {
+            if (seg.length > 1) inner += `<polyline points="${seg.join(' ')}" fill="none" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linecap="round" />`;
+          });
+          inner += `</g>`;
         };
         if (c.limitType === 'hole') {
           const fn = x => 0.25 * (x - x0) * (x - x0) + (x - x0) * 0.6 + y0;
-          drawSeg(xMin, x0 - 0.06, fn);
-          drawSeg(x0 + 0.06, xMax, fn);
-          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(y0).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
-          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(yf).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          drawBranch(xMin, Math.min(xMax, x0), fn);
+          drawBranch(Math.max(xMin, x0), xMax, fn);
+          if (x0 >= xMin && x0 <= xMax) {
+            if (y0 >= yMin && y0 <= yMax) inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(y0).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
+            if (yf >= yMin && yf <= yMax) inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(yf).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          }
           if (ro) ro.textContent = `lim(x→${fmtNum(x0)}) f(x) = ${fmtNum(y0)},  f(${fmtNum(x0)}) = ${fmtNum(yf)}`;
         } else {
-          drawSeg(xMin, x0 - 0.05, x => y0 - 0.35 * (x - x0));
-          drawSeg(x0 + 0.05, xMax, x => yf + 0.3 * (x - x0));
-          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(y0).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
-          inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(yf).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
-          if (ro) ro.textContent = `Left limit = ${fmtNum(y0)},  Right limit = ${fmtNum(yf)} (Jump)`;
+          drawBranch(xMin, Math.min(xMax, x0), x => y0 - 0.35 * (x - x0));
+          drawBranch(Math.max(xMin, x0), xMax, x => yr + 0.3 * (x - x0));
+          if (x0 >= xMin && x0 <= xMax) {
+            if (y0 >= yMin && y0 <= yMax) inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(y0).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
+            if (yr >= yMin && yr <= yMax && Math.abs(yr - y0) > 1e-6) inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(yr).toFixed(1)}" r="5" fill="#ffffff" stroke="${cfg.primary}" stroke-width="${cfg.sw}" />`;
+            if (yf >= yMin && yf <= yMax) inner += `<circle cx="${grid.toX(x0).toFixed(1)}" cy="${grid.toY(yf).toFixed(1)}" r="5" fill="${cfg.secondary}" stroke="#ffffff" stroke-width="1.2" />`;
+          }
+          if (ro) {
+            ro.textContent = Math.abs(y0 - yr) < 1e-6
+              ? `lim(x→${fmtNum(x0)}) f(x) = ${fmtNum(y0)},  f(${fmtNum(x0)}) = ${fmtNum(yf)}`
+              : `Left limit = ${fmtNum(y0)},  Right limit = ${fmtNum(yr)},  f(${fmtNum(x0)}) = ${fmtNum(yf)}`;
+          }
         }
       } else {
         // 2D Vectors
@@ -2790,24 +2916,38 @@
         const rxVal = c.vecOp === 'add' ? c.ux + c.vx : c.ux - c.vx;
         const ryVal = c.vecOp === 'add' ? c.uy + c.vy : c.uy - c.vy;
         const rx = grid.toX(rxVal), ry = grid.toY(ryVal);
+        const magU = Math.hypot(c.ux, c.uy), magV = Math.hypot(c.vx, c.vy), magR = Math.hypot(rxVal, ryVal);
 
-        if (c.showGuides && c.vecOp === 'add') {
+        if (c.showGuides && c.vecOp === 'add' && magU > 1e-9 && magV > 1e-9) {
           inner += `<line x1="${ux.toFixed(1)}" y1="${uy.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${cfg.muted}" stroke-width="1.3" stroke-dasharray="4,3" />`;
           inner += `<line x1="${vx.toFixed(1)}" y1="${vy.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${cfg.muted}" stroke-width="1.3" stroke-dasharray="4,3" />`;
         }
-        inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ux.toFixed(1)}" y2="${uy.toFixed(1)}" stroke="${cfg.primary}" stroke-width="${cfg.sw + 0.4}" marker-end="url(#arrow-line)" />`;
-        inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${vx.toFixed(1)}" y2="${vy.toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw + 0.4}" marker-end="url(#arrow-vec-em)" />`;
-        if (c.showResultant) {
-          inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${cfg.secondary}" stroke-width="${cfg.sw + 0.6}" marker-end="url(#arrow-vec-red)" />`;
-          inner += `<text x="${(rx + 8).toFixed(1)}" y="${(ry - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.secondary}">${c.vecOp==='add'?'u + v':'u - v'}</text>`;
+        if (magU > 1e-9) {
+          inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ux.toFixed(1)}" y2="${uy.toFixed(1)}" stroke="${cfg.primary}" stroke-width="${cfg.sw + 0.4}" marker-end="url(#arrow-line)" />`;
+          inner += `<text x="${(ux + 7).toFixed(1)}" y="${(uy - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.primary}">u</text>`;
+        } else {
+          inner += `<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4" fill="${cfg.primary}" />`;
         }
-        inner += `<text x="${(ux + 7).toFixed(1)}" y="${(uy - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.primary}">u</text>`;
-        inner += `<text x="${(vx + 7).toFixed(1)}" y="${(vy - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.tertiary}">v</text>`;
+        if (magV > 1e-9) {
+          inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${vx.toFixed(1)}" y2="${vy.toFixed(1)}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw + 0.4}" marker-end="url(#arrow-vec-em)" />`;
+          inner += `<text x="${(vx + 7).toFixed(1)}" y="${(vy - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.tertiary}">v</text>`;
+        } else {
+          inner += `<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4" fill="${cfg.tertiary}" />`;
+        }
+        if (c.showResultant) {
+          if (magR > 1e-9) {
+            inner += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${cfg.secondary}" stroke-width="${cfg.sw + 0.6}" marker-end="url(#arrow-vec-red)" />`;
+            inner += `<text x="${(rx + 8).toFixed(1)}" y="${(ry - 6).toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${cfg.fs}" fill="${cfg.secondary}">${c.vecOp==='add'?'u + v':'u - v'}</text>`;
+          } else {
+            inner += `<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4.5" fill="${cfg.secondary}" />`;
+          }
+        }
 
-        const magU = Math.hypot(c.ux, c.uy), magV = Math.hypot(c.vx, c.vy);
         const dotUV = c.ux * c.vx + c.uy * c.vy;
-        const theta = (magU > 0 && magV > 0) ? (Math.acos(Math.max(-1, Math.min(1, dotUV / (magU * magV)))) * 180) / Math.PI : 0;
-        if (ro) ro.textContent = `u·v = ${fmtNum(dotUV)} | θ = ${fmtNum(theta)}° | ${c.vecOp==='add'?'u+v':'u-v'} = (${fmtNum(rxVal)}, ${fmtNum(ryVal)})`;
+        const thetaStr = (magU > 1e-9 && magV > 1e-9)
+          ? `${fmtNum((Math.acos(Math.max(-1, Math.min(1, dotUV / (magU * magV)))) * 180) / Math.PI)}°`
+          : 'undefined (zero vector)';
+        if (ro) ro.textContent = `u·v = ${fmtNum(dotUV)} | θ = ${thetaStr} | ${c.vecOp==='add'?'u+v':'u-v'} = (${fmtNum(rxVal)}, ${fmtNum(ryVal)})`;
       }
       return inner;
     }
@@ -2950,22 +3090,31 @@
     function renderSvgToPngBlob(scale = 3) {
       const cfg = getGlobalStyle();
       return new Promise((resolve, reject) => {
-        const b64 = btoa(unescape(encodeURIComponent(currentSvgString)));
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = cfg.w * scale;
-          canvas.height = cfg.h * scale;
-          const ctx = canvas.getContext('2d');
-          ctx.scale(scale, scale);
-          ctx.drawImage(img, 0, 0, cfg.w, cfg.h);
-          canvas.toBlob(blob => {
-            if (blob) resolve(blob);
-            else reject(new Error('PNG encoding failed'));
-          }, 'image/png');
-        };
-        img.onerror = () => reject(new Error('SVG image decode failed'));
-        img.src = `data:image/svg+xml;base64,${b64}`;
+        try {
+          const b64 = btoa(unescape(encodeURIComponent(currentSvgString)));
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = cfg.w * scale;
+              canvas.height = cfg.h * scale;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return reject(new Error('Canvas 2D context unavailable'));
+              ctx.scale(scale, scale);
+              ctx.drawImage(img, 0, 0, cfg.w, cfg.h);
+              canvas.toBlob(blob => {
+                if (blob) resolve(blob);
+                else reject(new Error('PNG encoding failed'));
+              }, 'image/png');
+            } catch (e) {
+              reject(e);
+            }
+          };
+          img.onerror = () => reject(new Error('SVG image decode failed'));
+          img.src = `data:image/svg+xml;base64,${b64}`;
+        } catch (e) {
+          reject(e);
+        }
       });
     }
 
@@ -2974,13 +3123,15 @@
         if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) {
           throw new Error('ClipboardItem unsupported');
         }
-        // Pass Promise<Blob> synchronously inside click handler to satisfy browser user-gesture rules
         await navigator.clipboard.write([
           new ClipboardItem({ 'image/png': renderSvgToPngBlob(3) })
         ]);
         showCopyFeedback('✓ Copied 3× Hi-Res PNG! Paste (Ctrl+V) into Google Docs.', 'btnCopyDocs');
       } catch (err) {
-        showCopyFeedback('Clipboard blocked — use Download .PNG instead.', 'btnCopyDocs');
+        const msg = (err && /PNG|SVG|Canvas/i.test(err.message))
+          ? 'PNG generation failed — try Download .SVG.'
+          : 'Clipboard blocked — use Download .PNG instead.';
+        showCopyFeedback(msg);
       }
     }
 
