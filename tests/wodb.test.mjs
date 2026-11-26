@@ -44,27 +44,56 @@ for (const [course, bank, codes] of courses) {
   });
 }
 
-test('MCV4U skeleton covers A1-C3 with distinct 4-card boards', () => {
+function assertMcvGraphSamples(value, id) {
+  const [start, end] = value.x;
+  assert.ok(value.x.every(Number.isFinite) && start < end, `${id} x-axis bounds`);
+  assert.ok(value.y.every(Number.isFinite) && value.y[0] < value.y[1], `${id} y-axis bounds`);
+  assert.ok(value.description.trim(), `${id} graph description`);
+  const breaks = value.breaks ?? [];
+  assert.ok(breaks.every(x => Number.isFinite(x) && x >= start && x <= end), `${id} break bounds`);
+
+  let visible = 0;
+  for (let index = 0; index <= 480; index += 1) {
+    const x = start + (end - start) * index / 480;
+    const y = value.fn(x);
+    if (breaks.some(point => Math.abs(point - x) < 1e-10)) continue;
+    assert.ok(Number.isFinite(y), `${id} non-finite graph sample at x = ${x}`);
+    if (y >= value.y[0] && y <= value.y[1]) visible += 1;
+  }
+  assert.ok(visible >= 2, `${id} graph must have visible data`);
+}
+
+test('MCV4U covers A1–C3 with at least 400 distinct boards', () => {
   assert.deepEqual(mcv4u.map(strand => strand.groups.map(group => group.code).join(' ')), [
     'A1 A2 A3', 'B1 B2 B3', 'C1 C2 C3'
   ]);
   const boards = new Set();
   for (const { code, sets } of mcv4u.flatMap(strand => strand.groups)) {
-    assert.ok(sets.length >= 5, `MCV4U ${code} should have at least 5 starter sets`);
+    assert.equal(sets.length, 45, `MCV4U ${code} set count`);
+    const variantsByTitle = new Map();
     for (const [index, set] of sets.entries()) {
       const id = `MCV4U ${code} #${index + 1}`;
       assert.ok(set.title.trim(), `${id} title`);
+      variantsByTitle.set(set.title, (variantsByTitle.get(set.title) ?? 0) + 1);
       assert.equal(set.cards.length, 4, `${id} card count`);
-      assert.ok(set.cards.every(card => card.reason.trim()), `${id} sample arguments`);
+      for (const [position, card] of set.cards.entries()) {
+        const cardId = `${id} card ${position + 1}`;
+        assert.ok(card.reason.trim(), `${cardId} sample argument`);
+        if (card.value.kind === 'graph') assertMcvGraphSamples(card.value, cardId);
+      }
       const cardKeys = set.cards.map(card => cardKey(card.value));
       assert.equal(new Set(cardKeys).size, 4, `${id} has a duplicate card`);
-      const key = JSON.stringify([set.prompt, cardKeys.sort()]);
+      const key = JSON.stringify(cardKeys.sort());
       assert.ok(!boards.has(key), `${id} duplicates an earlier board`);
       boards.add(key);
     }
+    assert.equal(variantsByTitle.size, 9, `MCV4U ${code} pattern count`);
+    for (const [title, count] of variantsByTitle) {
+      assert.equal(count, 5, `MCV4U ${code} variants for ${title}`);
+    }
   }
+  assert.ok(boards.size >= 400);
 });
-
 
 // --- MPM2D 800-puzzle & DOM/storage regression tests ---
 const html = fs.readFileSync(new URL('../mpm2d-wodb.html', import.meta.url), 'utf8');
