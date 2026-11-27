@@ -619,6 +619,32 @@
         simLabel2: '6 cm, 9 cm, 12 cm',
         simVerts1: 'A, B, C',
         simVerts2: 'D, E, F',
+        // Right triangle pair (similarity -> trig ratios)
+        rpBase: 4,
+        rpHeight: 3,
+        rpHyp: 5,
+        rpScale: 2,
+        rpUnit: 'cm',
+        rpOrient: 'right', // 'right' (90° bottom-right) | 'left' (90° bottom-left)
+        rpVerts1: '',
+        rpVerts2: '',
+        rpAngleDisplay: 'deg', // 'deg' | 'theta' | 'both' | 'arc' | 'none'
+        rpShowRightAngle: true,
+        rpShowSideLabels: true,
+        rpShowTrigNames: false,
+        rpShowRatioCaption: false,
+        rpRotation: 0,
+        // Per-side label overrides: 'auto' = computed number, '' = hide, or custom e.g. 'x', 'y'
+        rpLbl1Base: 'auto',
+        rpLbl1Height: 'auto',
+        rpLbl1Hyp: 'auto',
+        rpLbl2Base: 'auto',
+        rpLbl2Height: 'auto',
+        rpLbl2Hyp: 'auto',
+        // Optional worksheet card frame (like Pair A1 / A2)
+        rpCardMode: false,
+        rpCardTitle: 'Pair A1',
+        rpCardRatioLabel: 'Ratio A',
         // Compound triangles ('bowtie' | 'nested' | 'shared_height')
         compType: 'bowtie',
         compParallel: true,
@@ -939,6 +965,7 @@
             <button type="button" class="pill-btn ${t.mode==='right'?'active':''}" onclick="state.tri.mode='right'; buildControls(); render();">Right Triangle</button>
             <button type="button" class="pill-btn ${t.mode==='oblique'?'active':''}" onclick="state.tri.mode='oblique'; buildControls(); render();">Oblique (Sine/Cosine)</button>
             <button type="button" class="pill-btn ${t.mode==='similar'?'active':''}" onclick="state.tri.mode='similar'; buildControls(); render();">Similar Triangles</button>
+            <button type="button" class="pill-btn ${t.mode==='right_pair'?'active':''}" onclick="state.tri.mode='right_pair'; buildControls(); render();">Right △ Pair (Sim→Trig)</button>
             <button type="button" class="pill-btn ${t.mode==='compound'?'active':''}" onclick="state.tri.mode='compound'; buildControls(); render();">Compound / 8-Shape</button>
           </div>
         </div>
@@ -1010,6 +1037,91 @@
             <div class="field"><label>Triangle 2 Vertices (top, right, left)</label><input type="text" value="${esc(t.simVerts2)}" placeholder="D, E, F" oninput="state.tri.simVerts2=this.value; render()"></div>
           </div>
         `;
+      } else if (t.mode === 'right_pair') {
+        const b = Math.max(0.01, Number(t.rpBase) || 4);
+        const h = Math.max(0.01, Number(t.rpHeight) || 3);
+        const hyp = Math.hypot(b, h);
+        const k = Math.max(0.1, Number(t.rpScale) || 2);
+        const thetaDeg = Math.atan2(h, b) * 180 / Math.PI;
+        html += `
+          <div class="preset-row">
+            <button type="button" class="preset-chip" onclick="applyRightPairPreset('pairA1')">Pair A1 (30° Card)</button>
+            <button type="button" class="preset-chip" onclick="applyRightPairPreset('345')">3-4-5 (k=2)</button>
+            <button type="button" class="preset-chip" onclick="applyRightPairPreset('51213')">5-12-13 (k=1.5)</button>
+            <button type="button" class="preset-chip" onclick="applyRightPairPreset('81517')">8-15-17 (k=0.5)</button>
+          </div>
+          <div id="rpInfoBox" class="info-box">
+            ∠θ = ${fmtNum(thetaDeg)}° &nbsp;|&nbsp; Scale k = ${fmtNum(k)}×<br>
+            sin θ = ${fmtNum(h)}/${fmtNum(hyp)} = ${fmtNum(h*k)}/${fmtNum(hyp*k)} = ${(h/hyp).toFixed(3)}<br>
+            cos θ = ${fmtNum(b)}/${fmtNum(hyp)} = ${fmtNum(b*k)}/${fmtNum(hyp*k)} = ${(b/hyp).toFixed(3)}<br>
+            tan θ = ${fmtNum(h)}/${fmtNum(b)} = ${fmtNum(h*k)}/${fmtNum(b*k)} = ${(h/b).toFixed(3)}
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>△1 Base (Adj)</label><input id="rpBaseInput" type="number" min="0.1" step="any" value="${fmtInputNum(b)}" oninput="onRightPairSideInput('base', this.value)"></div>
+            <div class="field"><label>△1 Height (Opp)</label><input id="rpHeightInput" type="number" min="0.1" step="any" value="${fmtInputNum(h)}" oninput="onRightPairSideInput('height', this.value)"></div>
+            <div class="field"><label>△1 Hypotenuse</label><input id="rpHypInput" type="number" min="0.1" step="any" value="${fmtInputNum(hyp)}" oninput="onRightPairSideInput('hyp', this.value, false)" onchange="onRightPairSideInput('hyp', this.value, true)"></div>
+          </div>
+          <div class="form-grid-3">
+            <div class="field"><label>Angle θ (°)</label><input id="rpAngleInput" type="number" min="1" max="89" step="any" value="${fmtInputNum(thetaDeg)}" oninput="onRightPairAngleInput(this.value)"></div>
+            <div class="field">
+              <label>Scale k (<span id="rpScaleLbl">${fmtNum(k)}</span>×)</label>
+              <input id="rpScaleSlider" type="range" min="0.4" max="3.0" step="0.1" value="${Math.min(3.0, Math.max(0.4, k))}" oninput="onRightPairScaleInput(this.value, 'slider')">
+            </div>
+            <div class="field">
+              <label>Exact k</label>
+              <input id="rpScaleInput" type="number" min="0.1" max="10" step="any" value="${fmtInputNum(k)}" oninput="onRightPairScaleInput(this.value, 'input')">
+            </div>
+          </div>
+          <div>
+            <p class="section-title" style="margin-bottom:4px;">Side Labels (auto = number, blank = hide, or x / y)</p>
+            <div class="form-grid-3" style="margin-bottom:6px;">
+              <div class="field"><label>△1 Base</label><input type="text" value="${esc(t.rpLbl1Base)}" placeholder="hide" oninput="state.tri.rpLbl1Base=this.value; render()"></div>
+              <div class="field"><label>△1 Height</label><input type="text" value="${esc(t.rpLbl1Height)}" placeholder="hide" oninput="state.tri.rpLbl1Height=this.value; render()"></div>
+              <div class="field"><label>△1 Hyp</label><input type="text" value="${esc(t.rpLbl1Hyp)}" placeholder="hide" oninput="state.tri.rpLbl1Hyp=this.value; render()"></div>
+            </div>
+            <div class="form-grid-3">
+              <div class="field"><label>△2 Base</label><input type="text" value="${esc(t.rpLbl2Base)}" placeholder="hide" oninput="state.tri.rpLbl2Base=this.value; render()"></div>
+              <div class="field"><label>△2 Height</label><input type="text" value="${esc(t.rpLbl2Height)}" placeholder="hide" oninput="state.tri.rpLbl2Height=this.value; render()"></div>
+              <div class="field"><label>△2 Hyp</label><input type="text" value="${esc(t.rpLbl2Hyp)}" placeholder="hide" oninput="state.tri.rpLbl2Hyp=this.value; render()"></div>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Orientation</label>
+              <select onchange="state.tri.rpOrient=this.value; render()">
+                <option value="right" ${t.rpOrient==='right'?'selected':''}>90° Bottom-Right (◿)</option>
+                <option value="left" ${t.rpOrient==='left'?'selected':''}>90° Bottom-Left (◺)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Acute Angle Label</label>
+              <select onchange="state.tri.rpAngleDisplay=this.value; render()">
+                <option value="deg" ${t.rpAngleDisplay==='deg'?'selected':''}>Degrees (auto)</option>
+                <option value="theta" ${t.rpAngleDisplay==='theta'?'selected':''}>Symbol (θ)</option>
+                <option value="both" ${t.rpAngleDisplay==='both'?'selected':''}>Both (θ = deg)</option>
+                <option value="arc" ${t.rpAngleDisplay==='arc'?'selected':''}>Arc only</option>
+                <option value="none" ${t.rpAngleDisplay==='none'?'selected':''}>Hide arc</option>
+              </select>
+            </div>
+            <div class="field"><label>Unit</label><input type="text" value="${esc(t.rpUnit)}" placeholder="e.g. cm, m, or blank" oninput="state.tri.rpUnit=this.value; render()"></div>
+            <div class="field"><label>Rotation (${t.rpRotation}°)</label><input type="range" min="0" max="345" step="15" value="${t.rpRotation}" oninput="state.tri.rpRotation=+this.value; this.previousElementSibling.textContent='Rotation ('+this.value+'°)'; render()"></div>
+            <div class="field"><label>△1 Vertices (blank = hide)</label><input type="text" value="${esc(t.rpVerts1)}" placeholder="e.g. A, B, C" oninput="state.tri.rpVerts1=this.value; render()"></div>
+            <div class="field"><label>△2 Vertices (blank = hide)</label><input type="text" value="${esc(t.rpVerts2)}" placeholder="e.g. D, E, F" oninput="state.tri.rpVerts2=this.value; render()"></div>
+          </div>
+          <div class="check-row">
+            <label class="check-label"><input type="checkbox" ${t.rpShowRightAngle?'checked':''} onchange="state.tri.rpShowRightAngle=this.checked; render()"> Right-angle box</label>
+            <label class="check-label"><input type="checkbox" ${t.rpShowSideLabels?'checked':''} onchange="state.tri.rpShowSideLabels=this.checked; render()"> Side labels</label>
+            <label class="check-label"><input type="checkbox" ${t.rpShowTrigNames?'checked':''} onchange="state.tri.rpShowTrigNames=this.checked; render()"> Opp/Adj/Hyp</label>
+            <label class="check-label"><input type="checkbox" ${t.rpShowRatioCaption?'checked':''} onchange="state.tri.rpShowRatioCaption=this.checked; render()"> Ratio caption</label>
+            <label class="check-label"><input type="checkbox" ${t.rpCardMode?'checked':''} onchange="state.tri.rpCardMode=this.checked; buildControls(); render()"> Worksheet Card</label>
+          </div>
+          ${t.rpCardMode ? `
+            <div class="form-grid">
+              <div class="field"><label>Card Title</label><input type="text" value="${esc(t.rpCardTitle)}" placeholder="Pair A1" oninput="state.tri.rpCardTitle=this.value; render()"></div>
+              <div class="field"><label>Ratio Prompt Label</label><input type="text" value="${esc(t.rpCardRatioLabel)}" placeholder="Ratio A" oninput="state.tri.rpCardRatioLabel=this.value; render()"></div>
+            </div>
+          ` : ''}
+        `;
       } else {
         html += `
           <div class="submode-pills">
@@ -1075,6 +1187,139 @@
         t.showEye = true; t.showBuilding = true; t.showDepressionLine = true;
       }
       buildControls();
+      render();
+    }
+
+    function fmtInputNum(n) {
+      const r = Math.round(n * 1000) / 1000;
+      return Object.is(r, -0) ? '0' : String(r);
+    }
+
+    function applyRightPairPreset(name) {
+      const t = state.tri;
+      if (name === 'pairA1') {
+        const rad = (30 * Math.PI) / 180;
+        t.rpHyp = 6;
+        t.rpBase = 6 * Math.cos(rad);
+        t.rpHeight = 6 * Math.sin(rad); // 3
+        t.rpScale = 14 / 6; // 2.3333 -> △2 hyp = 14
+        t.rpUnit = '';
+        t.rpOrient = 'right';
+        t.rpVerts1 = ''; t.rpVerts2 = '';
+        t.rpLbl1Base = ''; t.rpLbl1Height = 'auto'; t.rpLbl1Hyp = 'auto';
+        t.rpLbl2Base = ''; t.rpLbl2Height = 'x'; t.rpLbl2Hyp = 'auto';
+        t.rpCardMode = true;
+        t.rpCardTitle = 'Pair A1';
+        t.rpCardRatioLabel = 'Ratio A';
+      } else if (name === '345') {
+        t.rpBase = 4; t.rpHeight = 3; t.rpHyp = 5; t.rpScale = 2;
+        t.rpLbl1Base = 'auto'; t.rpLbl1Height = 'auto'; t.rpLbl1Hyp = 'auto';
+        t.rpLbl2Base = 'auto'; t.rpLbl2Height = 'auto'; t.rpLbl2Hyp = 'auto';
+        t.rpCardMode = false;
+      } else if (name === '51213') {
+        t.rpBase = 12; t.rpHeight = 5; t.rpHyp = 13; t.rpScale = 1.5;
+        t.rpLbl1Base = 'auto'; t.rpLbl1Height = 'auto'; t.rpLbl1Hyp = 'auto';
+        t.rpLbl2Base = 'auto'; t.rpLbl2Height = 'auto'; t.rpLbl2Hyp = 'auto';
+        t.rpCardMode = false;
+      } else if (name === '81517') {
+        t.rpBase = 15; t.rpHeight = 8; t.rpHyp = 17; t.rpScale = 0.5;
+        t.rpLbl1Base = 'auto'; t.rpLbl1Height = 'auto'; t.rpLbl1Hyp = 'auto';
+        t.rpLbl2Base = 'auto'; t.rpLbl2Height = 'auto'; t.rpLbl2Hyp = 'auto';
+        t.rpCardMode = false;
+      }
+      buildControls();
+      render();
+    }
+
+    function updateRightPairInfoBox() {
+      const box = document.getElementById('rpInfoBox');
+      if (!box) return;
+      const t = state.tri;
+      const b = Math.max(0.01, Number(t.rpBase) || 4);
+      const h = Math.max(0.01, Number(t.rpHeight) || 3);
+      const hyp = Math.hypot(b, h);
+      const k = Math.max(0.1, Number(t.rpScale) || 2);
+      const thetaDeg = Math.atan2(h, b) * 180 / Math.PI;
+      box.innerHTML = `
+        ∠θ = ${fmtNum(thetaDeg)}° &nbsp;|&nbsp; Scale k = ${fmtNum(k)}×<br>
+        sin θ = ${fmtNum(h)}/${fmtNum(hyp)} = ${fmtNum(h * k)}/${fmtNum(hyp * k)} = ${(h / hyp).toFixed(3)}<br>
+        cos θ = ${fmtNum(b)}/${fmtNum(hyp)} = ${fmtNum(b * k)}/${fmtNum(hyp * k)} = ${(b / hyp).toFixed(3)}<br>
+        tan θ = ${fmtNum(h)}/${fmtNum(b)} = ${fmtNum(h * k)}/${fmtNum(b * k)} = ${(h / b).toFixed(3)}
+      `;
+    }
+
+    function onRightPairSideInput(which, rawVal, commit = true) {
+      const t = state.tri;
+      const val = parseFloat(rawVal);
+      if (!isFinite(val) || val <= 0) return;
+
+      if (which === 'base') {
+        t.rpBase = val;
+        t.rpHyp = Math.hypot(t.rpBase, t.rpHeight);
+        const hypEl = document.getElementById('rpHypInput');
+        if (hypEl) hypEl.value = fmtInputNum(t.rpHyp);
+      } else if (which === 'height') {
+        t.rpHeight = val;
+        t.rpHyp = Math.hypot(t.rpBase, t.rpHeight);
+        const hypEl = document.getElementById('rpHypInput');
+        if (hypEl) hypEl.value = fmtInputNum(t.rpHyp);
+      } else if (which === 'hyp') {
+        if (val > t.rpBase) {
+          t.rpHyp = val;
+          t.rpHeight = Math.sqrt(val * val - t.rpBase * t.rpBase);
+          const hEl = document.getElementById('rpHeightInput');
+          if (hEl) hEl.value = fmtInputNum(t.rpHeight);
+        } else if (commit) {
+          const theta = Math.atan2(t.rpHeight, t.rpBase);
+          t.rpHyp = val;
+          t.rpBase = val * Math.cos(theta);
+          t.rpHeight = val * Math.sin(theta);
+          const bEl = document.getElementById('rpBaseInput');
+          const hEl = document.getElementById('rpHeightInput');
+          if (bEl) bEl.value = fmtInputNum(t.rpBase);
+          if (hEl) hEl.value = fmtInputNum(t.rpHeight);
+        } else {
+          setAlert('Hypotenuse ≤ base: press Enter or leave field to scale both legs proportionally.');
+          return;
+        }
+      }
+      const angEl = document.getElementById('rpAngleInput');
+      if (angEl) angEl.value = fmtInputNum(Math.atan2(t.rpHeight, t.rpBase) * 180 / Math.PI);
+      updateRightPairInfoBox();
+      render();
+    }
+
+    function onRightPairAngleInput(rawVal) {
+      const t = state.tri;
+      const deg = parseFloat(rawVal);
+      if (!isFinite(deg) || deg <= 0.5 || deg >= 89.5) return;
+      const hyp = Math.hypot(t.rpBase, t.rpHeight);
+      const rad = (deg * Math.PI) / 180;
+      t.rpBase = hyp * Math.cos(rad);
+      t.rpHeight = hyp * Math.sin(rad);
+      t.rpHyp = hyp;
+      const bEl = document.getElementById('rpBaseInput');
+      const hEl = document.getElementById('rpHeightInput');
+      if (bEl) bEl.value = fmtInputNum(t.rpBase);
+      if (hEl) hEl.value = fmtInputNum(t.rpHeight);
+      updateRightPairInfoBox();
+      render();
+    }
+
+    function onRightPairScaleInput(rawVal, source) {
+      const val = parseFloat(rawVal);
+      if (!isFinite(val) || val <= 0) return;
+      state.tri.rpScale = val;
+      const lbl = document.getElementById('rpScaleLbl');
+      if (lbl) lbl.textContent = fmtNum(val);
+      if (source === 'slider') {
+        const inp = document.getElementById('rpScaleInput');
+        if (inp) inp.value = fmtInputNum(val);
+      } else {
+        const sld = document.getElementById('rpScaleSlider');
+        if (sld) sld.value = Math.min(3.0, Math.max(0.4, val));
+      }
+      updateRightPairInfoBox();
       render();
     }
 
@@ -1974,6 +2219,160 @@
 
         inner += drawAngleArcAndLabel(C1, B1, A1, '', cfg);
         inner += drawAngleArcAndLabel(C2, B2, A2, '', cfg);
+      } else if (t.mode === 'right_pair') {
+        const base = Math.max(0.01, Number(t.rpBase) || 4);
+        const height = Math.max(0.01, Number(t.rpHeight) || 3);
+        const hyp = Math.hypot(base, height);
+        const k = Math.max(0.1, Number(t.rpScale) || 2);
+        const thetaDeg = Math.atan2(height, base) * 180 / Math.PI;
+        const degStr = `${thetaDeg.toFixed(1).replace(/\.0$/, '')}°`;
+
+        const rad = ((t.rpRotation || 0) * Math.PI) / 180;
+        const rot = p => ({
+          x: p.x * Math.cos(rad) - p.y * Math.sin(rad),
+          y: p.x * Math.sin(rad) + p.y * Math.cos(rad)
+        });
+
+        // [A (acute), B (top), C (right angle)]
+        const makeLocalPts = (bLen, hLen) => {
+          if (t.rpOrient === 'left') {
+            return [{ x: bLen, y: 0 }, { x: 0, y: -hLen }, { x: 0, y: 0 }].map(rot);
+          }
+          // Default 'right': acute at bottom-left (0,0), 90° at bottom-right (bLen,0)
+          return [{ x: 0, y: 0 }, { x: bLen, y: -hLen }, { x: bLen, y: 0 }].map(rot);
+        };
+        const tri1Raw = makeLocalPts(base, height);
+        const tri2Raw = makeLocalPts(base * k, height * k);
+
+        const bounds = pts => {
+          const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+          return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+        };
+        const b1 = bounds(tri1Raw), b2 = bounds(tri2Raw);
+        const w1 = b1.maxX - b1.minX, w2 = b2.maxX - b2.minX;
+        const h1 = b1.maxY - b1.minY, h2 = b2.maxY - b2.minY;
+        const gap = Math.max(w1, w2) * 0.45;
+
+        // Align bottoms of both triangles on the same baseline
+        const tri1Shifted = tri1Raw.map(p => ({ x: p.x - b1.minX, y: p.y - b1.maxY }));
+        const tri2Shifted = tri2Raw.map(p => ({ x: p.x - b2.minX + w1 + gap, y: p.y - b2.maxY }));
+
+        const totalW = w1 + gap + w2;
+        const totalH = Math.max(h1, h2);
+        const padX = t.rpCardMode ? 54 : 48;
+        const padTop = t.rpCardMode ? 68 : 44;
+        const padBot = t.rpCardMode ? 64 : (t.rpShowRatioCaption ? 64 : 44);
+        const availW = cfg.w - padX * 2;
+        const availH = cfg.h - padTop - padBot;
+        const sharedScale = Math.min(availW / Math.max(0.01, totalW), availH / Math.max(0.01, totalH));
+
+        const offsetX = (cfg.w - totalW * sharedScale) / 2;
+        const baseY = padTop + availH - ((availH - totalH * sharedScale) / 2);
+
+        const toCanvas = pts => {
+          const cPts = pts.map(p => ({ x: offsetX + p.x * sharedScale, y: baseY + p.y * sharedScale }));
+          return {
+            pts: cPts,
+            cx: cPts.reduce((s, p) => s + p.x, 0) / 3,
+            cy: cPts.reduce((s, p) => s + p.y, 0) / 3
+          };
+        };
+
+        const f1 = toCanvas(tri1Shifted);
+        const f2 = toCanvas(tri2Shifted);
+        const [A1, B1, C1] = f1.pts;
+        const [A2, B2, C2] = f2.pts;
+
+        // Optional Worksheet Card Frame (header + footer blanks)
+        if (t.rpCardMode) {
+          const cardPad = 10;
+          const cw = cfg.w - cardPad * 2;
+          const ch = cfg.h - cardPad * 2;
+          const headerTitle = `${(t.rpCardTitle || 'Pair A1').trim()} — Reference Angle θ = ${degStr}`;
+          inner += `<rect x="${cardPad}" y="${cardPad}" width="${cw}" height="${ch}" rx="6" fill="none" stroke="${cfg.border}" stroke-width="1.2" />`;
+          inner += `<text x="${cardPad + 14}" y="${cardPad + 22}" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="${Math.max(11, cfg.fs - 1)}" fill="${cfg.ink}">${esc(headerTitle)}</text>`;
+          inner += `<text x="${cfg.w - cardPad - 14}" y="${cardPad + 22}" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="${Math.max(10, cfg.fs - 2)}" fill="${cfg.muted}">△₁ ~ △₂</text>`;
+          inner += `<line x1="${cardPad + 12}" y1="${cardPad + 32}" x2="${cfg.w - cardPad - 12}" y2="${cardPad + 32}" stroke="${cfg.border}" stroke-width="0.9" />`;
+        }
+
+        inner += `<polygon points="${A1.x.toFixed(1)},${A1.y.toFixed(1)} ${B1.x.toFixed(1)},${B1.y.toFixed(1)} ${C1.x.toFixed(1)},${C1.y.toFixed(1)}" fill="${cfg.fillSoft1}" stroke="${cfg.primary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+        inner += `<polygon points="${A2.x.toFixed(1)},${A2.y.toFixed(1)} ${B2.x.toFixed(1)},${B2.y.toFixed(1)} ${C2.x.toFixed(1)},${C2.y.toFixed(1)}" fill="${cfg.fillSoft2}" stroke="${cfg.tertiary}" stroke-width="${cfg.sw}" stroke-linejoin="round" />`;
+
+        // Resolve per-side label overrides
+        const u = t.rpUnit && t.rpUnit.trim() ? ' ' + t.rpUnit.trim() : '';
+        const resolveLbl = (override, numVal, prefix) => {
+          const s = String(override === undefined ? 'auto' : override).trim();
+          if (!s) return '';
+          if (s.toLowerCase() === 'auto') return `${prefix}${fmtNum(numVal)}${u}`;
+          return `${prefix}${s}`;
+        };
+        const pAdj = t.rpShowTrigNames ? 'Adj: ' : '';
+        const pOpp = t.rpShowTrigNames ? 'Opp: ' : '';
+        const pHyp = t.rpShowTrigNames ? 'Hyp: ' : '';
+
+        const lbl1Base = resolveLbl(t.rpLbl1Base, base, pAdj);
+        const lbl1Height = resolveLbl(t.rpLbl1Height, height, pOpp);
+        const lbl1Hyp = resolveLbl(t.rpLbl1Hyp, hyp, pHyp);
+        const lbl2Base = resolveLbl(t.rpLbl2Base, base * k, pAdj);
+        const lbl2Height = resolveLbl(t.rpLbl2Height, height * k, pOpp);
+        const lbl2Hyp = resolveLbl(t.rpLbl2Hyp, hyp * k, pHyp);
+
+        // Highlight any unknown sides (e.g. 'x', 'y')
+        if (t.rpShowSideLabels) {
+          inner += drawUnknownEdgeOverlay(C1, A1, lbl1Base, cfg);
+          inner += drawUnknownEdgeOverlay(C1, B1, lbl1Height, cfg);
+          inner += drawUnknownEdgeOverlay(A1, B1, lbl1Hyp, cfg);
+          inner += drawUnknownEdgeOverlay(C2, A2, lbl2Base, cfg);
+          inner += drawUnknownEdgeOverlay(C2, B2, lbl2Height, cfg);
+          inner += drawUnknownEdgeOverlay(A2, B2, lbl2Hyp, cfg);
+        }
+
+        if (t.rpShowRightAngle) {
+          const minE1 = Math.min(Math.hypot(A1.x - C1.x, A1.y - C1.y), Math.hypot(B1.x - C1.x, B1.y - C1.y));
+          const minE2 = Math.min(Math.hypot(A2.x - C2.x, A2.y - C2.y), Math.hypot(B2.x - C2.x, B2.y - C2.y));
+          inner += drawRightAngleBox(C1, A1, B1, Math.max(7, Math.min(14, minE1 * 0.25)), cfg.ink, Math.max(1.3, cfg.sw * 0.75));
+          inner += drawRightAngleBox(C2, A2, B2, Math.max(7, Math.min(14, minE2 * 0.25)), cfg.ink, Math.max(1.3, cfg.sw * 0.75));
+        }
+
+        if (t.rpAngleDisplay !== 'none') {
+          let angLbl = '';
+          if (t.rpAngleDisplay === 'deg') angLbl = degStr;
+          else if (t.rpAngleDisplay === 'theta') angLbl = 'θ';
+          else if (t.rpAngleDisplay === 'both') angLbl = `θ = ${degStr}`;
+          inner += drawAngleArcAndLabel(A1, C1, B1, angLbl, cfg);
+          inner += drawAngleArcAndLabel(A2, C2, B2, angLbl, cfg);
+        }
+
+        if (t.rpShowSideLabels) {
+          if (lbl1Base) inner += drawEdgeLabel(C1, A1, { x: f1.cx, y: f1.cy }, lbl1Base, cfg, cfg.primary);
+          if (lbl1Height) inner += drawEdgeLabel(C1, B1, { x: f1.cx, y: f1.cy }, lbl1Height, cfg, cfg.primary);
+          if (lbl1Hyp) inner += drawEdgeLabel(A1, B1, { x: f1.cx, y: f1.cy }, lbl1Hyp, cfg, cfg.primary);
+
+          if (lbl2Base) inner += drawEdgeLabel(C2, A2, { x: f2.cx, y: f2.cy }, lbl2Base, cfg, cfg.tertiary);
+          if (lbl2Height) inner += drawEdgeLabel(C2, B2, { x: f2.cx, y: f2.cy }, lbl2Height, cfg, cfg.tertiary);
+          if (lbl2Hyp) inner += drawEdgeLabel(A2, B2, { x: f2.cx, y: f2.cy }, lbl2Hyp, cfg, cfg.tertiary);
+        }
+
+        const vLabels1 = (t.rpVerts1 || '').split(',').map(x => x.trim());
+        const vLabels2 = (t.rpVerts2 || '').split(',').map(x => x.trim());
+        f1.pts.forEach((p, i) => { if (vLabels1[i]) inner += drawVertexLabel(p, { x: f1.cx, y: f1.cy }, vLabels1[i], cfg); });
+        f2.pts.forEach((p, i) => { if (vLabels2[i]) inner += drawVertexLabel(p, { x: f2.cx, y: f2.cy }, vLabels2[i], cfg); });
+
+        if (t.rpCardMode) {
+          const cardPad = 10;
+          const footLineY = cfg.h - cardPad - 32;
+          const footTextY = cfg.h - cardPad - 12;
+          const unkCandidate = [lbl1Base, lbl1Height, lbl1Hyp, lbl2Base, lbl2Height, lbl2Hyp].find(s => s && isUnknownLabel(s)) || 'x';
+          const ratioLbl = (t.rpCardRatioLabel || 'Ratio A').trim();
+          const fsFoot = Math.max(10, cfg.fs - 2);
+          inner += `<line x1="${cardPad + 12}" y1="${footLineY}" x2="${cfg.w - cardPad - 12}" y2="${footLineY}" stroke="${cfg.border}" stroke-width="0.9" stroke-dasharray="4,3" />`;
+          inner += `<text x="${cardPad + 14}" y="${footTextY}" font-family="system-ui, -apple-system, sans-serif" font-size="${fsFoot}" fill="${cfg.ink}">Missing value: ${esc(unkCandidate)} = _________</text>`;
+          inner += `<text x="${(cfg.w * 0.52).toFixed(1)}" y="${footTextY}" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="${fsFoot}" fill="${cfg.ink}">${esc(ratioLbl)} (△₁) = _________</text>`;
+          inner += `<text x="${cfg.w - cardPad - 14}" y="${footTextY}" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="${fsFoot}" fill="${cfg.ink}">${esc(ratioLbl)} (△₂) = _________</text>`;
+        } else if (t.rpShowRatioCaption) {
+          const cap = `k = ${fmtNum(k)}×  |  sin θ = ${fmtNum(height)}/${fmtNum(hyp)} = ${fmtNum(height * k)}/${fmtNum(hyp * k)}  |  cos θ = ${fmtNum(base)}/${fmtNum(hyp)} = ${fmtNum(base * k)}/${fmtNum(hyp * k)}  |  tan θ = ${fmtNum(height)}/${fmtNum(base)} = ${fmtNum(height * k)}/${fmtNum(base * k)}`;
+          inner += `<text x="${(cfg.w / 2).toFixed(1)}" y="${(cfg.h - 14).toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${Math.max(10, cfg.fs - 2)}" fill="${cfg.muted}">${esc(cap)}</text>`;
+        }
       } else {
         // Compound / 8-Shape Triangles
         const vs = (t.compVerts || 'A,B,C,D,E').split(',').map(x => x.trim());
@@ -3563,6 +3962,8 @@
       if (state.category === 'triangle') {
         if (state.tri.mode === 'similar') {
           items = [dot(cfg.primary, 'Triangle 1'), dot(cfg.tertiary, 'Triangle 2 / Angles'), dot(cfg.secondary, 'Unknown Side')];
+        } else if (state.tri.mode === 'right_pair') {
+          items = [dot(cfg.primary, 'Triangle 1'), dot(cfg.tertiary, 'Triangle 2 (Scaled) / ∠')];
         } else {
           items = [dot(cfg.primary, 'Given Sides'), dot(cfg.tertiary, 'Given Angles'), dot(cfg.secondary, 'Unknown (Find)')];
         }
