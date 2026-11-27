@@ -543,6 +543,10 @@
               <input type="checkbox" id="whiteBg" checked onchange="render()" />
               White background (uncheck for transparent)
             </label>
+            <label class="check-label">
+              <input type="checkbox" id="tightCropPng" checked />
+              Tight-crop PNG whitespace
+            </label>
           </div>
         </div>
       </div>
@@ -553,7 +557,10 @@
       <div class="preview-toolbar">
         <div class="action-buttons">
           <button type="button" class="btn btn-primary" id="btnCopyDocs" onclick="copyHighResPngForDocs()">
-            📄 Copy for Google Docs (Hi-Res)
+            📄 Copy PNG for Word / Docs
+          </button>
+          <button type="button" class="btn" id="btnCopyWord4x5" onclick="copyHighResPngForDocs(165)" title="Copies a tight-cropped 165px (~1.7 in) wide PNG so 4 columns × 5 rows fit on 8.5×11">
+            🧩 Copy 4×5 Grid (1.7&quot;)
           </button>
           <button type="button" class="btn" id="btnDownloadPng" onclick="downloadPng()">
             ⬇️ Download .PNG
@@ -2577,17 +2584,17 @@
       const arcColor = cfg.isColor ? (isUnknownLabel(label) ? cfg.secondary : cfg.tertiary) : cfg.ink;
       let out = `<path d="M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r.toFixed(1)} ${r.toFixed(1)} 0 0 ${sweep} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${arcColor}" stroke-width="${Math.max(1.3, cfg.sw * 0.75)}" />`;
       if (label) {
-        const angFs = Math.max(9.5, cfg.fs - 2.5);
+        const angFs = Math.max(8.5, Math.min(cfg.fs - 2.5, minEdge * 0.14));
         const mid = a1 + diff / 2;
         const half = Math.abs(diff) / 2;
-        const hw = String(label).length * angFs * 0.29;
+        const hw = String(label).length * angFs * 0.28;
         const hh = angFs * 0.42;
-        const minLrForArc = r + hw * Math.abs(Math.cos(mid)) + hh * Math.abs(Math.sin(mid)) + 4;
-        const minLrForWedge = (hh + 3.5) / Math.max(0.18, Math.sin(half));
-        const lr = Math.min(minEdge * 0.65, Math.max(minLrForArc, minLrForWedge));
+        const minLrForArc = r + hw * Math.abs(Math.cos(mid)) + hh * Math.abs(Math.sin(mid)) + 3;
+        const minLrForWedge = (hh + 3) / Math.max(0.18, Math.sin(half));
+        const lr = Math.min(minEdge * 0.48, Math.max(minLrForArc, minLrForWedge));
         const lx = V.x + lr * Math.cos(mid);
         const ly = V.y + lr * Math.sin(mid) + angFs * 0.34;
-        out += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="${cfg.isColor ? '700' : '400'}" font-size="${angFs}" fill="${arcColor}">${esc(label)}</text>`;
+        out += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="${cfg.isColor ? '700' : '400'}" font-size="${angFs.toFixed(1)}" fill="${arcColor}">${esc(label)}</text>`;
       }
       return out;
     }
@@ -4063,12 +4070,62 @@
           const img = new Image();
           img.onload = () => {
             try {
+              const tightCrop = !!(document.getElementById('tightCropPng') && document.getElementById('tightCropPng').checked);
+              const mode = (document.getElementById('pngExportSize') || {}).value || 's3';
+              const targetW = scale !== undefined ? Math.round(cfg.w * scale) : null;
+
+              let sx = 0, sy = 0, sw = cfg.w * 3, sh = cfg.h * 3;
+              const srcCanvas = document.createElement('canvas');
+              srcCanvas.width = sw;
+              srcCanvas.height = sh;
+              const sctx = srcCanvas.getContext('2d');
+              if (!sctx) return reject(new Error('Canvas 2D context unavailable'));
+              sctx.drawImage(img, 0, 0, sw, sh);
+
+              if (tightCrop) {
+                const data = sctx.getImageData(0, 0, sw, sh).data;
+                let minX = sw, minY = sh, maxX = -1, maxY = -1;
+                for (let y = 0; y < sh; y++) {
+                  const row = y * sw * 4;
+                  for (let x = 0; x < sw; x++) {
+                    const i = row + x * 4;
+                    const a = data[i + 3];
+                    if (a > 8 && (!cfg.whiteBg || data[i] < 248 || data[i + 1] < 248 || data[i + 2] < 248)) {
+                      if (x < minX) minX = x;
+                      if (x > maxX) maxX = x;
+                      if (y < minY) minY = y;
+                      if (y > maxY) maxY = y;
+                    }
+                  }
+                }
+                if (maxX >= minX && maxY >= minY) {
+                  const pad = 18; // 6px at 1x
+                  sx = Math.max(0, minX - pad);
+                  sy = Math.max(0, minY - pad);
+                  sw = Math.min(srcCanvas.width - sx, maxX - minX + 1 + pad * 2);
+                  sh = Math.min(srcCanvas.height - sy, maxY - minY + 1 + pad * 2);
+                }
+              }
+
+              let finalW, finalH;
+              if (targetW) {
+                finalW = targetW;
+                finalH = Math.max(1, Math.round(targetW * (sh / sw)));
+              } else if (mode === 'w165' || mode === 'w220' || mode === 'w320') {
+                finalW = parseInt(mode.slice(1), 10);
+                finalH = Math.max(1, Math.round(finalW * (sh / sw)));
+              } else {
+                const mult = mode === 's1' ? 1 : 3;
+                finalW = Math.max(1, Math.round((sw / 3) * mult));
+                finalH = Math.max(1, Math.round((sh / 3) * mult));
+              }
+
               const canvas = document.createElement('canvas');
-              canvas.width = outW;
-              canvas.height = outH;
+              canvas.width = finalW;
+              canvas.height = finalH;
               const ctx = canvas.getContext('2d');
               if (!ctx) return reject(new Error('Canvas 2D context unavailable'));
-              ctx.drawImage(img, 0, 0, outW, outH);
+              ctx.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, finalW, finalH);
               canvas.toBlob(blob => {
                 if (blob) resolve(blob);
                 else reject(new Error('PNG encoding failed'));
@@ -4085,19 +4142,22 @@
       });
     }
 
-    async function copyHighResPngForDocs() {
+    async function copyHighResPngForDocs(targetWidthOverride = null) {
       try {
         if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) {
           throw new Error('ClipboardItem unsupported');
         }
         const cfg = getGlobalStyle();
-        const s = getPngExportScale(cfg);
-        const outW = Math.round(cfg.w * s);
-        const outH = Math.round(cfg.h * s);
+        const s = targetWidthOverride ? (targetWidthOverride / cfg.w) : undefined;
+        const btnId = targetWidthOverride ? 'btnCopyWord4x5' : 'btnCopyDocs';
+        const blobPromise = renderSvgToPngBlob(s);
         await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': renderSvgToPngBlob(s) })
+          new ClipboardItem({ 'image/png': blobPromise })
         ]);
-        showCopyFeedback(`✓ Copied ${outW}×${outH}px PNG! Paste (Ctrl+V) into Word/Docs.`, 'btnCopyDocs');
+        const msg = targetWidthOverride
+          ? `✓ Copied ${targetWidthOverride}px (~1.7") PNG! Paste into 4×5 Word grid.`
+          : '✓ Copied PNG! Paste (Ctrl+V) into Word/Docs.';
+        showCopyFeedback(msg, btnId);
       } catch (err) {
         const msg = (err && /PNG|SVG|Canvas/i.test(err.message))
           ? 'PNG generation failed — try Download .SVG.'
@@ -4108,20 +4168,16 @@
 
     async function downloadPng() {
       try {
-        const cfg = getGlobalStyle();
-        const s = getPngExportScale(cfg);
-        const outW = Math.round(cfg.w * s);
-        const outH = Math.round(cfg.h * s);
-        const blob = await renderSvgToPngBlob(s);
+        const blob = await renderSvgToPngBlob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `mpm2d-${state.category}-${outW}x${outH}.png`;
+        a.download = `mpm2d-${state.category}.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showCopyFeedback(`✓ Downloaded ${outW}×${outH}px .png file!`);
+        showCopyFeedback('✓ Downloaded .png file!');
       } catch (err) {
         showCopyFeedback('PNG export failed; try Download .SVG.');
       }
