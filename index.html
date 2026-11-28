@@ -16,120 +16,328 @@
             transform: translate(-2px, -2px);
             box-shadow: 8px 8px 0px #1e293b;
         }
+        .course-tab {
+            border: 3px solid #1e293b;
+            box-shadow: 3px 3px 0px #1e293b;
+            transition: all 0.15s ease;
+        }
+        .course-tab:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 4px 4px 0px #1e293b;
+        }
+        .course-tab.active {
+            background-color: #2563eb;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body class="bg-yellow-50 text-slate-800 font-sans min-h-screen p-6">
 
-    <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-wide text-blue-600 drop-shadow-md">
+    <div class="max-w-5xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-black mb-3 tracking-wide text-blue-600 drop-shadow-md">
                 Mr. Ngan's Interactive Learning Hub
             </h1>
             <p class="text-lg font-bold text-slate-600">A visual playground for Math and Physics</p>
         </header>
 
-        <section class="bg-white p-6 rounded-xl comic-border mb-10">
-            <h2 class="text-2xl font-bold mb-4 flex items-center">
+        <!-- Smart Search -->
+        <section class="bg-white p-6 rounded-xl comic-border mb-8">
+            <h2 class="text-2xl font-bold mb-3 flex items-center">
                 <span>🤖 Smart Assistant: What do you need help with?</span>
             </h2>
-            <p class="mb-4 text-slate-600 text-sm">Type a topic (e.g., MPM2D, math, money, physics) and I'll find it for you!</p>
-            <input type="text" id="aiInput" onkeyup="smartSearch()" placeholder="Try typing 'factoring'..." 
+            <p class="mb-4 text-slate-600 text-sm">Type a topic (e.g., MPM2D, factoring, similar triangles, trig, WODB) and I'll find it for you!</p>
+            <input type="text" id="aiInput" onkeyup="filterHub()" placeholder="Try typing 'factoring' or 'similar triangles'..."
                    class="w-full p-4 border-4 border-slate-800 rounded-lg text-lg focus:outline-none focus:ring-4 focus:ring-blue-300 font-bold">
-            <div id="aiResponse" class="mt-4 text-blue-600 font-bold min-h-[24px]"></div>
+            <div id="aiResponse" class="mt-3 text-blue-600 font-bold min-h-[24px]"></div>
         </section>
 
-        <div id="resourceGrid" class="grid grid-cols-1 gap-6">
-
-            <a href="mpm2d-similar-triangles/" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d similar triangles prove proving similarity aa sas sss scale factor missing sides angles geometry proof practice lab grade 10">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="bg-sky-100 text-sky-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grade 10 Math • Practice Lab</span>
-                    <span class="text-2xl">🔺</span>
+        <!-- Homepage Featured: Drill Master -->
+        <section class="mb-10" id="featuredSection">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="bg-blue-600 text-white text-xs font-black uppercase tracking-wider px-3 py-1 border-2 border-slate-800 rounded-full">Featured on Homepage</span>
+                <h2 class="text-xl font-black text-slate-800">Drill Master</h2>
+            </div>
+            <a href="mpm2d-drill.html" class="resource-card bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl comic-border block no-underline" data-course="MPM2D" data-tags="math mpm2d drill master factoring expansion expand solve quadratic transform linear systems analytic geometry trigonometry trig drill practice grade 10">
+                <div class="flex justify-between items-start mb-3">
+                    <span class="bg-blue-100 text-blue-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · All Strands Drill Master</span>
+                    <span class="text-3xl">🏋️</span>
                 </div>
-                <h3 class="text-xl font-black mb-2">SimLab MPM2D: Proving Similar Triangles</h3>
-                <p class="text-slate-600 font-medium">Interactive Grade 10 studio for proving similar triangles by AA, SAS, and SSS similarity, exploring transformations, and solving for missing sides and angles with instant feedback.</p>
+                <h3 class="text-2xl font-black mb-2 text-slate-900">MPM2D Math Drill Center</h3>
+                <p class="text-slate-700 font-medium">Unlimited Grade 10 practice across all expectations: Quadratics, Linear Systems, Analytic Geometry, and Trigonometry with instant feedback &amp; hints.</p>
             </a>
+        </section>
 
-            <a href="mpm2d-trig-studio.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d trig trigonometry sin cos tan sine cosine tangent sohcahtoa soh cah toa similar triangles right triangle explorer simulator ratio table formula guide grade 10">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="bg-cyan-100 text-cyan-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grade 10 Math • Simulator</span>
-                    <span class="text-2xl">📐</span>
-                </div>
-                <h3 class="text-xl font-black mb-2">Cosine Studio: MPM2D Trigonometry Explorer</h3>
-                <p class="text-slate-600 font-medium">Interactive right-triangle simulator for sin, cos, and tan: animate similar triangles to see why ratios stay constant, test classroom presets, and practice with step-by-step hints.</p>
-            </a>
+        <!-- Course Filter Tabs -->
+        <nav aria-label="Filter by course" class="flex flex-wrap gap-3 mb-8" id="courseTabs">
+            <button type="button" onclick="selectCourse('ALL')" data-course-btn="ALL" class="course-tab active bg-white px-4 py-2 rounded-lg font-black text-sm">
+                All Courses
+            </button>
+            <button type="button" onclick="selectCourse('MPM2D')" data-course-btn="MPM2D" class="course-tab bg-white px-4 py-2 rounded-lg font-black text-sm">
+                MPM2D · Grade 10
+            </button>
+            <button type="button" onclick="selectCourse('MCR3U')" data-course-btn="MCR3U" class="course-tab bg-white px-4 py-2 rounded-lg font-black text-sm">
+                MCR3U · Grade 11
+            </button>
+            <button type="button" onclick="selectCourse('G12')" data-course-btn="G12" class="course-tab bg-white px-4 py-2 rounded-lg font-black text-sm">
+                MHF4U &amp; MCV4U · Grade 12
+            </button>
+        </nav>
 
-            <a href="mathquest-card-match.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d mcr3u card match game quadratics factoring inverse functions transformations trig trigonometry linear systems grade 10 grade 11">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="bg-indigo-100 text-indigo-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · MCR3U Game</span>
-                    <span class="text-2xl">🃏</span>
-                </div>
-                <h3 class="text-xl font-black mb-2">MathQuest: MPM2D &amp; MCR3U Interactive Card Match</h3>
-                <p class="text-slate-600 font-medium">Arcade card-matching game for Grade 10 &amp; 11 math: Memory Flip, Speed Match, and Boss Challenge with hints and teacher score sync.</p>
-            </a>
+        <!-- Course Sections -->
+        <div id="coursesContainer" class="space-y-12">
 
-            <a href="mpm2d-drill.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d factoring expansion expand solve quadratic transform linear systems analytic geometry trigonometry trig drill practice grade 10">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="bg-blue-100 text-blue-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grade 10 Math</span>
-                    <span class="text-2xl">🏋️</span>
+            <!-- COURSE 1: MPM2D -->
+            <section class="course-section" data-course-section="MPM2D">
+                <div class="border-b-4 border-slate-800 pb-2 mb-6 flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 class="text-2xl md:text-3xl font-black text-slate-900">MPM2D — Grade 10 Academic Mathematics</h2>
+                    <span class="text-sm font-bold text-slate-600">Organized by Curriculum Expectation</span>
                 </div>
-                <h3 class="text-xl font-black mb-2">MPM2D Math Drill Center</h3>
-                <p class="text-slate-600 font-medium">Unlimited Grade 10 practice: Quadratics, Linear Systems, Analytic Geometry, and Trigonometry with instant feedback &amp; hints.</p>
-            </a>
 
-            <a href="mpm2d-problem-strings.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d algebra problem string strings warm up btc building thinking classrooms factoring expanding quadratics linear systems trig grade 10">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="bg-purple-100 text-purple-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grade 10 Math • BTC</span>
-                    <span class="text-2xl">🔗</span>
+                <!-- Expectation: Quadratic Relations -->
+                <div class="expectation-group mb-8">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-amber-900 bg-amber-100 border-2 border-slate-800 inline-block px-3 py-1 rounded-lg mb-4">
+                        Expectation · Quadratic Relations (QR): Expansion &amp; Factoring
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="mpm2d-algebra-skill/" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d algebra quadralab quadratic relations qr expansion expand factoring factor trinomial difference of squares common factor step by step leaderboard grade 10">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-amber-100 text-amber-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · QR Algebra Studio</span>
+                                <span class="text-2xl">🧮</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">QuadraLab: MPM2D Expansion &amp; Factoring Studio</h4>
+                            <p class="text-slate-600 font-medium">Interactive workbench for algebraic expansion, factoring strategies, step-by-step solutions, and live class leaderboards.</p>
+                        </a>
+                    </div>
                 </div>
-                <h3 class="text-xl font-black mb-2">MPM2D Algebra Problem String Presenter</h3>
-                <p class="text-slate-600 font-medium">Step-by-step problem string presenter for warm-ups &amp; Building Thinking Classrooms, with answer toggles and a live sketch pad.</p>
-            </a>
 
-            <a href="mpm2d-wodb.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d mcr3u mhf4u functions advanced functions wodb which one doesnt belong warm up btc building thinking classrooms quadratics factoring linear systems trig grade 10 grade 11 grade 12">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grades 10–12 • BTC</span>
-                    <span class="text-2xl">🤔</span>
-                </div>
-                <h3 class="text-xl font-black mb-2">Which One Doesn't Belong? (WODB)</h3>
-                <p class="text-slate-600 font-medium">Four-card math warm-ups for MPM2D, MCR3U, and MHF4U, with curriculum filters, class voting, and sample arguments.</p>
-            </a>
+                <!-- Expectation: Trigonometry & Similar Triangles -->
+                <div class="expectation-group mb-8">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-cyan-900 bg-cyan-100 border-2 border-slate-800 inline-block px-3 py-1 rounded-lg mb-4">
+                        Expectation · Trigonometry &amp; Similar Triangles (TR)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="mpm2d-similar-triangles/" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d similar triangles prove proving similarity aa sas sss scale factor missing sides angles geometry proof practice lab tr trigonometry grade 10">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-sky-100 text-sky-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · TR Practice Lab</span>
+                                <span class="text-2xl">🔺</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">SimLab MPM2D: Proving Similar Triangles</h4>
+                            <p class="text-slate-600 font-medium">Interactive Grade 10 studio for proving similar triangles by AA, SAS, and SSS similarity, exploring transformations, and solving for missing sides and angles with instant feedback.</p>
+                        </a>
 
-            <a href="mpm2d-diagram-generator.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d mcr3u mhf4u mcv4u svg diagram image generator test paper triangle parallel perpendicular parabola quad linear polynomial rational logarithm tangent limit vectors sinusoid unit circle cast grid copy paste grade 10 grade 11 grade 12">
-                <div class="flex justify-between items-start mb-4">
-                    <span class="bg-amber-100 text-amber-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · MCR3U · MHF4U · MCV4U</span>
-                    <span class="text-2xl">📐</span>
+                        <a href="mpm2d-trig-studio.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d trig trigonometry tr sin cos tan sine cosine tangent sohcahtoa soh cah toa sine law cosine law inverse trig similar triangles right triangle explorer simulator ratio table formula guide grade 10">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-cyan-100 text-cyan-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · TR Simulator</span>
+                                <span class="text-2xl">📐</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">Cosine Studio: MPM2D Trigonometry Explorer</h4>
+                            <p class="text-slate-600 font-medium">Interactive right-triangle simulator for sin, cos, and tan: animate similar triangles, practice inverse trig (Find &theta;), and explore Area, Sine Law, and Cosine Law proofs.</p>
+                        </a>
+                    </div>
                 </div>
-                <h3 class="text-xl font-black mb-2">MPM2D–MCV4U Test Paper SVG Generator</h3>
-                <p class="text-slate-600 font-medium">Generate crisp vector SVG diagrams for Grade 10–12 tests: triangles, lines, parabolas, quad-linear systems, 3U functions/trig, 4U polynomials/rationals/logs, tangents, limits, and 2D vectors.</p>
-            </a>
+
+                <!-- Expectation: Cross-Strand Warm-ups, Games & Teacher Tools -->
+                <div class="expectation-group">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-purple-900 bg-purple-100 border-2 border-slate-800 inline-block px-3 py-1 rounded-lg mb-4">
+                        Cross-Strand · Games, BTC Warm-ups &amp; Teacher Tools (QR · LS · AG · TR)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="mathquest-card-match.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d mcr3u card match game quadratics factoring inverse functions transformations trig trigonometry linear systems grade 10 grade 11">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-indigo-100 text-indigo-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · MCR3U Game</span>
+                                <span class="text-2xl">🃏</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">MathQuest: MPM2D &amp; MCR3U Interactive Card Match</h4>
+                            <p class="text-slate-600 font-medium">Arcade card-matching game for Grade 10 &amp; 11 math: Memory Flip, Speed Match, and Boss Challenge with hints and teacher score sync.</p>
+                        </a>
+
+                        <a href="mpm2d-problem-strings.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d algebra problem string strings warm up btc building thinking classrooms factoring expanding quadratics linear systems trig grade 10">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-purple-100 text-purple-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · BTC Presenter</span>
+                                <span class="text-2xl">🔗</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">MPM2D Algebra Problem String Presenter</h4>
+                            <p class="text-slate-600 font-medium">Step-by-step problem string presenter for warm-ups &amp; Building Thinking Classrooms, with answer toggles and a live sketch pad.</p>
+                        </a>
+
+                        <a href="mpm2d-wodb.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d mcr3u mhf4u mcv4u functions advanced functions wodb which one doesnt belong warm up btc building thinking classrooms quadratics factoring linear systems trig grade 10 grade 11 grade 12">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grades 10–12 · BTC Warm-up</span>
+                                <span class="text-2xl">🤔</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">Which One Doesn't Belong? (WODB)</h4>
+                            <p class="text-slate-600 font-medium">Four-card math warm-ups for MPM2D, MCR3U, MHF4U, and MCV4U, with curriculum filters, class voting, and sample arguments.</p>
+                        </a>
+
+                        <a href="mpm2d-diagram-generator.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mpm2d mcr3u mhf4u mcv4u svg diagram image generator test paper triangle parallel perpendicular parabola quad linear polynomial rational logarithm tangent limit vectors sinusoid unit circle cast grid copy paste grade 10 grade 11 grade 12">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-amber-100 text-amber-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D–MCV4U · Teacher Tool</span>
+                                <span class="text-2xl">📐</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">MPM2D–MCV4U Test Paper SVG Generator</h4>
+                            <p class="text-slate-600 font-medium">Generate crisp vector SVG diagrams for Grade 10–12 tests: triangles, lines, parabolas, quad-linear systems, 3U functions/trig, 4U polynomials/rationals/logs, tangents, limits, and 2D vectors.</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COURSE 2: MCR3U -->
+            <section class="course-section" data-course-section="MCR3U">
+                <div class="border-b-4 border-slate-800 pb-2 mb-6 flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 class="text-2xl md:text-3xl font-black text-slate-900">MCR3U — Grade 11 Functions</h2>
+                    <span class="text-sm font-bold text-slate-600">Organized by Curriculum Expectation</span>
+                </div>
+
+                <div class="expectation-group">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-indigo-900 bg-indigo-100 border-2 border-slate-800 inline-block px-3 py-1 rounded-lg mb-4">
+                        Expectation · Characteristics of Functions, Inverse &amp; Trigonometry
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="mathquest-card-match.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mcr3u mpm2d card match game quadratics factoring inverse functions transformations trig trigonometry grade 11">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-indigo-100 text-indigo-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D · MCR3U Game</span>
+                                <span class="text-2xl">🃏</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">MathQuest: MPM2D &amp; MCR3U Interactive Card Match</h4>
+                            <p class="text-slate-600 font-medium">Arcade card-matching game with MCR3U inverse functions, transformations, and trigonometry decks plus teacher score sync.</p>
+                        </a>
+
+                        <a href="mpm2d-wodb.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mcr3u functions wodb which one doesnt belong warm up btc building thinking classrooms grade 11">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grades 10–12 · BTC Warm-up</span>
+                                <span class="text-2xl">🤔</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">Which One Doesn't Belong? (WODB)</h4>
+                            <p class="text-slate-600 font-medium">Filter to MCR3U four-card warm-ups for functions, transformations, exponentials, and periodic behavior.</p>
+                        </a>
+
+                        <a href="mpm2d-diagram-generator.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mcr3u svg diagram image generator test paper 3u functions trig sinusoid unit circle cast grid grade 11">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-amber-100 text-amber-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D–MCV4U · Teacher Tool</span>
+                                <span class="text-2xl">📐</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">MPM2D–MCV4U Test Paper SVG Generator</h4>
+                            <p class="text-slate-600 font-medium">Generate crisp vector SVG diagrams for MCR3U functions, sinusoids, unit circles, and CAST grids.</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COURSE 3: MHF4U & MCV4U -->
+            <section class="course-section" data-course-section="G12">
+                <div class="border-b-4 border-slate-800 pb-2 mb-6 flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 class="text-2xl md:text-3xl font-black text-slate-900">MHF4U &amp; MCV4U — Grade 12 Advanced Functions &amp; Calculus</h2>
+                    <span class="text-sm font-bold text-slate-600">Organized by Curriculum Expectation</span>
+                </div>
+
+                <div class="expectation-group">
+                    <h3 class="text-sm font-black uppercase tracking-wider text-emerald-900 bg-emerald-100 border-2 border-slate-800 inline-block px-3 py-1 rounded-lg mb-4">
+                        Expectation · Polynomials, Rationals, Logs, Limits &amp; Vectors
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <a href="mpm2d-wodb.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mhf4u mcv4u advanced functions calculus vectors wodb which one doesnt belong warm up btc grade 12">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">Grades 10–12 · BTC Warm-up</span>
+                                <span class="text-2xl">🤔</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">Which One Doesn't Belong? (WODB)</h4>
+                            <p class="text-slate-600 font-medium">Filter to MHF4U &amp; MCV4U four-card warm-ups for polynomials, rationals, logs, derivatives, and vectors.</p>
+                        </a>
+
+                        <a href="mpm2d-diagram-generator.html" class="resource-card bg-white p-6 rounded-xl comic-border block no-underline" data-tags="math mhf4u mcv4u svg diagram image generator test paper polynomial rational logarithm tangent limit vectors grade 12">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-amber-100 text-amber-900 text-xs font-black px-3 py-1 border-2 border-slate-800 rounded-full">MPM2D–MCV4U · Teacher Tool</span>
+                                <span class="text-2xl">📐</span>
+                            </div>
+                            <h4 class="text-xl font-black mb-2">MPM2D–MCV4U Test Paper SVG Generator</h4>
+                            <p class="text-slate-600 font-medium">Generate crisp vector SVG diagrams for 4U polynomials, rationals, logs, tangents, limits, and 2D vectors.</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
         </div>
     </div>
 
     <script>
-        function smartSearch() {
-            let input = document.getElementById('aiInput').value.toLowerCase();
-            let cards = document.querySelectorAll('.resource-card');
-            let aiResponse = document.getElementById('aiResponse');
-            let matchCount = 0;
+        let activeCourse = 'ALL';
 
-            cards.forEach(card => {
-                let tags = card.getAttribute('data-tags').toLowerCase();
-                let title = card.querySelector('h3').innerText.toLowerCase();
-                
-                if (tags.includes(input) || title.includes(input)) {
-                    card.style.display = "block";
-                    matchCount++;
+        function selectCourse(course) {
+            activeCourse = course;
+            document.querySelectorAll('[data-course-btn]').forEach(btn => {
+                if (btn.getAttribute('data-course-btn') === course) {
+                    btn.classList.add('active');
                 } else {
-                    card.style.display = "none";
+                    btn.classList.remove('active');
                 }
             });
+            filterHub();
+        }
 
-            if (input.trim() === "") {
-                aiResponse.innerText = "";
-            } else if (matchCount > 0) {
-                aiResponse.innerText = `💡 I found ${matchCount} tool(s) for you! Go check them out!`;
+        function filterHub() {
+            const input = document.getElementById('aiInput').value.toLowerCase().trim();
+            const aiResponse = document.getElementById('aiResponse');
+            const courseSections = document.querySelectorAll('.course-section');
+            const featuredSection = document.getElementById('featuredSection');
+            const matchedHrefs = new Set();
+
+            // Always evaluate featured Drill Master card
+            const featuredCard = featuredSection.querySelector('.resource-card');
+            if (featuredCard) {
+                const tags = (featuredCard.getAttribute('data-tags') || '').toLowerCase();
+                const title = (featuredCard.querySelector('h3')?.innerText || '').toLowerCase();
+                const matchesSearch = !input || tags.includes(input) || title.includes(input);
+                featuredCard.style.display = matchesSearch ? 'block' : 'none';
+                featuredSection.style.display = matchesSearch ? 'block' : 'none';
+                if (matchesSearch) {
+                    matchedHrefs.add(featuredCard.getAttribute('href'));
+                }
+            }
+
+            // Evaluate course sections -> expectation groups -> cards
+            courseSections.forEach(section => {
+                const sectionCourse = section.getAttribute('data-course-section');
+                const courseVisible = (activeCourse === 'ALL' || activeCourse === sectionCourse);
+
+                if (!courseVisible) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                let sectionHasMatch = false;
+                const groups = section.querySelectorAll('.expectation-group');
+
+                groups.forEach(group => {
+                    let groupHasMatch = false;
+                    const cards = group.querySelectorAll('.resource-card');
+
+                    cards.forEach(card => {
+                        const tags = (card.getAttribute('data-tags') || '').toLowerCase();
+                        const title = (card.querySelector('h4')?.innerText || '').toLowerCase();
+                        const desc = (card.querySelector('p')?.innerText || '').toLowerCase();
+                        const matchesSearch = !input || tags.includes(input) || title.includes(input) || desc.includes(input);
+
+                        card.style.display = matchesSearch ? 'block' : 'none';
+                        if (matchesSearch) {
+                            groupHasMatch = true;
+                            sectionHasMatch = true;
+                            matchedHrefs.add(card.getAttribute('href'));
+                        }
+                    });
+
+                    group.style.display = groupHasMatch ? 'block' : 'none';
+                });
+
+                section.style.display = sectionHasMatch ? 'block' : 'none';
+            });
+
+            if (input === '') {
+                aiResponse.innerText = '';
+            } else if (matchedHrefs.size > 0) {
+                aiResponse.innerText = `💡 I found ${matchedHrefs.size} tool(s) for you! Go check them out!`;
             } else {
-                aiResponse.innerText = "🤔 Hmm... I couldn't find a tool for that topic yet. Try a different keyword!";
+                aiResponse.innerText = "🤔 Hmm... I couldn't find a tool for that topic yet. Try a different keyword or switch to 'All Courses'!";
             }
         }
     </script>
